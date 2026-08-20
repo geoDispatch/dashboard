@@ -1,106 +1,75 @@
 import { createSignal } from 'solid-js'
-import solidLogo from './assets/solid.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
+import { createWebSocket } from './hooks/createWebSocket'
+import DisasterMap from './components/DisasterMap'
+import SidebarPanel from './components/SidebarPanel'
+import EventBanner from './components/EventBanner'
+import ErrorToast from './components/ErrorToast'
 import './App.css'
 
-function App() {
-  const [count, setCount] = createSignal(0)
+export default function App() {
+  // ── state signals ─────────────────────────────────────────
+  const [event,       setEvent]       = createSignal(null)
+  const [devices,     setDevices]     = createSignal({})   // phone → DeviceUpdate
+  const [zoneSummary, setZoneSummary] = createSignal(null)
+  const [narratives,  setNarratives]  = createSignal({})   // zone → string
+  const [errors,      setErrors]      = createSignal([])
+
+  // ── WS message router ─────────────────────────────────────
+  const { connected } = createWebSocket((msg) => {
+    const p = msg.payload
+    switch (msg.type) {
+      case 'event_start':
+        setEvent(p)
+        setDevices({})       // clear previous event dots
+        setNarratives({})
+        setZoneSummary(null)
+        setErrors([])
+        break
+
+      case 'device_update':
+        setDevices(d => ({ ...d, [p.phone]: p }))
+        break
+
+      case 'zone_summary':
+        setZoneSummary(p)
+        break
+
+      case 'narrative_update':
+        setNarratives(n => ({ ...n, [p.zone]: p.narrative }))
+        break
+
+      case 'error':
+        setErrors(e => [...e, p])
+        break
+
+      default:
+        console.warn('[WS] unknown message type:', msg.type)
+    }
+  })
 
   return (
-    <>
-      <section id="center">
-        <div class="hero">
-          <img src={heroImg} class="base" width="170" height="179" alt="" />
-          <img src={solidLogo} class="framework" alt="Solid logo" />
-          <img src={viteLogo} class="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          class="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count()}
-        </button>
-      </section>
+    <div class="app">
+      {/* top bar */}
+      <EventBanner event={event()} connected={connected()} />
 
-      <div class="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg class="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img class="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://solidjs.com/" target="_blank">
-                <img class="button-icon" src={solidLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+      {/* main layout */}
+      <div class="layout">
+        <div class="map-container">
+          <DisasterMap
+            event={event()}
+            devices={devices()}
+          />
         </div>
-        <div id="social">
-          <svg class="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg class="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg class="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg class="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg class="button-icon" role="presentation" aria-hidden="true">
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+        <SidebarPanel
+          zoneSummary={zoneSummary()}
+          narratives={narratives()}
+        />
+      </div>
 
-      <div class="ticks"></div>
-      <section id="spacer"></section>
-    </>
+      {/* floating error toasts */}
+      <ErrorToast errors={errors()} onDismiss={(i) =>
+        setErrors(e => e.filter((_, idx) => idx !== i))
+      } />
+    </div>
   )
 }
-
-export default App
