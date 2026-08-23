@@ -3,15 +3,14 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ZONE_COLORS } from '../constants/zones'
 
-export default function DisasterMap({ event, devices }) {
+export default function DisasterMap(props) {
   let mapContainer
   let map
   let impactCircle = null
   let epicenterMarker = null
-  const markerMap = new Map() // phone → L.circleMarker
+  const markerMap = new Map()
 
   onMount(() => {
-    // default center: Morocco
     map = L.map(mapContainer, {
       center: [33.9716, -6.8498],
       zoom: 8,
@@ -24,23 +23,20 @@ export default function DisasterMap({ event, devices }) {
     }).addTo(map)
   })
 
-  // react to event_start — re-center map, draw impact circle
   createEffect(() => {
-    if (!map || !event) return
+    const currentEvent = props.event
+    if (!map || !currentEvent) return
 
-    const { epicenter, radius_km, severity } = event
+    const { epicenter, radius_km, severity, disaster_type } = currentEvent
     const center = [epicenter.latitude, epicenter.longitude]
 
-    // fly to epicenter
     map.flyTo(center, 10, { duration: 1.5 })
 
-    // remove old circle + epicenter marker
     impactCircle?.remove()
     epicenterMarker?.remove()
 
-    // draw impact radius circle
     impactCircle = L.circle(center, {
-      radius:      radius_km * 1000, // km → metres
+      radius:      radius_km * 1000,
       color:       '#FF3B30',
       fillColor:   '#FF3B30',
       fillOpacity: 0.06,
@@ -48,7 +44,6 @@ export default function DisasterMap({ event, devices }) {
       dashArray:   '6 4',
     }).addTo(map)
 
-    // epicenter crosshair marker
     epicenterMarker = L.marker(center, {
       icon: L.divIcon({
         className: '',
@@ -57,15 +52,15 @@ export default function DisasterMap({ event, devices }) {
         iconAnchor: [12, 12],
       })
     }).addTo(map)
+
     epicenterMarker.bindPopup(
-      `<b>Epicenter</b><br/>M${severity} ${event.disaster_type}<br/>${epicenter.latitude.toFixed(4)}, ${epicenter.longitude.toFixed(4)}`
+      `<b>Epicenter</b><br/>M${severity} ${disaster_type}<br/>${epicenter.latitude.toFixed(4)}, ${epicenter.longitude.toFixed(4)}`
     )
   })
 
-  // react to device updates — add or update dots
   createEffect(() => {
     if (!map) return
-    const allDevices = devices
+    const allDevices = props.devices || {}
 
     Object.values(allDevices).forEach(device => {
       const { phone, latitude, longitude, zone, reachable, sms_sent, rescue_flag } = device
@@ -73,13 +68,11 @@ export default function DisasterMap({ event, devices }) {
       const opacity = reachable ? 0.9 : 0.35
 
       if (markerMap.has(phone)) {
-        // update existing marker
         const marker = markerMap.get(phone)
         marker.setLatLng([latitude, longitude])
         marker.setStyle({ color, fillColor: color, fillOpacity: opacity })
         marker.getPopup()?.setContent(popupHTML(device))
       } else {
-        // create new marker
         const marker = L.circleMarker([latitude, longitude], {
           radius:      rescue_flag ? 10 : 7,
           color,
@@ -103,8 +96,7 @@ export default function DisasterMap({ event, devices }) {
 }
 
 function maskPhone(phone) {
-  // +212612345678 → +212 6** *** 678
-  if (phone.length < 6) return phone
+  if (!phone || phone.length < 6) return phone || ''
   return phone.slice(0, 5) + '** *** ' + phone.slice(-3)
 }
 
@@ -112,7 +104,7 @@ function popupHTML(d) {
   return `
     <div class="device-popup">
       <b>${maskPhone(d.phone)}</b>
-      <div class="popup-row">Zone <span class="zone-tag zone-${d.zone}">${d.zone.toUpperCase()}</span></div>
+      <div class="popup-row">Zone <span class="zone-tag zone-${d.zone}">${d.zone ? d.zone.toUpperCase() : ''}</span></div>
       <div class="popup-row">${d.reachable   ? '📶 Reachable'   : '📵 Unreachable'}</div>
       <div class="popup-row">${d.sms_sent    ? '💬 SMS sent'    : '💬 No SMS'}</div>
       <div class="popup-row">${d.rescue_flag ? '🚁 Rescue flagged' : ''}</div>

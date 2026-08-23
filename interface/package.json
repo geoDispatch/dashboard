@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "leaflet": "^1.9.4",
     "solid-js": "^1.9.14"
   },
   "devDependencies": {
