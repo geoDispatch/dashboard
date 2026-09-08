@@ -13,6 +13,7 @@ import { maskPhone } from '../lib/format'
 
 const DEFAULT_CENTER = [31.0625, -8.4144]   // Al Haouz
 const DEFAULT_ZOOM   = 9
+const TILE_MAX_ZOOM  = 16   // the Esri light-gray canvas stops here
 
 export default function DisasterMap(props) {
   let container
@@ -30,17 +31,27 @@ export default function DisasterMap(props) {
       zoomControl: false,
       preferCanvas: true,
       attributionControl: false,
+      maxZoom: TILE_MAX_ZOOM,
     })
 
     renderer = L.canvas({ padding: 0.5 })
 
+    // Esri's World Light Gray canvas — the muted grey base the design uses,
+    // and genuinely keyless. (CARTO's basemaps are not: they now watermark
+    // "API KEY REQUIRED" straight into the tile image and still return HTTP 200,
+    // so a failed key check looks like a successful fetch.)
     L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
       {
-        subdomains: 'abcd',
-        maxZoom: 19,
-        attribution: '© OpenStreetMap · © CARTO',
+        maxZoom: TILE_MAX_ZOOM,
+        attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ',
       },
+    ).addTo(map)
+
+    // Place names ride above the data so the operator can name a locality.
+    L.tileLayer(
+      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      { maxZoom: TILE_MAX_ZOOM, pane: 'shadowPane', attribution: '' },
     ).addTo(map)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
