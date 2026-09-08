@@ -398,21 +398,119 @@
   left: var(--gd-map-inset);
   display: flex;
   align-items: flex-start;
+
+  /* Explicit width, deliberately not a percentage.
+     The stack used to size itself from its content while its child asked for
+     `min(400px, 100% - 48px)` — a percentage resolved against a parent whose
+     width depended on that same child. The circular case resolved to 354px, so
+     the Hide button squeezed the cards ~46px narrower than the 400 the design
+     calls for, and the label/value columns lost their alignment with it.
+     400 (panel) + 24 (gap) + 84 (Hide) = 508. */
+  width: min(508px, calc(100% - (var(--gd-map-inset) * 2)));
+  max-height: calc(100% - (var(--gd-map-inset) * 2));
 }
 
+.map-overlay--stack .dd,
+.map-overlay--stack .ops {
+  width: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+/* The cards keep their 400px and scroll inside themselves. The max-height comes
+   from the overlay, not from 100vh: at 110% browser zoom the viewport unit and
+   the map's real height diverge enough that the last card sat below the fold
+   with nothing to scroll. */
 .map-overlay--stack .dd__stack,
 .map-overlay--stack .ops__stack {
+  flex: 1 1 auto;
+  width: auto;
+  min-width: 0;
+
+  /* Measured against the viewport, not the parent. A percentage max-height
+     resolves to `none` when the parent's own height is auto — which is exactly
+     the case here — so the stack silently grew past the bottom of the map with
+     nothing to scroll, and the last card sat below the fold. */
   max-height: calc(100vh - var(--gd-topbar-h) - (var(--gd-map-inset) * 2));
   overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
 
-/* The panel is 400px, but never wider than the map minus its two insets. */
+.map-overlay--stack .dd__stack::-webkit-scrollbar,
+.map-overlay--stack .ops__stack::-webkit-scrollbar {
+  width: 6px;
+}
+
+.map-overlay--stack .dd__stack::-webkit-scrollbar-thumb,
+.map-overlay--stack .ops__stack::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: rgba(23, 33, 43, 0.18);
+}
+
+.map-overlay--stack .dd__stack::-webkit-scrollbar-track,
+.map-overlay--stack .ops__stack::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Cards keep their natural height. As flex children in a column they were
+   shrinking to fit the available space instead of overflowing it, so the stack
+   always reported "fits" — scrolling never engaged and the last card's rows
+   were quietly squashed and clipped. */
+.map-overlay--stack .dd__stack > *,
+.map-overlay--stack .ops__stack > * {
+  flex: 0 0 auto;
+}
+
+/* The Hide button must not shrink or scroll away with the cards. */
+.map-overlay--stack .dd-hide {
+  flex: 0 0 auto;
+}
+
+/* ── Panel entrance ─────────────────────────────────────────────────────────
+   The panel is swapped, not merely revealed: picking a device, a zone, or a
+   rail view replaces its whole contents. Sliding it in from the left tells the
+   operator the panel changed rather than the numbers inside it. */
+
+@keyframes gd-panel-in {
+  from {
+    opacity: 0;
+    transform: translateX(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .map-overlay--stack .dd__stack,
 .map-overlay--stack .ops__stack {
-  width: var(--gd-panel-actual);
-  flex: 0 1 var(--gd-panel-actual);
+  animation: gd-panel-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* Cards inside a freshly swapped panel arrive a beat apart, so the eye follows
+   the stack down instead of everything landing at once. */
+.map-overlay--stack .dd-card,
+.map-overlay--stack .ops-card {
+  animation: gd-panel-in 260ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+.map-overlay--stack .dd-card:nth-child(1) { animation-delay: 0ms; }
+.map-overlay--stack .dd-card:nth-child(2) { animation-delay: 40ms; }
+.map-overlay--stack .dd-card:nth-child(3) { animation-delay: 80ms; }
+.map-overlay--stack .dd-card:nth-child(4) { animation-delay: 120ms; }
+
+.dd-hide {
+  transition: background 140ms ease, color 140ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-overlay--stack .dd__stack,
+  .map-overlay--stack .ops__stack,
+  .map-overlay--stack .dd-card,
+  .map-overlay--stack .ops-card {
+    animation: none;
+  }
 }
 
 /* ── Shelter marker ──────────────────────────────────────────────────────
@@ -541,4 +639,112 @@
   font-weight: var(--gd-fw-medium);
   line-height: 20px;
   box-shadow: var(--gd-shadow-pop);
+}
+
+/* ── Simulation control ─────────────────────────────────────────────────────
+   The demo used to announce itself in a paragraph in the bottom-left corner,
+   beside the details column. It now sits with the other stream controls at the
+   top right, because that is where the operator already looks to read stream
+   state, and one click starts or stops it. */
+
+.map-overlay--tr.app-tr {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-sim {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--gd-control-h);
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-surface);
+  box-shadow: var(--gd-shadow-card);
+  font-family: var(--gd-font);
+  font-size: var(--gd-fs-sm, 16px);
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--gd-ink);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.app-sim:hover {
+  background: var(--gd-field);
+}
+
+.app-sim:focus-visible {
+  outline: 2px solid var(--gd-ink);
+  outline-offset: 2px;
+}
+
+/* Idle: a play triangle — the affordance for "start this". */
+.app-sim__glyph {
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid currentColor;
+}
+
+/* Running: the triangle becomes a pulsing dot, matching the Stream live pill
+   beside it so the two read as one status, not two competing ones. */
+.app-sim.is-running {
+  border-color: rgba(255, 165, 31, 0.32);
+  background: rgba(255, 165, 31, 0.10);
+  color: var(--gd-ink);
+}
+
+.app-sim.is-running:hover {
+  background: rgba(255, 165, 31, 0.16);
+}
+
+.app-sim.is-running .app-sim__glyph {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--gd-orange);
+  animation: app-sim-pulse 1.8s ease-in-out infinite;
+}
+
+@keyframes app-sim-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.35; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-sim.is-running .app-sim__glyph { animation: none; }
+}
+
+/* ── Overlay hit-testing ────────────────────────────────────────────────────
+   The overlay boxes are transparent, but they are still elements: the details
+   wrapper stretches well past its 400px cards and was swallowing every click,
+   drag and wheel event over that slice of the map. The map underneath then
+   never saw them — zone clicks did nothing, and panning or zooming was dead
+   wherever an overlay happened to reach, including the empty space left when
+   the panel was collapsed to its "Show" button.
+
+   So the containers opt out of hit-testing entirely and only the real controls
+   opt back in. Anything genuinely clickable added to an overlay must be listed
+   here, or it will look enabled and do nothing. */
+
+.map-overlay,
+.map-overlay--stack,
+.map-overlay .dd,
+.map-overlay .ops {
+  pointer-events: none;
+}
+
+.map-overlay .dd__stack,
+.map-overlay .ops__stack,
+.map-overlay .dd-hide,
+.map-overlay .app-sim,
+.map-overlay .map-toolbar,
+.app-note {
+  pointer-events: auto;
 }

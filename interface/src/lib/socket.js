@@ -155,7 +155,10 @@ export function createStream(actions, {
     setSource('demo')
     actions.reset()
     actions.setStatus('live', 'demo')
-    stopMock = startMockStream(enqueue, { loop: true })
+    // Deliberately does not loop. A repeat would re-fire event_start, which
+    // legitimately clears state — wiping whatever the operator had selected
+    // every time the scenario came round again.
+    stopMock = startMockStream(enqueue, { loop: false })
   }
 
   function stopDemo() {

@@ -29,7 +29,10 @@ export function createConsoleStore() {
     fatal:      null,   // first fatal error — pipeline is dead
 
     // ── ui ────────────────────────────────────────────────────
+    // Selecting a device and selecting a zone are mutually exclusive: the
+    // details panel shows one subject at a time.
     selectedPhone: null,
+    selectedZone:  null,
     region:        null,   // { name, latitude, longitude, source }
     batchCount:    0,
   })
@@ -74,6 +77,7 @@ export function createConsoleStore() {
           s.errors        = []
           s.fatal         = null
           s.selectedPhone = null
+          s.selectedZone  = null
           s.joinedLate    = false
           s.batchCount    = 0
         }))
@@ -129,7 +133,24 @@ export function createConsoleStore() {
 
     // ── ui ──────────────────────────────────────────────────
     selectDevice(phone) {
-      setState('selectedPhone', phone ?? null)
+      batch(() => {
+        setState('selectedPhone', phone ?? null)
+        if (phone) setState('selectedZone', null)
+      })
+    },
+
+    selectZone(zone) {
+      batch(() => {
+        setState('selectedZone', zone ?? null)
+        if (zone) setState('selectedPhone', null)
+      })
+    },
+
+    clearSelection() {
+      batch(() => {
+        setState('selectedPhone', null)
+        setState('selectedZone', null)
+      })
     },
 
     dismissError(id) {
@@ -154,6 +175,7 @@ export function createConsoleStore() {
           s.errors = []
           s.fatal = null
           s.selectedPhone = null
+          s.selectedZone = null
           s.joinedLate = false
           s.batchCount = 0
         }))

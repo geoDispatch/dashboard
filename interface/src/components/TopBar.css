@@ -519,3 +519,134 @@
     display: none;
   }
 }
+
+/* ── Notifications popover ──────────────────────────────────────────────────
+   Anchored under the bell, right-aligned to it. Errors used to open a panel in
+   the left column, which put the detail a long way from the control that
+   summoned it and stole the column the device panel owns. */
+
+.gd-notif {
+  position: relative;
+  flex: none;
+}
+
+.gd-notifications.is-open {
+  background: var(--gd-field);
+}
+
+.gd-notif__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 60;
+  width: 380px;
+  max-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid rgba(23, 33, 43, 0.08);
+  border-radius: var(--gd-radius-card);
+  background: var(--gd-surface);
+  box-shadow: 0 1px 2px rgba(23, 33, 43, 0.06), 0 12px 32px rgba(23, 33, 43, 0.14);
+}
+
+.gd-notif__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(23, 33, 43, 0.08);
+}
+
+.gd-notif__title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 24px;
+  color: var(--gd-ink);
+}
+
+.gd-notif__clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--gd-ink-2);
+  cursor: pointer;
+}
+
+.gd-notif__clear:hover { color: var(--gd-ink); }
+
+.gd-notif__empty {
+  margin: 0;
+  padding: 20px;
+  font-size: 14px;
+  line-height: 22px;
+  color: var(--gd-ink-3);
+}
+
+.gd-notif__list {
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* A left edge carries the severity so it is not colour-on-text alone. */
+.gd-notif__item {
+  padding: 12px 20px 12px 17px;
+  border-left: 3px solid var(--gd-orange);
+}
+
+.gd-notif__item.is-fatal { border-left-color: var(--gd-red); }
+
+.gd-notif__item + .gd-notif__item {
+  border-top: 1px solid rgba(23, 33, 43, 0.06);
+}
+
+.gd-notif__row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.gd-notif__code {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--gd-ink);
+}
+
+.gd-notif__count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gd-ink-3);
+}
+
+.gd-notif__meaning {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  color: var(--gd-ink);
+}
+
+/* Raw Go error text — not written for humans and not length-bounded. */
+.gd-notif__detail {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 19px;
+  color: var(--gd-ink-3);
+  overflow-wrap: anywhere;
+}
+
+.gd-notif__phone {
+  margin: 4px 0 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--gd-ink-3);
+}

@@ -1,6 +1,6 @@
 import { createMemo } from 'solid-js'
 import { haversine, nearestLocality } from './geo'
-import { ZONE_ORDER } from '../constants/zones'
+import { ZONE_ORDER, ERROR_SEVERITY } from '../constants/zones'
 import { deriveAction } from './format'
 
 // Derived views over the store. Counts, queues and groupings are computed here
@@ -117,7 +117,15 @@ export function createSelectors(state) {
     const groups = new Map()
     for (const e of state.errors) {
       if (!groups.has(e.code)) {
-        groups.set(e.code, { code: e.code, count: 0, fatal: false, latest: null, samples: [] })
+        groups.set(e.code, {
+          code: e.code,
+          // What the code actually means to an operator, not just its name.
+          reads: ERROR_SEVERITY[e.code]?.reads ?? 'Unrecognised error code',
+          count: 0,
+          fatal: false,
+          latest: null,
+          samples: [],
+        })
       }
       const g = groups.get(e.code)
       g.count += 1

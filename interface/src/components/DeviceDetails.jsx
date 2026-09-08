@@ -94,7 +94,7 @@ export function HideButton(props) {
 // Building blocks
 // ---------------------------------------------------------------------------
 
-function EmptyState(props) {
+export function EmptyState(props) {
   return (
     <p class="dd-empty" style={{ '--dd-empty-h': `${props.height}px` }}>
       {props.text}
@@ -104,7 +104,7 @@ function EmptyState(props) {
 
 // A label column fixed at 124px, then the value. `missing` marks one of the
 // three backend gap fields, which renders DASH plus the muted note.
-function DetailRow(props) {
+export function DetailRow(props) {
   return (
     <div class="dd-row">
       <p class="dd-row__label">{props.label}</p>
@@ -120,7 +120,7 @@ function DetailRow(props) {
   )
 }
 
-function DetailCard(props) {
+export function DetailCard(props) {
   return (
     <section class="dd-card" aria-labelledby={`dd-title-${props.id}`}>
       <div class="dd-card__heading">

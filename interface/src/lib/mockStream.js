@@ -80,20 +80,59 @@ export function buildPopulation({ total = 4812, seed = 20230908 } = {}) {
   const localityTotal = AL_HAOUZ_LOCALITIES.reduce((n, l) => n + l.people, 0)
   const scale = total / localityTotal
 
+  // Devices cluster around settlements, but a uniform box around each centroid
+  // renders as a hard-edged rectangle. Scatter radially with a normal falloff so
+  // each locality reads as a town, and spread a minority across the whole disc
+  // so the impact area looks populated rather than like seven separate blobs.
+  const gaussian = () => {
+    const u = Math.max(1e-9, rnd())
+    return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * rnd())
+  }
+
+  const kmToLat = (k) => k / 111
+  const kmToLng = (k, lat) => k / (111 * Math.cos((lat * Math.PI) / 180))
+
   let i = 0
+  const scattered = Math.round(total * 0.18)
+
   for (const loc of AL_HAOUZ_LOCALITIES) {
-    const n = Math.round(loc.people * scale)
+    const n = Math.max(0, Math.round(loc.people * scale * 0.82))
+    // Bigger settlements physically spread further.
+    const sigmaKm = 1.6 + (loc.people / 1129) * 2.2
+
     for (let k = 0; k < n; k++) {
-      // Scatter around the locality centroid — tighter for small settlements.
-      const spread = 0.045 + rnd() * 0.03
-      const lat = loc.latitude + (rnd() - 0.5) * spread * 2
-      const lng = loc.longitude + (rnd() - 0.5) * spread * 2.4
+      const rKm = Math.abs(gaussian()) * sigmaKm
+      const theta = rnd() * 2 * Math.PI
+      const lat = loc.latitude + kmToLat(rKm * Math.cos(theta))
+      const lng = loc.longitude + kmToLng(rKm * Math.sin(theta), loc.latitude)
       const dKm = distanceKm(lat, lng, epi)
       devices.push(makeDevice(i++, lat, lng, dKm, radius, rnd, loc.name))
     }
   }
 
+  // The rest: uniform over the impact disc. sqrt keeps it area-uniform rather
+  // than piling up at the centre.
+  for (let k = 0; k < scattered; k++) {
+    const rKm = Math.sqrt(rnd()) * radius
+    const theta = rnd() * 2 * Math.PI
+    const lat = epi.latitude + kmToLat(rKm * Math.cos(theta))
+    const lng = epi.longitude + kmToLng(rKm * Math.sin(theta), epi.latitude)
+    const dKm = distanceKm(lat, lng, epi)
+    const near = nearestName(lat, lng)
+    devices.push(makeDevice(i++, lat, lng, dKm, radius, rnd, near))
+  }
+
   return devices.sort((a, b) => a._distance - b._distance)
+}
+
+function nearestName(lat, lng) {
+  let best = AL_HAOUZ_LOCALITIES[0]
+  let bestD = Infinity
+  for (const l of AL_HAOUZ_LOCALITIES) {
+    const d = (l.latitude - lat) ** 2 + (l.longitude - lng) ** 2
+    if (d < bestD) { bestD = d; best = l }
+  }
+  return best.name
 }
 
 function distanceKm(lat, lng, epi) {
