@@ -1,0 +1,146 @@
+/* Left navigation rail — Figma 65:2 (Primary navigation) + 68:2 (Utility navigation).
+ *
+ * Geometry from Frame 18: an 80px white column running the full height below
+ * the 96px top bar, with a 16px horizontal inset so the 48px tiles sit centred.
+ * Primary nav is top-anchored 24px below the top bar on a 60px pitch
+ * (48px tile + 12px gap); utility nav is bottom-anchored on a 56px pitch
+ * (44px tile + 12px gap). `space-between` plus the symmetric 24px block
+ * padding produces both anchors without any magic offsets. */
+
+.navrail {
+  /* Local tokens. The two nav colours are baked into the Figma icon exports;
+     they are declared here so the tile background and the glyph stay in sync. */
+  --nav-active-bg: #e5f0f7;
+  --nav-active-ink: #1f5278;
+
+  box-sizing: border-box;
+  flex: 0 0 var(--gd-rail-w, 80px);
+  width: var(--gd-rail-w, 80px);
+  height: 100%;
+  align-self: stretch;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 24px 16px;
+
+  background: var(--gd-surface, #ffffff);
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+.navrail__nav {
+  display: block;
+}
+
+.navrail__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.navrail__item {
+  display: block;
+}
+
+/* --- buttons ------------------------------------------------------------ */
+
+.navrail__btn {
+  position: relative;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 140ms ease;
+}
+
+.navrail__btn--primary {
+  height: 48px;
+}
+
+.navrail__btn--utility {
+  height: 44px;
+}
+
+.navrail__btn:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.navrail__btn:active {
+  background: #eceef1;
+}
+
+.navrail__btn:focus-visible {
+  outline: 2px solid var(--nav-active-ink);
+  outline-offset: 2px;
+}
+
+/* Selected treatment from the frame: the tinted tile behind the glyph. The
+   glyph itself changes colour by swapping to the *-active.svg export. */
+.navrail__btn--active,
+.navrail__btn--active:hover,
+.navrail__btn--active:active {
+  background: var(--nav-active-bg);
+}
+
+/* --- icon --------------------------------------------------------------- */
+
+/* A fixed 24px slot; the image is drawn at its own artboard size (27–30px)
+   and allowed to bleed symmetrically, matching Figma's negative insets. */
+.navrail__icon {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  pointer-events: none;
+}
+
+.navrail__icon img {
+  display: block;
+  width: var(--nav-icon-size, 24px);
+  height: var(--nav-icon-size, 24px);
+  max-width: none;
+}
+
+/* --- badge -------------------------------------------------------------- */
+
+/* Count pill in the tile's top-right corner. The white ring keeps it legible
+   over both the plain and the selected tile. Purely decorative — the count is
+   announced through the button's aria-label. */
+.navrail__badge {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  box-sizing: content-box;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border: 2px solid var(--gd-surface, #ffffff);
+  border-radius: 999px;
+
+  background: var(--gd-red, #ff2d3d);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .navrail__btn {
+    transition: none;
+  }
+}

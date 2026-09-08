@@ -1,0 +1,246 @@
+/* Map toolbar — Figma node 72:2 ("Map toolbar", 576x44).
+   Left to right: Stream live pill (176x44), Map layers segmented control
+   (276x44, 4px inset, three 88x36 segments), Fullscreen (44x44), Export (44x44).
+   12px gap => 176 + 12 + 276 + 12 + 44 + 12 + 44 = 576. */
+
+.map-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* Sums to 576 with the sizes below; max-content keeps that true whether the
+     overlay positions it absolutely, in a flex row, or in a grid cell. */
+  width: max-content;
+  height: var(--gd-control-h, 44px);
+  font-family: 'DM Sans', system-ui, sans-serif;
+
+  /* No token exists for the pressed-segment fill or for the darkened ink used
+     by the amber / red pill states, so they are declared here as overridable
+     locals rather than as bare hexes scattered through the rules. */
+  --mt-seg-active: var(--gd-field-strong, #ebf0f4);
+  --mt-amber-ink: var(--gd-amber-ink, #8a5a00);
+  --mt-red-ink: var(--gd-red-ink, #a51120);
+}
+
+/* ---- Stream pill -------------------------------------------------------- */
+
+.mt-stream {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--gd-control-h, 44px);
+  /* 176px in the frame. min-width, not width, so a longer state word
+     ("Reconnecting") is never clipped mid-letter. */
+  min-width: 176px;
+  padding: 0 16px;
+  box-sizing: border-box;
+  background: var(--gd-surface, #ffffff);
+  border-radius: var(--gd-radius-control, 10px);
+  overflow: hidden;
+  cursor: default;
+
+  --mt-dot: var(--gd-ink-2, #47525e);
+  --mt-label: var(--gd-ink-2, #47525e);
+}
+
+.mt-stream[data-status='live'] {
+  --mt-dot: var(--gd-zone-green, #22d07a);
+  --mt-label: var(--gd-green, #246e47);
+}
+
+.mt-stream[data-status='connecting'],
+.mt-stream[data-status='reconnecting'] {
+  --mt-dot: var(--gd-orange, #ffa51f);
+  --mt-label: var(--mt-amber-ink);
+}
+
+.mt-stream[data-status='lost'] {
+  --mt-dot: var(--gd-red, #ff2d3d);
+  --mt-label: var(--mt-red-ink);
+}
+
+/* A demo stream must never wear the live colours, whatever the socket says.
+   Declared last so it overrides every status rule above. */
+.mt-stream[data-source='demo'] {
+  --mt-dot: var(--gd-orange, #ffa51f);
+  --mt-label: var(--mt-amber-ink);
+  background: #fff7e8;
+  box-shadow: inset 0 0 0 1px rgba(255, 165, 31, 0.55);
+}
+
+.mt-dot {
+  position: relative;
+  flex: 0 0 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mt-dot);
+}
+
+/* A gentle pulse means frames are actually arriving. It runs only while the
+   status is live — a stalled stream must look stalled. */
+.mt-stream[data-status='live'] .mt-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: var(--mt-dot);
+  animation: mt-pulse 2.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes mt-pulse {
+  0%   { transform: scale(0.55); opacity: 0.45; }
+  70%  { transform: scale(1.9);  opacity: 0; }
+  100% { transform: scale(1.9);  opacity: 0; }
+}
+
+.mt-stream-label {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--mt-label);
+  white-space: nowrap;
+}
+
+.mt-stream-fps {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 24px;
+  color: var(--gd-ink-2, #47525e);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- Map layers --------------------------------------------------------- */
+
+.mt-layers {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--gd-control-h, 44px);
+  width: 276px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  background: var(--gd-surface, #ffffff);
+  border-radius: var(--gd-radius-control, 10px);
+  overflow: hidden;
+}
+
+.mt-seg {
+  flex: 0 0 88px;
+  width: 88px;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--gd-ink-2, #47525e);
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease;
+}
+
+.mt-seg:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.mt-seg[aria-pressed='true'] {
+  background: var(--mt-seg-active);
+  font-weight: 700;
+}
+
+.mt-seg[aria-pressed='true']:hover {
+  background: #e1e8ee;
+}
+
+/* ---- Icon buttons ------------------------------------------------------- */
+
+.mt-icon-btn {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gd-radius-control, 10px);
+  background: var(--gd-surface, #ffffff);
+  cursor: pointer;
+  transition: background-color 140ms ease;
+}
+
+.mt-icon-btn:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.mt-icon-btn:active {
+  background: var(--mt-seg-active);
+}
+
+/* Every icon sits in a box with both dimensions set; the img fills it. */
+.mt-icon-box {
+  display: block;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.mt-icon-box-22 {
+  width: 22px;
+  height: 22px;
+}
+
+/* Figma exported the Export glyph on the button's own 44x44 canvas, so the
+   box matches the button and the glyph keeps its designed position. */
+.mt-icon-box-44 {
+  width: 44px;
+  height: 44px;
+}
+
+.mt-icon-box img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Shared ------------------------------------------------------------- */
+
+.mt-seg:focus-visible,
+.mt-icon-btn:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+/* Announced to screen readers, absent from the visual 576x44 frame. */
+.mt-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mt-stream[data-status='live'] .mt-dot::after {
+    animation: none;
+    transform: scale(1);
+    opacity: 0.28;
+  }
+
+  .mt-seg,
+  .mt-icon-btn {
+    transition: none;
+  }
+}

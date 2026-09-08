@@ -1,166 +1,351 @@
-* { box-sizing: border-box; margin: 0; padding: 0; }
+/* ============================================================================
+   GeoDispatch — application shell.
 
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: #0f1117;
-  color: #e2e8f0;
-  height: 100vh;
+   ONLY the three regions of Frame 18 and the map's Leaflet overrides live
+   here. Every component (top bar, rail, details cards, map toolbar) owns its
+   own CSS file and imports it itself.
+
+       +-----------------------------------------------------------+
+       | .app-topbar        96px, white, full width                 |
+       +--------+--------------------------------------------------+
+       | .app-  | .app-map     rounded 16px at the top-left corner  |
+       | rail   |   .map-overlay--*   24px in from every edge       |
+       | 80px   |                                                   |
+       +--------+--------------------------------------------------+
+
+   The frame is 1920x1080 in Figma but is built fluid: the rail and the top
+   bar are the only fixed tracks, the map takes whatever is left.
+
+   Expected markup:
+
+       <div class="app-shell">
+         <header class="app-topbar"> ...TopBar... </header>
+         <nav    class="app-rail">   ...NavRail... </nav>
+         <main   class="app-map">
+           <DisasterMap />                                (.map-canvas)
+           <aside class="map-overlay map-overlay--panel"> ...cards...  </aside>
+           <div   class="map-overlay map-overlay--aside"> ...Hide...   </div>
+           <div   class="map-overlay map-overlay--tr">    ...toolbar... </div>
+         </main>
+       </div>
+   ========================================================================= */
+
+/* ── Shell ───────────────────────────────────────────────────────────────── */
+
+.app-shell {
+  display: grid;
+  grid-template-columns: var(--gd-rail-w) 1fr;
+  grid-template-rows: var(--gd-topbar-h) 1fr;
+  grid-template-areas:
+    'topbar topbar'
+    'rail   map';
+  height: 100%;
+  width: 100%;
   overflow: hidden;
+  background: var(--gd-surface);
+  color: var(--gd-ink);
 }
 
-.app {
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-}
+/* ── Top bar ─────────────────────────────────────────────────────────────
+   Full width, 96 tall. Logo sits 28px in, the right-hand controls stop 24px
+   from the edge. Contents are TopBar.css's business. */
 
-/* ── banner ── */
-.event-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  height: 52px;
-  background: #1a1d27;
-  border-bottom: 1px solid #2d3148;
-  flex-shrink: 0;
-}
-.app-title { font-weight: 700; font-size: 1.1rem; margin-right: 16px; }
-.ws-status { font-size: 0.75rem; font-weight: 600; }
-.ws-status.connected    { color: #34C759; }
-.ws-status.disconnected { color: #FF9500; }
-.banner-left  { display: flex; align-items: center; gap: 12px; }
-.banner-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.banner-chip {
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: #2d3148;
-}
-.banner-chip.disaster-type { background: #3b1f1f; color: #FF6B6B; }
-.banner-chip.severity      { background: #1f2b3b; color: #64B5F6; }
-.banner-chip.warning       { background: #3b2e1f; color: #FF9500; }
-.banner-idle { font-size: 0.8rem; color: #64748b; }
-
-/* ── layout ── */
-.layout {
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-}
-.map-container {
-  flex: 1;
+.app-topbar {
+  grid-area: topbar;
   position: relative;
-}
-
-/* ── sidebar ── */
-.sidebar {
-  width: 300px;
-  background: #1a1d27;
-  border-left: 1px solid #2d3148;
-  overflow-y: auto;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.sidebar-title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: #64748b;
-  text-transform: uppercase;
-  margin-top: 8px;
-}
-.zone-cards { display: flex; flex-direction: column; gap: 8px; }
-.zone-card {
-  background: #22263a;
-  border-radius: 8px;
-  padding: 10px 14px;
-}
-.zone-card-label { font-size: 0.8rem; font-weight: 600; margin-bottom: 6px; }
-.zone-card-stats { display: flex; gap: 12px; font-size: 0.75rem; color: #94a3b8; }
-.zone-card-stats b { color: #e2e8f0; }
-
-/* ── narratives ── */
-.narratives { display: flex; flex-direction: column; gap: 10px; }
-.narrative {
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 0.78rem;
-  line-height: 1.5;
-  background: #22263a;
-}
-.narrative-red    { border-left: 3px solid #FF3B30; }
-.narrative-orange { border-left: 3px solid #FF9500; }
-.narrative-green  { border-left: 3px solid #34C759; }
-.narrative-zone {
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: #64748b;
-  margin-bottom: 4px;
-}
-.narrative-idle { font-size: 0.78rem; color: #475569; }
-
-/* ── toasts ── */
-.toast-container {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 9999;
-  max-width: 360px;
-}
-.toast {
-  border-radius: 8px;
-  padding: 10px 14px;
-  font-size: 0.8rem;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
-}
-.toast-warning { background: #2d2010; border: 1px solid #FF9500; }
-.toast-fatal   { background: #2d1010; border: 1px solid #FF3B30; }
-.toast-header {
-  display: flex;
-  justify-content: space-between;
-  font-weight: 700;
-  margin-bottom: 4px;
-}
-.toast-close {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 0.9rem;
-}
-.toast-body  { color: #cbd5e1; }
-.toast-phone { color: #64748b; font-size: 0.75rem; }
-
-/* ── map overlays ── */
-.epicenter-icon {
-  width: 24px;
-  height: 24px;
+  z-index: var(--gd-z-chrome);
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #FF3B30;
-  font-weight: 900;
-  font-size: 1.2rem;
-  text-shadow: 0 0 6px rgba(255,59,48,0.8);
+  gap: var(--gd-gap);
+  padding: 0 var(--gd-map-inset) 0 28px;
+  background: var(--gd-surface);
+  min-width: 0;
 }
-.device-popup { font-size: 0.8rem; line-height: 1.6; min-width: 140px; }
-.device-popup b { font-size: 0.85rem; }
-.popup-row { color: #555; }
-.zone-tag {
-  display: inline-block;
+
+/* ── Left rail ───────────────────────────────────────────────────────────
+   80 wide, buttons centred on the 48px column. Primary nav pinned to the
+   top, utility nav to the bottom — both 24px from their edge, which is what
+   `space-between` plus this padding gives. */
+
+.app-rail {
+  grid-area: rail;
+  position: relative;
+  z-index: var(--gd-z-chrome);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--gd-map-inset) 0;
+  background: var(--gd-surface);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* ── Map area ────────────────────────────────────────────────────────────
+   Starts where the rail and the top bar end, rounded at that inner corner.
+   `isolation` keeps the overlays' z-indexes from competing with the top bar
+   and rail: everything inside stacks against the map, not the page. */
+
+.app-map {
+  grid-area: map;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  min-width: 0;
+  min-height: 0;
+  border-top-left-radius: var(--gd-radius-card);
+  background: var(--gd-map-bg);
+
+  /* The details panel is 400 wide, but never wider than the map minus its
+     two insets — so a narrow window shrinks the panel instead of pushing
+     the "Hide" button off-screen. Overlays read this, not --gd-panel-w. */
+  --gd-panel-actual: min(var(--gd-panel-w), calc(100% - (var(--gd-map-inset) * 2)));
+}
+
+/* Requesting fullscreen on the map container drops the inner corner. */
+.app-map:fullscreen {
+  border-top-left-radius: 0;
+}
+
+/* ── Overlay positioning helpers ─────────────────────────────────────────
+   Everything that floats over the map is inset 24px from the map area's own
+   edges. Each helper is an absolutely positioned box, so the gaps between
+   them stay live for panning and dot clicks. */
+
+.map-overlay {
+  position: absolute;
+  z-index: var(--gd-z-overlay);
+  max-width: calc(100% - (var(--gd-map-inset) * 2));
+  max-height: calc(100% - (var(--gd-map-inset) * 2));
+}
+
+.map-overlay--tl {
+  top: var(--gd-map-inset);
+  left: var(--gd-map-inset);
+}
+
+.map-overlay--tr {
+  top: var(--gd-map-inset);
+  right: var(--gd-map-inset);
+}
+
+.map-overlay--bl {
+  bottom: var(--gd-map-inset);
+  left: var(--gd-map-inset);
+}
+
+.map-overlay--br {
+  bottom: var(--gd-map-inset);
+  right: var(--gd-map-inset);
+}
+
+/* The device details viewport: top-left, 400 wide, scrolls inside itself
+   when the four cards outgrow the window. */
+.map-overlay--panel {
+  top: var(--gd-map-inset);
+  left: var(--gd-map-inset);
+  width: var(--gd-panel-actual);
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Immediately right of the panel (Figma x=448 = 24 + 400 + 24) — the "Hide"
+   button. It tracks the panel's real width, so it follows on a narrow window;
+   the second term is a floor that stops it being squeezed off the map edge
+   entirely, at the cost of overlapping the panel on a very small window. */
+.map-overlay--aside {
+  top: var(--gd-map-inset);
+  left: min(
+    calc(var(--gd-map-inset) + var(--gd-panel-actual) + var(--gd-map-inset)),
+    calc(100% - var(--gd-map-inset) - var(--gd-control-h))
+  );
+}
+
+/* When the panel is hidden, the same button returns to the top-left corner. */
+.map-overlay--aside.is-collapsed {
+  left: var(--gd-map-inset);
+}
+
+/* ── Leaflet, restyled for the light console ─────────────────────────────
+   DisasterMap.jsx renders <div class="map-canvas"> and builds its markers as
+   divIcons using the class names below. Selectors are doubled up where they
+   have to beat leaflet.css, which loads first. */
+
+.map-canvas,
+.app-map .leaflet-container {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--gd-map-bg);
+  font-family: var(--gd-font);
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-3);
+  outline: none;
+}
+
+/* Leaflet paints its own focus ring on the container on every click. */
+.leaflet-container:focus,
+.leaflet-container:focus-visible {
+  outline: none;
+}
+
+.leaflet-container a {
+  color: var(--gd-ink-2);
+}
+
+/* Zoom control — the design's control language: white, 10px, soft shadow,
+   no hard 2px border. */
+.app-map .leaflet-bar {
+  border: 0;
+  border-radius: var(--gd-radius-control);
+  box-shadow: var(--gd-shadow-card);
+  overflow: hidden;
+}
+
+.app-map .leaflet-bar a,
+.app-map .leaflet-bar a:hover {
+  width: 32px;
+  height: 32px;
+  line-height: 32px;
+  border: 0;
+  border-bottom: 1px solid var(--gd-hairline);
+  background: var(--gd-surface);
+  color: var(--gd-ink-2);
+  font-weight: var(--gd-fw-medium);
+  transition: background var(--gd-dur-fast) var(--gd-ease);
+}
+
+.app-map .leaflet-bar a:last-child {
+  border-bottom: 0;
+}
+
+.app-map .leaflet-bar a:hover {
+  background: var(--gd-field);
+}
+
+.app-map .leaflet-bar a.leaflet-disabled {
+  background: var(--gd-field);
+  color: var(--gd-ink-4);
+}
+
+/* Attribution and scale — present and readable, but never loud. */
+.app-map .leaflet-control-attribution {
+  padding: 2px 8px;
+  border-radius: var(--gd-radius-pill);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--gd-ink-4);
+  font-size: 11px;
+  line-height: 16px;
+}
+
+.app-map .leaflet-control-scale-line {
+  border: 1px solid var(--gd-hairline-strong);
+  border-top: 0;
   padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: 700;
+  border-radius: 0 0 4px 4px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--gd-ink-3);
+  font-size: 11px;
+  line-height: 16px;
+  text-shadow: none;
 }
-.zone-red    { background: #FFE5E3; color: #FF3B30; }
-.zone-orange { background: #FFF3E0; color: #FF9500; }
-.zone-green  { background: #E8F8EE; color: #34C759; }
+
+/* ── Device tooltip ──────────────────────────────────────────────────────
+   Leaflet's default is a white box with a 1px white border, a dark drop
+   shadow and a CSS-triangle arrow. All three go; what is left matches the
+   cards: white, 10px, DM Sans, the card shadow. */
+
+.leaflet-tooltip.device-tip {
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-surface);
+  color: var(--gd-ink);
+  font-family: var(--gd-font);
+  font-size: 13px;
+  font-weight: var(--gd-fw-medium);
+  line-height: 16px;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+  box-shadow: var(--gd-shadow-card);
+}
+
+/* The arrow is a ::before on the tooltip itself, one rule per direction. */
+.leaflet-tooltip.device-tip::before,
+.leaflet-tooltip.device-tip::after {
+  display: none;
+  content: none;
+  border: 0;
+}
+
+/* ── Epicentre ───────────────────────────────────────────────────────────
+   divIcon html: <div class="epicentre"><span class="epicentre-pulse"></span></div>
+   A solid red core in a white collar, with a ring breathing outwards. The
+   ring is not the only cue — the map also draws the labelled zone bands. */
+
+.epicentre {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.epicentre::after {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--gd-red);
+  box-shadow:
+    0 0 0 3px var(--gd-surface),
+    0 1px 4px rgba(23, 33, 43, 0.35);
+}
+
+.epicentre-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 2px solid var(--gd-red);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: gd-epicentre-pulse 2400ms var(--gd-ease) infinite;
+}
+
+@keyframes gd-epicentre-pulse {
+  0% {
+    transform: scale(1);
+    opacity: 0.85;
+  }
+  70% {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(3.6);
+    opacity: 0;
+  }
+}
+
+/* ── Operator pin ────────────────────────────────────────────────────────
+   "You are here" after Set Location resolves. Ink, not a zone colour: the
+   operator is not a casualty and must not read as one. */
+
+.operator-pin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--gd-ink);
+  box-shadow:
+    0 0 0 3px var(--gd-surface),
+    0 0 0 5px rgba(23, 33, 43, 0.18),
+    0 2px 6px rgba(23, 33, 43, 0.35);
+}

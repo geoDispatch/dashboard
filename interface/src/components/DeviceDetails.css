@@ -1,0 +1,356 @@
+/* Device details viewport — Figma 77:3 / 77:2.
+   Plain CSS. Tokens come from src/styles/tokens.css; the fallbacks repeat the
+   token values verbatim so the panel still renders correctly on its own. */
+
+.dd {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-variation-settings: 'opsz' 14;
+}
+
+.dd__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gd-gap, 16px);
+  width: 400px;
+  flex: 0 0 400px;
+}
+
+/* --- card ---------------------------------------------------------------- */
+
+.dd-card {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gd-gap, 16px);
+  padding: var(--gd-card-pad, 24px);
+  background: var(--gd-surface, #ffffff);
+  border-radius: var(--gd-radius-card, 16px);
+  overflow: hidden;
+}
+
+.dd-card__heading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 32px;
+}
+
+.dd-card__title {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 28px;
+  color: var(--gd-ink, #17212b);
+  word-break: break-word;
+}
+
+/* Heading icons live in a fixed 22px box; each source SVG has its own
+   intrinsic size, so it is sized explicitly and centred inside that box. */
+.dd-card__icon {
+  position: relative;
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+}
+
+.dd-card__icon img {
+  position: absolute;
+  display: block;
+  max-width: none;
+}
+
+.dd-card__icon--overview img {
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+}
+
+.dd-card__icon--status img {
+  top: -1.5px;
+  left: -1.5px;
+  width: 25px;
+  height: 25px;
+}
+
+.dd-card__icon--location img {
+  top: -1px;
+  left: 1px;
+  width: 20px;
+  height: 24px;
+}
+
+.dd-card__icon--ai img {
+  top: 0;
+  left: 0;
+  width: 22px;
+  height: 22px;
+}
+
+/* --- collapse button ----------------------------------------------------- */
+
+.dd-card__collapse {
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.dd-card__collapse:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.dd-card__collapse:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+/* The minus icon is the only glyph Figma ships. The plus affordance is the
+   same real vector drawn twice, the second copy rotated a quarter turn —
+   nothing here is hand-drawn. */
+.dd-card__glyph {
+  position: relative;
+  display: block;
+  width: 16px;
+  height: 16px;
+}
+
+.dd-card__glyph img {
+  position: absolute;
+  top: -0.5px;
+  left: -0.5px;
+  display: block;
+  width: 17px;
+  height: 17px;
+  max-width: none;
+}
+
+/* Swapped instantly, never faded: whether a card is collapsed is state the
+   operator reads at a glance, not decoration. */
+.dd-card__glyph-cross {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+.dd-card__glyph.is-plus .dd-card__glyph-cross {
+  opacity: 1;
+}
+
+/* --- card body ----------------------------------------------------------- */
+
+.dd-card__body {
+  width: 100%;
+}
+
+/* Device identity — masked phone + assigned zone */
+
+.dd-identity {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.dd-identity__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.dd-identity__icon {
+  position: relative;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.dd-identity__icon img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+}
+
+.dd-identity__phone {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--gd-ink, #17212b);
+  word-break: break-word;
+}
+
+/* Colour is set inline from ZONE_COLORS; the zone WORD is always present, so
+   the zone is never encoded by colour alone. */
+.dd-identity__zone {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  word-break: break-word;
+}
+
+/* --- detail rows --------------------------------------------------------- */
+
+.dd-details {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  font-size: 16px;
+  line-height: 24px;
+}
+
+.dd-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--gd-gap, 16px);
+  width: 100%;
+}
+
+.dd-row__label {
+  flex: 0 0 124px;
+  width: 124px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  color: var(--gd-ink-3, #525e6b);
+  word-break: break-word;
+}
+
+.dd-row__value-col {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.dd-row__value {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--gd-ink, #17212b);
+  word-break: break-word;
+}
+
+/* A field the supervisor never sends: the em-dash reads as absence, not data. */
+.dd-row__value.is-missing {
+  color: var(--gd-ink-3, #525e6b);
+}
+
+.dd-row__note {
+  margin: 2px 0 0;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+  color: var(--gd-ink-3, #525e6b);
+  opacity: 0.75;
+}
+
+/* --- empty state --------------------------------------------------------- */
+
+/* Holds the same height as the rows it replaces, so picking a device does not
+   shift the stack. */
+.dd-empty {
+  display: flex;
+  align-items: center;
+  min-height: var(--dd-empty-h, 56px);
+  margin: 0;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  color: var(--gd-ink-3, #525e6b);
+  word-break: break-word;
+}
+
+/* --- hide / show control — Figma 77:2 ------------------------------------ */
+
+.dd-hide {
+  box-sizing: border-box;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 84px;
+  height: var(--gd-control-h, 44px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--gd-radius-control, 10px);
+  background: var(--gd-surface, #ffffff);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.dd-hide:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.dd-hide:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+.dd-hide__label {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 24px;
+  color: var(--gd-ink-2, #47525e);
+  white-space: nowrap;
+}
+
+/* 10x14 chevron rotated a quarter turn inside a 14x10 box, exactly as Figma
+   composes it. */
+.dd-hide__chevron {
+  position: relative;
+  flex: 0 0 14px;
+  width: 14px;
+  height: 10px;
+}
+
+.dd-hide__chevron img {
+  position: absolute;
+  top: -2px;
+  left: 2px;
+  display: block;
+  width: 10px;
+  height: 14px;
+  max-width: none;
+  transform: rotate(90deg);
+}
+
+/* Restoring points the other way. */
+.dd-hide--show .dd-hide__chevron img {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dd-card__collapse,
+  .dd-hide {
+    transition: none;
+  }
+}

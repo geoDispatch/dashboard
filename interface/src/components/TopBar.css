@@ -1,0 +1,521 @@
+/* Top bar — Figma 6:14 (logo) + 60:2 (header controls).
+   Frame 18 geometry: bar h=96, logo 172x48 at x=28/y=24, controls start at
+   x=248 (so a 48px gap after the logo), h=44, gap 16, right edge x=1896 —
+   a 24px inset from the right. Built fluid: only the logo is a fixed width. */
+
+.gd-topbar {
+  position: relative;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 48px;
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--gd-topbar-h, 96px);
+  padding: 0 24px 0 28px;
+  background: var(--gd-surface, #ffffff);
+  font-family: 'DM Sans', system-ui, sans-serif;
+}
+
+/* ── Logo (6:14) ─────────────────────────────────────────────── */
+
+.gd-logo {
+  position: relative;
+  flex: 0 0 172px;
+  width: 172px;
+  height: 48px;
+}
+
+/* The mark's artwork bleeds 13.19% outside its 41.851px box (stroke overhang),
+   exactly as Figma exports it. */
+.gd-logo__mark {
+  position: absolute;
+  left: 0;
+  top: 3.68px;
+  width: 41.851px;
+  height: 41.851px;
+}
+
+.gd-logo__mark img {
+  position: absolute;
+  left: -5.5194px;
+  top: -5.5194px;
+  display: block;
+  width: 52.8888px;
+  height: 52.8888px;
+}
+
+.gd-logo__word {
+  position: absolute;
+  left: 54.27px;
+  top: 0;
+  color: var(--gd-ink, #17212b);
+  font-size: 24.266px;
+  font-weight: 700;
+  line-height: 21.62px;
+  letter-spacing: -0.035em;
+  white-space: nowrap;
+}
+
+.gd-logo__line {
+  display: block;
+}
+
+/* ── Header controls (60:2) ──────────────────────────────────── */
+
+.gd-controls {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: var(--gd-gap, 16px);
+  min-width: 0;
+  height: var(--gd-control-h, 44px);
+}
+
+/* ── Location selector (60:3) ────────────────────────────────── */
+
+.gd-location {
+  position: relative;
+  flex: 0 0 240px;
+  width: 240px;
+  height: var(--gd-control-h, 44px);
+}
+
+.gd-location__trigger {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--gd-radius-control, 10px);
+  background: var(--gd-field, #f6f7f9);
+  color: var(--gd-ink-2, #47525e);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  text-align: left;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.gd-location__trigger:hover,
+.gd-location__trigger.is-open {
+  background: #eef0f3;
+}
+
+.gd-location__trigger:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+.gd-location__pin {
+  position: relative;
+  flex: 0 0 9.1px;
+  width: 9.1px;
+  height: 14px;
+}
+
+.gd-location__pin img {
+  position: absolute;
+  left: -1.4px;
+  top: -1.4px;
+  display: block;
+  width: 11.9px;
+  height: 18.0212px;
+}
+
+.gd-location__label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The resolving state is stated, not spun — it dims and italicises the label
+   so the operator can see the pill is working without a distracting animation. */
+.gd-location__trigger.is-busy .gd-location__label {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+.gd-location__chevron {
+  position: relative;
+  flex: 0 0 12px;
+  width: 12px;
+  height: 14px;
+}
+
+.gd-location__chevron img {
+  position: absolute;
+  left: -0.3px;
+  top: -0.3122px;
+  display: block;
+  width: 12.6px;
+  height: 14.6244px;
+}
+
+/* ── Location dropdown ───────────────────────────────────────── */
+
+.gd-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  box-sizing: border-box;
+  width: 268px;
+  max-height: 360px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid #e7eaee;
+  border-radius: 12px;
+  background: var(--gd-surface, #ffffff);
+  box-shadow: 0 12px 32px rgba(23, 33, 43, 0.14);
+}
+
+.gd-menu__item {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--gd-ink, #17212b);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 22px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gd-menu__item:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.gd-menu__item:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: -2px;
+}
+
+.gd-menu__item[aria-current='true'] {
+  background: var(--gd-field, #f6f7f9);
+  font-weight: 700;
+}
+
+.gd-menu__divider {
+  height: 1px;
+  margin: 6px 4px;
+  background: #e7eaee;
+}
+
+/* ── Search (60:4) ───────────────────────────────────────────── */
+
+.gd-search {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  min-width: 0;
+  height: var(--gd-control-h, 44px);
+  padding: 0 16px;
+  border-radius: var(--gd-radius-control, 10px);
+  background: var(--gd-field, #f6f7f9);
+}
+
+.gd-search:focus-within {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+.gd-search__icon {
+  position: relative;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+}
+
+.gd-search__icon img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.gd-search__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--gd-ink, #17212b);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+  outline: none;
+  appearance: none;
+}
+
+.gd-search__input::placeholder {
+  color: var(--gd-ink-2, #47525e);
+  opacity: 1;
+}
+
+.gd-search__input::-webkit-search-cancel-button,
+.gd-search__input::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+
+/* ── Search results ──────────────────────────────────────────── */
+
+.gd-results {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  box-sizing: border-box;
+  max-height: 380px;
+  padding: 6px;
+  overflow-y: auto;
+  border: 1px solid #e7eaee;
+  border-radius: 12px;
+  background: var(--gd-surface, #ffffff);
+  box-shadow: 0 12px 32px rgba(23, 33, 43, 0.14);
+}
+
+.gd-results__item {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0;
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.gd-results__item:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.gd-results__item:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: -2px;
+}
+
+.gd-results__label {
+  flex: 0 0 auto;
+  color: var(--gd-ink, #17212b);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.gd-results__sub {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--gd-ink-3, #525e6b);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gd-results__zone {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.gd-results__dot {
+  display: block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.gd-results__empty {
+  margin: 0;
+  padding: 12px;
+  color: var(--gd-ink-3, #525e6b);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 22px;
+}
+
+/* ── Notifications (62:2) ────────────────────────────────────── */
+
+/* The exported asset carries its own #f6f7f9 rounded plate, so the button
+   itself stays transparent. */
+.gd-notifications {
+  position: relative;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gd-radius-control, 10px);
+  background: transparent;
+  cursor: pointer;
+}
+
+.gd-notifications img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 44px;
+  height: 44px;
+}
+
+.gd-notifications:hover {
+  filter: brightness(0.97);
+}
+
+.gd-notifications:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+.gd-notifications__badge {
+  position: absolute;
+  top: 4px;
+  right: 3px;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border: 2px solid var(--gd-surface, #ffffff);
+  border-radius: 9px;
+  background: var(--gd-red, #ff2d3d);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Sign in (62:3) / Get Started (62:4) ─────────────────────── */
+
+.gd-signin {
+  display: flex;
+  flex: 0 0 80px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 80px;
+  height: var(--gd-control-h, 44px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gd-radius-control, 10px);
+  background: transparent;
+  color: var(--gd-ink-2, #47525e);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.gd-signin:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+.gd-getstarted {
+  display: flex;
+  flex: 0 0 128px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 128px;
+  height: var(--gd-control-h, 44px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--gd-radius-control, 10px);
+  background: var(--gd-ink, #17212b);
+  color: #ffffff;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 24px;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.gd-getstarted:hover {
+  background: #22303d;
+}
+
+.gd-signin:focus-visible,
+.gd-getstarted:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+/* ── Narrower consoles ───────────────────────────────────────── */
+
+@media (max-width: 1280px) {
+  .gd-topbar {
+    gap: 24px;
+    padding-right: 16px;
+  }
+
+  .gd-location {
+    flex-basis: 200px;
+    width: 200px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .gd-logo {
+    flex-basis: 60px;
+    width: 60px;
+    overflow: hidden;
+  }
+
+  .gd-logo__word {
+    display: none;
+  }
+
+  .gd-signin {
+    display: none;
+  }
+}

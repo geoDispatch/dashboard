@@ -1,113 +1,227 @@
-import { onMount, createEffect } from 'solid-js'
+import { onMount, onCleanup, createEffect } from 'solid-js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ZONE_COLORS } from '../constants/zones'
+import { maskPhone } from '../lib/format'
+
+// The impact map. Leaflet, canvas-rendered — a 50 km radius over a populated
+// region is thousands of dots and SVG markers stop being viable well before that.
+//
+// Zone is never encoded by colour alone: unreachable devices are drawn hollow
+// and rescue-flagged devices carry a ring, so the map still reads for a
+// red/green colour-blind operator.
+
+const DEFAULT_CENTER = [31.0625, -8.4144]   // Al Haouz
+const DEFAULT_ZOOM   = 9
 
 export default function DisasterMap(props) {
-  let mapContainer
+  let container
   let map
-  let impactCircle = null
+  let renderer
+  let impactRings = []
   let epicenterMarker = null
-  const markerMap = new Map()
+  let operatorMarker = null
+  const markers = new Map()   // phone → L.CircleMarker
 
   onMount(() => {
-    map = L.map(mapContainer, {
-      center: [33.9716, -6.8498],
-      zoom: 8,
-      zoomControl: true,
+    map = L.map(container, {
+      center: DEFAULT_CENTER,
+      zoom: DEFAULT_ZOOM,
+      zoomControl: false,
+      preferCanvas: true,
+      attributionControl: false,
     })
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap contributors',
-      maxZoom: 18,
-    }).addTo(map)
+    renderer = L.canvas({ padding: 0.5 })
+
+    L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      {
+        subdomains: 'abcd',
+        maxZoom: 19,
+        attribution: '© OpenStreetMap · © CARTO',
+      },
+    ).addTo(map)
+
+    L.control.zoom({ position: 'bottomright' }).addTo(map)
+    L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map)
+    L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map)
+
+    // Clicking empty map clears the selection — the details panel returns to
+    // its "no device chosen" state.
+    map.on('click', () => props.onSelect?.(null))
+
+    // Hand an imperative handle back so the shell can fly to a region.
+    props.onReady?.({
+      flyTo: (lat, lng, zoom = 11) => map.flyTo([lat, lng], zoom, { duration: 1.2 }),
+      fitEvent: () => fitToEvent(),
+      focusDevice: (phone) => {
+        const m = markers.get(phone)
+        if (m) map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.8 })
+      },
+      invalidate: () => map.invalidateSize(),
+    })
+
+    // The map lives inside a flex panel that resizes with the layout.
+    const ro = new ResizeObserver(() => map.invalidateSize())
+    ro.observe(container)
+    onCleanup(() => ro.disconnect())
   })
 
+  onCleanup(() => {
+    markers.clear()
+    map?.remove()
+  })
+
+  function fitToEvent() {
+    const ev = props.event
+    if (!map || !ev?.epicenter) return
+    const c = L.latLng(ev.epicenter.latitude, ev.epicenter.longitude)
+    map.fitBounds(c.toBounds(ev.radius_km * 2000), { padding: [24, 24] })
+  }
+
+  // ── epicentre + zone rings ────────────────────────────────
   createEffect(() => {
-    const currentEvent = props.event
-    if (!map || !currentEvent) return
+    const ev = props.event
+    if (!map) return
 
-    const { epicenter, radius_km, severity, disaster_type } = currentEvent
-    const center = [epicenter.latitude, epicenter.longitude]
-
-    map.flyTo(center, 10, { duration: 1.5 })
-
-    impactCircle?.remove()
+    impactRings.forEach(r => r.remove())
+    impactRings = []
     epicenterMarker?.remove()
+    epicenterMarker = null
 
-    impactCircle = L.circle(center, {
-      radius:      radius_km * 1000,
-      color:       '#FF3B30',
-      fillColor:   '#FF3B30',
-      fillOpacity: 0.06,
-      weight:      1.5,
-      dashArray:   '6 4',
-    }).addTo(map)
+    if (!ev?.epicenter) return
+
+    const center = [ev.epicenter.latitude, ev.epicenter.longitude]
+    const radius = ev.radius_km ?? 0
+
+    // Rings drawn outermost first so the red band sits on top.
+    const bands = [
+      { frac: 1.00, color: ZONE_COLORS.green },
+      { frac: 0.66, color: ZONE_COLORS.orange },
+      { frac: 0.33, color: ZONE_COLORS.red },
+    ]
+
+    for (const band of bands) {
+      impactRings.push(
+        L.circle(center, {
+          radius: radius * 1000 * band.frac,
+          color: band.color,
+          weight: 1,
+          opacity: 0.38,
+          dashArray: '4 6',
+          fillColor: band.color,
+          fillOpacity: 0.035,
+          interactive: false,
+        }).addTo(map),
+      )
+    }
 
     epicenterMarker = L.marker(center, {
+      zIndexOffset: 1000,
       icon: L.divIcon({
         className: '',
-        html: `<div class="epicenter-icon">✕</div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12],
-      })
+        html: '<div class="epicentre"><span class="epicentre-pulse"></span></div>',
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      }),
     }).addTo(map)
 
-    epicenterMarker.bindPopup(
-      `<b>Epicenter</b><br/>M${severity} ${disaster_type}<br/>${epicenter.latitude.toFixed(4)}, ${epicenter.longitude.toFixed(4)}`
-    )
+    fitToEvent()
   })
 
+  // ── device dots ───────────────────────────────────────────
   createEffect(() => {
+    const devices = props.devices || {}
+    const selected = props.selectedPhone
     if (!map) return
-    const allDevices = props.devices || {}
 
-    Object.values(allDevices).forEach(device => {
-      const { phone, latitude, longitude, zone, reachable, sms_sent, rescue_flag } = device
-      const color   = ZONE_COLORS[zone] ?? '#999'
-      const opacity = reachable ? 0.9 : 0.35
+    for (const device of Object.values(devices)) {
+      const { phone, latitude, longitude } = device
+      if (typeof latitude !== 'number' || typeof longitude !== 'number') continue
 
-      if (markerMap.has(phone)) {
-        const marker = markerMap.get(phone)
-        marker.setLatLng([latitude, longitude])
-        marker.setStyle({ color, fillColor: color, fillOpacity: opacity })
-        marker.getPopup()?.setContent(popupHTML(device))
+      const style = styleFor(device, phone === selected)
+      const existing = markers.get(phone)
+
+      if (existing) {
+        existing.setLatLng([latitude, longitude])
+        existing.setStyle(style)
+        existing.setRadius(style.radius)
+        existing.setTooltipContent(tooltipFor(device))
       } else {
-        const marker = L.circleMarker([latitude, longitude], {
-          radius:      rescue_flag ? 10 : 7,
-          color,
-          fillColor:   color,
-          fillOpacity: opacity,
-          weight:      rescue_flag ? 3 : 1.5,
+        const marker = L.circleMarker([latitude, longitude], { ...style, renderer })
+        marker.bindTooltip(tooltipFor(device), {
+          direction: 'top',
+          offset: [0, -6],
+          className: 'device-tip',
         })
-        marker.bindPopup(popupHTML(device))
+        marker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e)
+          props.onSelect?.(phone)
+        })
         marker.addTo(map)
-        markerMap.set(phone, marker)
+        markers.set(phone, marker)
       }
-    })
+    }
+
+    // Devices never disappear mid-event, but a new event clears the store.
+    if (markers.size > Object.keys(devices).length) {
+      for (const [phone, marker] of markers) {
+        if (!devices[phone]) {
+          marker.remove()
+          markers.delete(phone)
+        }
+      }
+    }
   })
 
-  return (
-    <div
-      ref={mapContainer}
-      style={{ width: '100%', height: '100%' }}
-    />
-  )
+  // ── operator position (Set location) ──────────────────────
+  createEffect(() => {
+    const loc = props.operator
+    if (!map) return
+    operatorMarker?.remove()
+    operatorMarker = null
+    if (!loc) return
+
+    operatorMarker = L.marker([loc.latitude, loc.longitude], {
+      zIndexOffset: 900,
+      icon: L.divIcon({
+        className: '',
+        html: '<div class="operator-pin"></div>',
+        iconSize: [16, 16],
+        iconAnchor: [8, 8],
+      }),
+    })
+      .bindTooltip(
+        `You are here · ${loc.source === 'gps' ? 'GPS' : loc.source === 'ip' ? 'IP estimate' : 'manual'}`,
+        { direction: 'top', className: 'device-tip' },
+      )
+      .addTo(map)
+  })
+
+  return <div ref={container} class="map-canvas" />
 }
 
-function maskPhone(phone) {
-  if (!phone || phone.length < 6) return phone || ''
-  return phone.slice(0, 5) + '** *** ' + phone.slice(-3)
+function styleFor(device, isSelected) {
+  const color = ZONE_COLORS[device.zone] ?? '#8A93A0'
+  const rescue = !!device.rescue_flag
+  const reachable = !!device.reachable
+
+  return {
+    // Rescue dots are larger and ringed; selection adds a further step up.
+    radius: isSelected ? 9 : rescue ? 6.5 : 4.5,
+    color: isSelected ? '#FFFFFF' : color,
+    weight: isSelected ? 2.5 : rescue ? 2 : reachable ? 0.5 : 1.5,
+    opacity: 1,
+    fillColor: color,
+    // Unreachable devices are hollow — the second channel for reachability.
+    fillOpacity: reachable ? 0.92 : 0.12,
+  }
 }
 
-function popupHTML(d) {
-  return `
-    <div class="device-popup">
-      <b>${maskPhone(d.phone)}</b>
-      <div class="popup-row">Zone <span class="zone-tag zone-${d.zone}">${d.zone ? d.zone.toUpperCase() : ''}</span></div>
-      <div class="popup-row">${d.reachable   ? '📶 Reachable'   : '📵 Unreachable'}</div>
-      <div class="popup-row">${d.sms_sent    ? '💬 SMS sent'    : '💬 No SMS'}</div>
-      <div class="popup-row">${d.rescue_flag ? '🚁 Rescue flagged' : ''}</div>
-    </div>
-  `
+function tooltipFor(d) {
+  const zone = d.zone ? d.zone.toUpperCase() : '—'
+  const reach = d.reachable ? 'reachable' : 'unreachable'
+  const rescue = d.rescue_flag ? ' · rescue' : ''
+  return `${maskPhone(d.phone)} · ${zone} · ${reach}${rescue}`
 }
