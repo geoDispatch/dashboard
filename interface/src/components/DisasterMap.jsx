@@ -10,10 +10,22 @@ import { maskPhone } from '../lib/format'
 // Zone is never encoded by colour alone: unreachable devices are drawn hollow
 // and rescue-flagged devices carry a ring, so the map still reads for a
 // red/green colour-blind operator.
+//
+// props:
+//   event, devices, selectedPhone, operator, onSelect, onReady
+//   layers   — { zones, devices, shelters }; each key genuinely adds or removes
+//              its objects from the map rather than just hiding them. Omit the
+//              prop entirely and zones + devices draw, shelters do not.
+//   shelters — [{ name, latitude, longitude, occupied, capacity, anchor }];
+//              entries without coordinates are skipped, never guessed at.
 
 const DEFAULT_CENTER = [31.0625, -8.4144]   // Al Haouz
 const DEFAULT_ZOOM   = 9
 const TILE_MAX_ZOOM  = 16   // the Esri light-gray canvas stops here
+
+// Defaults for when no `layers` prop is passed at all. Once it IS passed it is
+// read literally, so a key the caller left out means "off", not "on".
+const LAYER_DEFAULTS = { zones: true, devices: true, shelters: false }
 
 export default function DisasterMap(props) {
   let container
@@ -22,7 +34,13 @@ export default function DisasterMap(props) {
   let impactRings = []
   let epicenterMarker = null
   let operatorMarker = null
+  let shelterMarkers = []
   const markers = new Map()   // phone → L.CircleMarker
+
+  const layerOn = (key) => {
+    if (!props.layers) return LAYER_DEFAULTS[key]
+    return !!props.layers[key]
+  }
 
   onMount(() => {
     map = L.map(container, {
@@ -94,6 +112,7 @@ export default function DisasterMap(props) {
 
   onCleanup(() => {
     markers.clear()
+    shelterMarkers = []
     map?.remove()
   })
 
@@ -105,8 +124,11 @@ export default function DisasterMap(props) {
   }
 
   // ── epicentre + zone rings ────────────────────────────────
+  // The "Zones" layer owns both: the bands and the epicentre marker are one
+  // reading of the event, so they go together.
   createEffect(() => {
     const ev = props.event
+    const show = layerOn('zones')
     if (!map) return
 
     impactRings.forEach(r => r.remove())
@@ -114,6 +136,7 @@ export default function DisasterMap(props) {
     epicenterMarker?.remove()
     epicenterMarker = null
 
+    if (!show) return
     if (!ev?.epicenter) return
 
     const center = [ev.epicenter.latitude, ev.epicenter.longitude]
@@ -158,7 +181,16 @@ export default function DisasterMap(props) {
   createEffect(() => {
     const devices = props.devices || {}
     const selected = props.selectedPhone
+    const show = layerOn('devices')
     if (!map) return
+
+    // Turning the layer off really removes the dots — the map keeps panning
+    // at full speed instead of dragging thousands of hidden markers around.
+    if (!show) {
+      for (const [, marker] of markers) marker.remove()
+      markers.clear()
+      return
+    }
 
     for (const device of Object.values(devices)) {
       const { phone, latitude, longitude } = device
@@ -196,6 +228,40 @@ export default function DisasterMap(props) {
           markers.delete(phone)
         }
       }
+    }
+  })
+
+  // ── shelters ──────────────────────────────────────────────
+  // Shelters come from the bundled Al Haouz scenario — the supervisor does not
+  // publish them. Only the ones whose name resolves to a known locality carry
+  // coordinates; the rest are listed in the panel and left off the map rather
+  // than dropped at an invented point.
+  createEffect(() => {
+    const show = layerOn('shelters')
+    const list = props.shelters || []
+    if (!map) return
+
+    shelterMarkers.forEach(m => m.remove())
+    shelterMarkers = []
+
+    if (!show) return
+
+    for (const shelter of list) {
+      if (typeof shelter.latitude !== 'number' || typeof shelter.longitude !== 'number') continue
+
+      const marker = L.marker([shelter.latitude, shelter.longitude], {
+        zIndexOffset: 800,
+        icon: L.divIcon({
+          className: '',
+          html: '<div class="shelter-pin"></div>',
+          iconSize: [18, 18],
+          iconAnchor: [9, 9],
+        }),
+      })
+        .bindTooltip(shelterTip(shelter), { direction: 'top', className: 'device-tip' })
+        .addTo(map)
+
+      shelterMarkers.push(marker)
     }
   })
 
@@ -241,6 +307,14 @@ function styleFor(device, isSelected) {
     // Unreachable devices are hollow — the second channel for reachability.
     fillOpacity: reachable ? 0.92 : 0.12,
   }
+}
+
+// Occupancy is only stated when both numbers are actually present.
+function shelterTip(shelter) {
+  const known =
+    typeof shelter.occupied === 'number' && typeof shelter.capacity === 'number'
+  const occupancy = known ? ` · ${shelter.occupied} of ${shelter.capacity}` : ' · occupancy —'
+  return `Shelter · ${shelter.name}${occupancy}`
 }
 
 function tooltipFor(d) {

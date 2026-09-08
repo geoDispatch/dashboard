@@ -1,0 +1,281 @@
+/* ============================================================================
+   Ops panels — the rail's non-map views (Rescue, Devices, Shelters, Errors).
+
+   These float in exactly the same place as the device details viewport, so
+   the geometry deliberately mirrors DeviceDetails.css: a 400px stack of white
+   16px cards with a 16px gap, and the same 84x44 "Hide" button beside it at a
+   24px gap. Switching rail sections must not move anything.
+   ========================================================================= */
+
+.ops {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  font-family: var(--gd-font, 'DM Sans', system-ui, sans-serif);
+  font-variation-settings: 'opsz' 14;
+}
+
+.ops__stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gd-gap, 16px);
+  width: var(--gd-panel-w, 400px);
+  flex: 0 0 var(--gd-panel-w, 400px);
+}
+
+/* ── Card ────────────────────────────────────────────────────────────────── */
+
+.ops-card {
+  box-sizing: border-box;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gd-gap, 16px);
+  padding: var(--gd-card-pad, 24px);
+  background: var(--gd-surface, #ffffff);
+  border-radius: var(--gd-radius-card, 16px);
+  box-shadow: var(--gd-shadow-card, 0 8px 24px rgba(23, 33, 43, 0.08));
+  overflow: hidden;
+}
+
+.ops-card__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-height: 28px;
+}
+
+.ops-card__title {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--gd-fs-title, 20px);
+  font-weight: var(--gd-fw-bold, 700);
+  line-height: var(--gd-lh-title, 28px);
+  color: var(--gd-ink, #17212b);
+}
+
+/* The count beside the title is meta, never the headline. */
+.ops-card__meta {
+  flex: 0 0 auto;
+  font-size: var(--gd-fs-sm, 14px);
+  font-weight: var(--gd-fw-medium, 500);
+  line-height: var(--gd-lh-sm, 20px);
+  color: var(--gd-ink-4, #8a93a0);
+  white-space: nowrap;
+}
+
+/* ── Empty states and footnotes ─────────────────────────────────────────── */
+
+.ops-empty {
+  margin: 0;
+  font-size: var(--gd-fs-sm, 14px);
+  font-weight: var(--gd-fw-regular, 400);
+  line-height: 20px;
+  color: var(--gd-ink-4, #8a93a0);
+}
+
+.ops-note {
+  margin: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--gd-hairline, rgba(23, 33, 43, 0.08));
+  font-size: var(--gd-fs-xs, 12px);
+  line-height: var(--gd-lh-xs, 16px);
+  color: var(--gd-ink-4, #8a93a0);
+}
+
+/* ── Stat rows (Devices panel) ──────────────────────────────────────────── */
+
+.ops-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ops-stat {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ops-stat__label {
+  flex: 0 0 var(--gd-label-w, 124px);
+  font-size: var(--gd-fs-base, 16px);
+  font-weight: var(--gd-fw-regular, 400);
+  line-height: var(--gd-lh-base, 24px);
+  color: var(--gd-ink-3, #525e6b);
+}
+
+.ops-stat__value {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: right;
+  font-size: var(--gd-fs-base, 16px);
+  font-weight: var(--gd-fw-medium, 500);
+  line-height: var(--gd-lh-base, 24px);
+  color: var(--gd-ink, #17212b);
+}
+
+/* A value the supervisor never sent renders as a dash — quieter than a number
+   so it never reads as one. */
+.ops-stat__value.is-missing {
+  color: var(--gd-ink-4, #8a93a0);
+  font-weight: var(--gd-fw-regular, 400);
+}
+
+/* ── Lists ──────────────────────────────────────────────────────────────── */
+
+.ops-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.ops-list__item {
+  display: block;
+}
+
+.ops-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: var(--gd-radius-control, 10px);
+  text-align: left;
+  background: transparent;
+  transition: background var(--gd-dur-fast, 120ms) var(--gd-ease, ease);
+}
+
+button.ops-row:hover {
+  background: var(--gd-field, #f6f7f9);
+}
+
+button.ops-row:disabled {
+  opacity: 0.6;
+}
+
+button.ops-row:disabled:hover {
+  background: transparent;
+}
+
+.ops-row.is-selected {
+  background: var(--gd-field-hover, #eef0f3);
+  box-shadow: inset 0 0 0 1px var(--gd-hairline-strong, rgba(23, 33, 43, 0.14));
+}
+
+/* A static row is a read-only list entry — no hover, no pointer. */
+.ops-row--static {
+  cursor: default;
+}
+
+.ops-row.is-fatal {
+  background: var(--gd-red-soft, rgba(255, 45, 61, 0.1));
+}
+
+.ops-row__main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ops-row__title {
+  font-size: var(--gd-fs-base, 16px);
+  font-weight: var(--gd-fw-medium, 500);
+  line-height: var(--gd-lh-base, 24px);
+  color: var(--gd-ink, #17212b);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-row__sub {
+  font-size: var(--gd-fs-xs, 12px);
+  line-height: var(--gd-lh-xs, 16px);
+  color: var(--gd-ink-4, #8a93a0);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-row__side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  flex: 0 0 auto;
+}
+
+.ops-row__pri {
+  font-size: var(--gd-fs-xs, 12px);
+  line-height: var(--gd-lh-xs, 16px);
+  color: var(--gd-ink-4, #8a93a0);
+  white-space: nowrap;
+}
+
+.ops-row__word {
+  font-size: var(--gd-fs-sm, 14px);
+  font-weight: var(--gd-fw-medium, 500);
+  line-height: var(--gd-lh-sm, 20px);
+  color: var(--gd-ink-2, #47525e);
+  white-space: nowrap;
+}
+
+/* "At capacity" / "Fatal" — the one state that must not read as routine. */
+.ops-row__word.is-full {
+  color: var(--gd-red, #ff2d3d);
+}
+
+/* ── Zone word ──────────────────────────────────────────────────────────
+   The dot is decoration; the word carries the meaning. Colour is only ever
+   the second channel. */
+
+.ops-zone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--gd-fs-sm, 14px);
+  font-weight: var(--gd-fw-medium, 500);
+  line-height: var(--gd-lh-sm, 20px);
+  white-space: nowrap;
+}
+
+.ops-zone__dot {
+  display: block;
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* ── Actions ────────────────────────────────────────────────────────────── */
+
+.ops-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.ops-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--gd-radius-control, 10px);
+  background: var(--gd-field, #f6f7f9);
+  font-size: var(--gd-fs-sm, 14px);
+  font-weight: var(--gd-fw-medium, 500);
+  line-height: 20px;
+  color: var(--gd-ink-2, #47525e);
+  transition: background var(--gd-dur-fast, 120ms) var(--gd-ease, ease);
+}
+
+.ops-btn:hover {
+  background: var(--gd-field-hover, #eef0f3);
+}

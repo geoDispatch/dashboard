@@ -349,3 +349,180 @@
     0 0 0 5px rgba(23, 33, 43, 0.18),
     0 2px 6px rgba(23, 33, 43, 0.35);
 }
+
+/* ── Shell placement for the chrome components ───────────────────────────
+   TopBar and NavRail already carry their full Figma geometry — the 96px bar
+   with its 28/24px insets, the 80px rail with its 16px inset and its
+   top/bottom anchoring. They are placed straight into the grid rather than
+   wrapped in .app-topbar / .app-rail, which would double every one of those
+   paddings. The two rules below are placement only. */
+
+.app-shell > .gd-topbar {
+  grid-area: topbar;
+  z-index: var(--gd-z-chrome);
+}
+
+.app-shell > .navrail {
+  grid-area: rail;
+  z-index: var(--gd-z-chrome);
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* ── Left overlay stack ──────────────────────────────────────────────────
+   DeviceDetails and the ops panels each render their own 400px card stack
+   with the 84x44 "Hide" button beside it, so both live in one overlay box
+   rather than in the separate --panel / --aside pair. The stack scrolls
+   inside itself; the Hide button stays pinned at the top next to it. */
+
+.map-overlay--stack {
+  top: var(--gd-map-inset);
+  left: var(--gd-map-inset);
+  display: flex;
+  align-items: flex-start;
+}
+
+.map-overlay--stack .dd__stack,
+.map-overlay--stack .ops__stack {
+  max-height: calc(100vh - var(--gd-topbar-h) - (var(--gd-map-inset) * 2));
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* The panel is 400px, but never wider than the map minus its two insets. */
+.map-overlay--stack .dd__stack,
+.map-overlay--stack .ops__stack {
+  width: var(--gd-panel-actual);
+  flex: 0 1 var(--gd-panel-actual);
+}
+
+/* ── Shelter marker ──────────────────────────────────────────────────────
+   divIcon html: <div class="shelter-pin"></div>. A shelter is not a casualty
+   and must not read as a zone: it is a square, in ink, so it is separable
+   from every round device dot at a glance and without colour. */
+
+.shelter-pin {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: var(--gd-surface);
+  border: 3px solid var(--gd-ink-2);
+  box-shadow: 0 1px 4px rgba(23, 33, 43, 0.35);
+}
+
+/* ── Stream state strip ──────────────────────────────────────────────────
+   Bottom-left of the map. Present whenever the console is anything other
+   than plainly live on the supervisor — including a healthy demo, which
+   still has to say that it is a demo. */
+
+.app-strip {
+  box-sizing: border-box;
+  width: min(420px, calc(100% - (var(--gd-map-inset) * 2)));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: var(--gd-radius-card);
+  background: var(--gd-surface);
+  box-shadow: var(--gd-shadow-card);
+  border-left: 4px solid var(--gd-ink-4);
+}
+
+.app-strip--degraded {
+  border-left-color: var(--gd-orange);
+}
+
+.app-strip--fatal {
+  border-left-color: var(--gd-red);
+}
+
+.app-strip__title {
+  margin: 0;
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-base);
+  color: var(--gd-ink);
+}
+
+.app-strip__body {
+  margin: 0;
+  font-size: var(--gd-fs-sm);
+  line-height: 20px;
+  color: var(--gd-ink-3);
+}
+
+.app-strip__detail {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+  word-break: break-word;
+}
+
+.app-strip__actions {
+  display: flex;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.app-strip__btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: 20px;
+  color: var(--gd-ink-2);
+  transition: background var(--gd-dur-fast) var(--gd-ease);
+}
+
+.app-strip__btn:hover {
+  background: var(--gd-field-hover);
+}
+
+/* ── Transient note ──────────────────────────────────────────────────────
+   The one place the console admits what it cannot do: no auth service, a
+   refused fullscreen, a declined location. Top-centre of the map, clears
+   itself after a few seconds. */
+
+.app-note {
+  top: var(--gd-map-inset);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: var(--gd-z-toast);
+  margin: 0;
+  max-width: min(520px, calc(100% - (var(--gd-map-inset) * 2)));
+  padding: 12px 16px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-ink);
+  color: var(--gd-surface);
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: 20px;
+  box-shadow: var(--gd-shadow-pop);
+}
+
+/* ── Fatal banner ────────────────────────────────────────────────────────
+   Outside the map, so it survives every rail view and the hidden panel. */
+
+.app-fatal {
+  position: fixed;
+  left: 50%;
+  bottom: var(--gd-map-inset);
+  transform: translateX(-50%);
+  z-index: var(--gd-z-toast);
+  margin: 0;
+  max-width: min(680px, calc(100vw - 48px));
+  padding: 12px 18px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-red);
+  color: #ffffff;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: 20px;
+  box-shadow: var(--gd-shadow-pop);
+}
