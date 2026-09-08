@@ -35,7 +35,7 @@ export default function DisasterMap(props) {
     renderer = L.canvas({ padding: 0.5 })
 
     L.tileLayer(
-      'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+      'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
       {
         subdomains: 'abcd',
         maxZoom: 19,
@@ -60,6 +60,19 @@ export default function DisasterMap(props) {
         if (m) map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.8 })
       },
       invalidate: () => map.invalidateSize(),
+
+      // Leaflet's own geolocation — no third-party service, no API key.
+      // The browser resolves it from GPS, Wi-Fi or IP, whichever it has.
+      locate: () => new Promise((resolve) => {
+        map.once('locationfound', (e) => resolve({
+          latitude:  e.latlng.lat,
+          longitude: e.latlng.lng,
+          accuracyM: e.accuracy,
+          source:    'browser',
+        }))
+        map.once('locationerror', () => resolve(null))
+        map.locate({ setView: true, maxZoom: 11, enableHighAccuracy: false, timeout: 8000 })
+      }),
     })
 
     // The map lives inside a flex panel that resizes with the layout.

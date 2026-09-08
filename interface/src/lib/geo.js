@@ -67,8 +67,8 @@ export function nearestRegion(lat, lng) {
 }
 
 // ── "Set location" ────────────────────────────────────────────
-// Browser geolocation first (precise, needs consent), IP lookup as the
-// fallback. Both are best-effort: the caller must handle null.
+// Best-effort and keyless: the caller must handle null and fall back to
+// picking a region by hand.
 
 export function browserLocation({ timeout = 8000 } = {}) {
   return new Promise((resolve) => {
@@ -78,7 +78,7 @@ export function browserLocation({ timeout = 8000 } = {}) {
         latitude:  pos.coords.latitude,
         longitude: pos.coords.longitude,
         accuracyM: pos.coords.accuracy,
-        source:    'gps',
+        source:    'browser',
       }),
       () => resolve(null),
       { timeout, maximumAge: 60_000, enableHighAccuracy: false },
@@ -86,39 +86,14 @@ export function browserLocation({ timeout = 8000 } = {}) {
   })
 }
 
-const IP_ENDPOINTS = [
-  { url: 'https://ipapi.co/json/', parse: (j) => ({
-      latitude: j.latitude, longitude: j.longitude,
-      city: j.city, region: j.region, country: j.country_name, ip: j.ip,
-    }) },
-  { url: 'https://ipwho.is/', parse: (j) => ({
-      latitude: j.latitude, longitude: j.longitude,
-      city: j.city, region: j.region, country: j.country, ip: j.ip,
-    }) },
-]
-
-export async function ipLocation({ timeout = 6000 } = {}) {
-  for (const ep of IP_ENDPOINTS) {
-    try {
-      const ctrl = new AbortController()
-      const timer = setTimeout(() => ctrl.abort(), timeout)
-      const res = await fetch(ep.url, { signal: ctrl.signal })
-      clearTimeout(timer)
-      if (!res.ok) continue
-      const parsed = ep.parse(await res.json())
-      if (typeof parsed.latitude === 'number' && typeof parsed.longitude === 'number') {
-        return { ...parsed, accuracyM: 25_000, source: 'ip' }
-      }
-    } catch {
-      // try the next provider
-    }
-  }
-  return null
-}
-
 // Resolve the operator's position, then name the region it falls in.
-export async function resolveLocation({ preferGps = true } = {}) {
-  const fix = (preferGps ? await browserLocation() : null) ?? (await ipLocation())
+//
+// The browser's Geolocation API is the only source — it already resolves from
+// GPS, Wi-Fi or IP, whichever the device has, so there is no third-party
+// geolocation service to call and no API key to hold. Leaflet exposes the same
+// thing as map.locate(); DisasterMap's onReady handle wraps it.
+export async function resolveLocation({ locate } = {}) {
+  const fix = locate ? await locate() : await browserLocation()
   if (!fix) return null
   const region = nearestRegion(fix.latitude, fix.longitude)
   return {

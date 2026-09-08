@@ -70,11 +70,6 @@ export default function TopBar(props) {
     props.onUseMyLocation?.()
   }
 
-  function locateByIp() {
-    setMenuOpen(false)
-    props.onLocateByIp?.()
-  }
-
   function selectRegion(name) {
     setMenuOpen(false)
     props.onSelectRegion?.(name)
@@ -132,14 +127,6 @@ export default function TopBar(props) {
                 onClick={useMyLocation}
               >
                 Use my location
-              </button>
-              <button
-                type="button"
-                class="gd-menu__item"
-                role="menuitem"
-                onClick={locateByIp}
-              >
-                Locate by IP
               </button>
               <div class="gd-menu__divider" role="separator" />
               <For each={props.regions || []}>

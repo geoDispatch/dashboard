@@ -1,14 +1,17 @@
 import { createSignal } from 'solid-js'
-import { resolveLocation, ipLocation, browserLocation, nearestRegion, MOROCCO_REGIONS } from '../lib/geo'
+import { resolveLocation, browserLocation, nearestRegion, MOROCCO_REGIONS } from '../lib/geo'
 
 // "Set location" for the region selector.
 //
 // There is no region query on the supervisor (agent.md §6) — the selector is a
 // client-side view control. It resolves where the operator actually is, names
 // the Moroccan region that contains them, and hands the caller a point to fly
-// the map to. Browser geolocation is tried first because it is precise and
-// consented; IP lookup is the fallback and is labelled as such, since an IP fix
-// can be tens of kilometres out.
+// the map to.
+//
+// The position comes from the map's own geolocation (Leaflet map.locate(), or
+// the browser Geolocation API directly). That already resolves from GPS, Wi-Fi
+// or IP depending on the device, so there is no third-party lookup service and
+// no API key involved. If the operator declines it, they pick a region by hand.
 
 const STORAGE_KEY = 'geodispatch.region'
 
@@ -42,15 +45,19 @@ export function useOperatorLocation({ onLocated } = {}) {
     return loc
   }
 
-  /** Resolve where the operator is: GPS if granted, IP otherwise. */
-  async function locate({ preferGps = true } = {}) {
+  /**
+   * Resolve where the operator is.
+   * Pass the map handle's `locate` so Leaflet does it; falls back to the
+   * browser Geolocation API when no map handle is available yet.
+   */
+  async function locate({ locate: mapLocate } = {}) {
     setStatus('locating')
     setError(null)
     try {
-      const fix = await resolveLocation({ preferGps })
+      const fix = await resolveLocation({ locate: mapLocate })
       if (!fix) {
-        setStatus('failed')
-        setError('Could not determine location from GPS or IP.')
+        setStatus('denied')
+        setError('Location unavailable — pick a region below instead.')
         return null
       }
       setStatus('ok')
@@ -60,25 +67,6 @@ export function useOperatorLocation({ onLocated } = {}) {
       setError(String(err?.message ?? err))
       return null
     }
-  }
-
-  /** IP only — no permission prompt, coarser fix. */
-  async function locateByIp() {
-    setStatus('locating')
-    setError(null)
-    const fix = await ipLocation()
-    if (!fix) {
-      setStatus('failed')
-      setError('IP lookup failed.')
-      return null
-    }
-    const region = nearestRegion(fix.latitude, fix.longitude)
-    setStatus('ok')
-    return apply({
-      ...fix,
-      name: region?.name ?? fix.city ?? 'Unknown region',
-      regionDistanceKm: region?.distanceKm ?? null,
-    })
   }
 
   /** Pick a region by hand from the list of twelve. */
@@ -96,7 +84,7 @@ export function useOperatorLocation({ onLocated } = {}) {
 
   return {
     location, status, error,
-    locate, locateByIp, selectRegion, clear,
+    locate, selectRegion, clear,
     regions: MOROCCO_REGIONS,
     browserLocation,
   }
