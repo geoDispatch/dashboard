@@ -173,6 +173,22 @@
    divIcons using the class names below. Selectors are doubled up where they
    have to beat leaflet.css, which loads first. */
 
+/* The global reset in index.css sets `max-width: 100%` on img/svg/canvas.
+   Leaflet's panes are absolutely positioned with no width, so inside them
+   `100%` resolves to 0 and the canvas renderer collapses — every device dot
+   and zone ring silently disappears while the tiles keep drawing. Leaflet
+   sizes these elements itself in pixels, so opt them out of the reset. */
+.leaflet-container img,
+.leaflet-container canvas,
+.leaflet-pane img,
+.leaflet-pane canvas,
+.leaflet-tile,
+.leaflet-marker-icon,
+.leaflet-image-layer {
+  max-width: none;
+  max-height: none;
+}
+
 .map-canvas,
 .app-map .leaflet-container {
   position: absolute;

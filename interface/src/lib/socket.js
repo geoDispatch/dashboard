@@ -26,23 +26,52 @@ export function createStream(actions, {
   let stopMock = null
   let reconnectTimer = null
   let demoTimer = null
-  let flushHandle = null
+  let rafHandle = null
+  let fallbackTimer = null
+  let flushScheduled = false
   let attempts = 0
   let closed = false
 
   const queue = []
   const fpsWindow = []
 
+  // Frames are dropped rather than queued without bound. The supervisor already
+  // drops when its own outbound channel fills, so an unbounded client queue buys
+  // nothing except memory.
+  const MAX_QUEUE = 20_000
+
   // ── frame plumbing ──────────────────────────────────────────
+  //
+  // Draining is scheduled on an animation frame so a burst lands in one batch,
+  // BUT requestAnimationFrame does not fire while the tab is hidden. A console
+  // on a second monitor, minimised, or on a wall display the OS has backgrounded
+  // would then queue frames forever and appear frozen at 0/s — and dump the
+  // whole backlog the moment it regained focus. So a timer runs alongside it and
+  // whichever fires first drains the queue.
   function enqueue(frames) {
     for (const f of frames) queue.push(f)
-    if (flushHandle == null) {
-      flushHandle = requestAnimationFrame(flush)
-    }
+    if (queue.length > MAX_QUEUE) queue.splice(0, queue.length - MAX_QUEUE)
+    scheduleFlush()
+  }
+
+  function scheduleFlush() {
+    if (flushScheduled) return
+    flushScheduled = true
+    rafHandle = requestAnimationFrame(runFlush)
+    fallbackTimer = setTimeout(runFlush, 50)
+  }
+
+  function runFlush() {
+    if (!flushScheduled) return
+    flushScheduled = false
+    if (rafHandle != null) cancelAnimationFrame(rafHandle)
+    if (fallbackTimer != null) clearTimeout(fallbackTimer)
+    rafHandle = null
+    fallbackTimer = null
+    flush()
   }
 
   function flush() {
-    flushHandle = null
     if (!queue.length) return
     const frames = queue.splice(0, queue.length)
     batch(() => {
@@ -142,7 +171,8 @@ export function createStream(actions, {
     clearTimeout(reconnectTimer)
     clearTimeout(demoTimer)
     clearInterval(fpsTimer)
-    if (flushHandle != null) cancelAnimationFrame(flushHandle)
+    if (rafHandle != null) cancelAnimationFrame(rafHandle)
+    if (fallbackTimer != null) clearTimeout(fallbackTimer)
     stopDemo()
     ws?.close()
   })
