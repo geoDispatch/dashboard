@@ -1,7 +1,7 @@
 import { createSignal, onMount, onCleanup, Show, For } from 'solid-js'
 import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
 import { maskPhone } from '../lib/format'
-import markIcon from '../assets/icons/geo-dispatch-mark.svg'
+import logoLockup from '../assets/icons/geo-dispatch-logo.svg'
 import pinIcon from '../assets/icons/location-pin.svg'
 import chevronIcon from '../assets/icons/chevron-down-up.svg'
 import searchIcon from '../assets/icons/search.svg'
@@ -89,14 +89,13 @@ export default function TopBar(props) {
 
   return (
     <header class="gd-topbar" data-node-id="6:95">
+      {/* The whole lockup as one exported asset, not a mark plus live text.
+          The wordmark is set in Test Die Grotesk, which is a licensed test
+          font we cannot ship — rebuilding it in DM Sans gave the wrong
+          letterforms and spacing. Figma's SVG export carries the glyphs as
+          outlines, so it matches the design exactly and depends on no font. */}
       <div class="gd-logo" data-node-id="6:14">
-        <span class="gd-logo__mark" data-node-id="6:18">
-          <img src={markIcon} alt="" />
-        </span>
-        <span class="gd-logo__word" data-node-id="6:15">
-          <span class="gd-logo__line">GEO</span>
-          <span class="gd-logo__line">DISPATCH</span>
-        </span>
+        <img class="gd-logo__lockup" src={logoLockup} alt="GeoDispatch" />
       </div>
 
       <div class="gd-controls" data-node-id="60:2">

@@ -20,45 +20,18 @@
 /* ── Logo (6:14) ─────────────────────────────────────────────── */
 
 .gd-logo {
-  position: relative;
-  flex: 0 0 172px;
-  width: 172px;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
   height: 48px;
 }
 
-/* The mark's artwork bleeds 13.19% outside its 41.851px box (stroke overhang),
-   exactly as Figma exports it. */
-.gd-logo__mark {
-  position: absolute;
-  left: 0;
-  top: 3.68px;
-  width: 41.851px;
-  height: 41.851px;
-}
-
-.gd-logo__mark img {
-  position: absolute;
-  left: -5.5194px;
-  top: -5.5194px;
+/* One exported asset: mark and wordmark together, text already outlined.
+   178x53 in Figma, rendered at the 172px width the header reserves. */
+.gd-logo__lockup {
   display: block;
-  width: 52.8888px;
-  height: 52.8888px;
-}
-
-.gd-logo__word {
-  position: absolute;
-  left: 54.27px;
-  top: 0;
-  color: var(--gd-ink, #17212b);
-  font-size: 24.266px;
-  font-weight: 700;
-  line-height: 21.62px;
-  letter-spacing: -0.035em;
-  white-space: nowrap;
-}
-
-.gd-logo__line {
-  display: block;
+  width: 172px;
+  height: auto;
 }
 
 /* ── Header controls (60:2) ──────────────────────────────────── */
@@ -374,10 +347,14 @@
 
 /* ── Notifications (62:2) ────────────────────────────────────── */
 
-/* The exported asset carries its own #f6f7f9 rounded plate, so the button
-   itself stays transparent. */
+/* The plate used to be baked into the exported SVG, along with a drop shadow
+   and an empty clip path that made the bell vanish entirely. The asset is now
+   just the glyph, so the button carries its own surface. */
 .gd-notifications {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex: 0 0 44px;
   width: 44px;
   height: 44px;
@@ -385,16 +362,14 @@
   padding: 0;
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
-  background: transparent;
+  background: var(--gd-field, #f6f7f9);
   cursor: pointer;
 }
 
 .gd-notifications img {
-  position: absolute;
-  inset: 0;
   display: block;
-  width: 44px;
-  height: 44px;
+  width: 20px;
+  height: 22px;
 }
 
 .gd-notifications:hover {
@@ -505,14 +480,8 @@
 }
 
 @media (max-width: 1024px) {
-  .gd-logo {
-    flex-basis: 60px;
-    width: 60px;
-    overflow: hidden;
-  }
-
-  .gd-logo__word {
-    display: none;
+  .gd-logo__lockup {
+    width: 132px;
   }
 
   .gd-signin {

@@ -650,7 +650,17 @@
 .map-overlay--tr.app-tr {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 12px;
+  row-gap: 12px;
+
+  /* Keep clear of the details column and its Hide button. Without this the
+     cluster kept its full width and ran straight into the Hide button on a
+     1280-wide window, printing the simulation label on top of it. Below that
+     width it wraps onto a second row instead of colliding.
+     400 panel + 84 Hide + three 24px gaps = 556. */
+  flex-wrap: wrap;
+  max-width: calc(100% - 556px);
 }
 
 .app-sim {

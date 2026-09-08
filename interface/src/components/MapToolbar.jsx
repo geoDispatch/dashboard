@@ -125,7 +125,7 @@ export default function MapToolbar(props) {
         title="Export JSON"
         onClick={() => props.onExport?.()}
       >
-        <span class="mt-icon-box mt-icon-box-44">
+        <span class="mt-icon-box mt-icon-box-22">
           <img src={exportIcon} alt="" />
         </span>
       </button>

@@ -197,13 +197,6 @@
   height: 22px;
 }
 
-/* Figma exported the Export glyph on the button's own 44x44 canvas, so the
-   box matches the button and the glyph keeps its designed position. */
-.mt-icon-box-44 {
-  width: 44px;
-  height: 44px;
-}
-
 .mt-icon-box img {
   display: block;
   width: 100%;

@@ -81,7 +81,9 @@ export default function DisasterMap(props) {
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
     L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map)
-    L.control.scale({ position: 'bottomleft', imperial: false }).addTo(map)
+    // Bottom-left is the details column's corner — the scale bar rendered
+    // half-hidden behind the cards, reading "2C" instead of "20 km".
+    L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 120 }).addTo(map)
 
     // A click on the map resolves to a zone by distance from the epicentre
     // rather than by hit-testing the ring shapes. Canvas hit-testing is
