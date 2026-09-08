@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="506" height="550" viewBox="0 0 506 550">
+<rect width="506" height="550" fill="#FAFBFC"/>
+<text x="28" y="44" font-family="Outfit, system-ui, sans-serif" font-size="15" font-weight="700" fill="#12151A">GeoDispatch — navigation rail</text>
+<text x="28" y="62" font-family="system-ui, sans-serif" font-size="11" fill="#8A92A0">24×24 · stroke currentColor · round caps</text>
+<rect x="28" y="80" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(80.0,110) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="2.5"/>
+  <path d="M12 3v3.2M12 17.8V21M3 12h3.2M17.8 12H21"/>
+  <path d="M6.4 6.4a8 8 0 0 0 0 11.2M17.6 17.6a8 8 0 0 0 0-11.2" opacity="0.55"/></g>
+<text x="96.0" y="194" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Brand mark</text>
+<text x="96.0" y="208" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">geodispatch-mark.svg</text>
+<rect x="178" y="80" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(230.0,110) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"/>
+  <rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"/>
+  <rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"/>
+  <rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"/></g>
+<text x="246.0" y="194" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Live operations</text>
+<text x="246.0" y="208" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-live-operations.svg</text>
+<rect x="328" y="80" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(380.0,110) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5 3.5 6v14.5L9 18l6 2.5 5.5-2.5V3.5L15 6Z"/>
+  <path d="M9 3.5V18M15 6v14.5"/></g>
+<text x="396.0" y="194" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Impact map</text>
+<text x="396.0" y="208" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-impact-map.svg</text>
+<rect x="28" y="230" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(80.0,260) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/>
+  <circle cx="12" cy="12" r="3.4"/>
+  <path d="m6 6 3.6 3.6M18 6l-3.6 3.6M18 18l-3.6-3.6M6 18l3.6-3.6"/></g>
+<text x="96.0" y="344" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Rescue queue</text>
+<text x="96.0" y="358" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-rescue-queue.svg</text>
+<rect x="178" y="230" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(230.0,260) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.4"/>
+  <path d="M10.8 18.4h2.4"/></g>
+<text x="246.0" y="344" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Devices</text>
+<text x="246.0" y="358" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-devices.svg</text>
+<rect x="328" y="230" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(380.0,260) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M10 20V4.5M16 20v-6M22 20H2"/></g>
+<text x="396.0" y="344" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Analytics</text>
+<text x="396.0" y="358" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-analytics.svg</text>
+<rect x="28" y="380" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(80.0,410) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"/>
+  <path d="M5.5 9.6V20h13V9.6"/>
+  <path d="M9.8 20v-5.4h4.4V20"/></g>
+<text x="96.0" y="494" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Shelters</text>
+<text x="96.0" y="508" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-shelters.svg</text>
+<rect x="178" y="380" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(230.0,410) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/>
+  <circle cx="16" cy="7" r="2.2"/>
+  <circle cx="8" cy="17" r="2.2"/></g>
+<text x="246.0" y="494" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Settings</text>
+<text x="246.0" y="508" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-settings.svg</text>
+<rect x="328" y="380" width="136" height="136" rx="12" fill="#FFFFFF" stroke="#E3E7EC"/>
+<g transform="translate(380.0,410) scale(1.35)" fill="none" stroke="#12151A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 20H6.5A2.5 2.5 0 0 1 4 17.5v-11A2.5 2.5 0 0 1 6.5 4H14"/>
+  <path d="m17 8 4 4-4 4M21 12H10"/></g>
+<text x="396.0" y="494" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#59616F">Sign out</text>
+<text x="396.0" y="508" text-anchor="middle" font-family="ui-monospace, Menlo, monospace" font-size="9" fill="#A8AFBB">nav-sign-out.svg</text>
+</svg>

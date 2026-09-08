@@ -1,0 +1,619 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+  <style>
+    body { margin: 0; background: #0B0E11; }
+    a { color: #8391FF; text-decoration: none; }
+    a:hover { color: #A8B2FF; }
+    .gd *, .gd *::before, .gd *::after { box-sizing: border-box; }
+    .mono { font-family: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+    .lbl { font-size: 9.5px; font-weight: 600; letter-spacing: 0.13em; text-transform: uppercase; color: rgba(255,255,255,0.45); }
+    .pnl { background: #171B21; border: 1px solid rgba(255,255,255,0.075); border-radius: 12px; display: flex; flex-direction: column; overflow: hidden; }
+    .pnl-h { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 14px 11px; border-bottom: 1px solid rgba(255,255,255,0.075); flex: none; }
+    .rail-i { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.34); }
+    .rail-i:hover { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.7); }
+    .btn { font: inherit; font-size: 12px; font-weight: 500; border: 1px solid rgba(255,255,255,0.14); background: transparent; color: rgba(255,255,255,0.70); border-radius: 7px; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; padding: 0 12px; height: 32px; }
+    .btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+    .row-h:hover { background: rgba(255,255,255,0.04); }
+    .scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.14); border-radius: 3px; }
+    .scroll::-webkit-scrollbar-track { background: transparent; }
+    @keyframes gd-ping { 0% { transform: scale(1); opacity: .5 } 70%, 100% { transform: scale(2.5); opacity: 0 } }
+    @keyframes gd-blink { 0%, 100% { opacity: 1 } 50% { opacity: .25 } }
+    @keyframes gd-sweep { to { transform: rotate(360deg) } }
+    .ping { animation: gd-ping 2.4s cubic-bezier(.2,.6,.3,1) infinite; transform-origin: 440px 210px; }
+    .blink { animation: gd-blink 1.7s ease-in-out infinite; }
+    .sweep { animation: gd-sweep 5s linear infinite; transform-origin: 440px 210px; }
+  </style>
+</helmet>
+
+<div class="gd" style="width: 1440px; height: 1024px; display: flex; background: #0B0E11; font-family: Outfit, system-ui, sans-serif; color: #fff; overflow: hidden;">
+
+  <!-- ── ICON RAIL ─────────────────────────────────────────── -->
+  <nav style="width: 72px; flex: none; background: #14171A; border-right: 1px solid rgba(255,255,255,0.075); display: flex; flex-direction: column; align-items: center; padding: 16px 0 18px; gap: 6px;">
+    <div style="width: 38px; height: 38px; border-radius: 11px; background: #001DF3; display: flex; align-items: center; justify-content: center; margin-bottom: 14px;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="2.5"></circle><path d="M12 3v3.2M12 17.8V21M3 12h3.2M17.8 12H21"></path><path d="M6.4 6.4a8 8 0 0 0 0 11.2M17.6 17.6a8 8 0 0 0 0-11.2" opacity="0.55"></path></svg>
+    </div>
+    <div class="rail-i" style="background: rgba(68,87,255,0.16); color: #8391FF;" title="Live operations">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="7.5" rx="1.6"></rect><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.6"></rect><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.6"></rect><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.6"></rect></svg>
+    </div>
+    <div class="rail-i" title="Impact map">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3.5 3.5 6v14.5L9 18l6 2.5 5.5-2.5V3.5L15 6Z"></path><path d="M9 3.5V18M15 6v14.5"></path></svg>
+    </div>
+    <div class="rail-i" style="position: relative;" title="Rescue queue">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><circle cx="12" cy="12" r="3.4"></circle><path d="m6 6 3.6 3.6M18 6l-3.6 3.6M18 18l-3.6-3.6M6 18l3.6-3.6"></path></svg>
+      <span style="position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 4px; background: #FF2D3D; border: 2px solid #14171A;"></span>
+    </div>
+    <div class="rail-i" title="Devices">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.4"></rect><path d="M10.8 18.4h2.4"></path></svg>
+    </div>
+    <div class="rail-i" title="Analytics">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V11M10 20V4.5M16 20v-6M22 20H2"></path></svg>
+    </div>
+    <div class="rail-i" title="Shelters">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 10.5 12 3.5l8.5 7"></path><path d="M5.5 9.6V20h13V9.6"></path><path d="M9.8 20v-5.4h4.4V20"></path></svg>
+    </div>
+    <div style="flex: 1;"></div>
+    <div class="rail-i" title="Settings">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"></path><circle cx="16" cy="7" r="2.2"></circle><circle cx="8" cy="17" r="2.2"></circle></svg>
+    </div>
+    <div class="rail-i" title="Sign out">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M14 20H6.5A2.5 2.5 0 0 1 4 17.5v-11A2.5 2.5 0 0 1 6.5 4H14"></path><path d="m17 8 4 4-4 4M21 12H10"></path></svg>
+    </div>
+  </nav>
+
+  <!-- ── MAIN COLUMN ───────────────────────────────────────── -->
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+
+    <!-- TOPBAR -->
+    <header style="height: 60px; flex: none; border-bottom: 1px solid rgba(255,255,255,0.075); background: #14171A; display: flex; align-items: center; gap: 14px; padding: 0 24px;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 12px 0 11px; border: 1px solid rgba(255,255,255,0.14); border-radius: 9px; background: #1E242B; cursor: pointer;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8391FF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11Z"></path><circle cx="12" cy="10" r="2.4"></circle></svg>
+        <span style="font-size: 13px; font-weight: 600;">Marrakech-Safi</span>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+      </div>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.34)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 6 6 6-6 6"></path></svg>
+      <div style="display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 11px; border-radius: 8px; background: rgba(255,45,61,0.10); border: 1px solid rgba(255,45,61,0.30);">
+        <span style="width: 6px; height: 6px; border-radius: 3px; background: #FF2D3D;" class="blink"></span>
+        <span class="lbl" style="color: #FF2D3D;">Al Haouz · Active</span>
+      </div>
+
+      <div style="flex: 1;"></div>
+
+      <div style="display: flex; align-items: center; gap: 9px; width: 260px; height: 36px; padding: 0 12px; border: 1px solid rgba(255,255,255,0.075); border-radius: 9px; background: #1E242B;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.34)" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"></circle><path d="m16 16 4.5 4.5"></path></svg>
+        <span style="font-size: 12.5px; color: rgba(255,255,255,0.34);">Search device, locality, shelter</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 11px; border-radius: 8px; background: rgba(34,208,122,0.10); border: 1px solid rgba(34,208,122,0.28);">
+        <span style="width: 6px; height: 6px; border-radius: 3px; background: #22D07A;" class="blink"></span>
+        <span class="lbl" style="color: #22D07A;">Stream live</span>
+        <span class="mono" style="font-size: 11px; color: rgba(255,255,255,0.45);">41/s</span>
+      </div>
+
+      <div style="width: 1px; height: 26px; background: rgba(255,255,255,0.075);"></div>
+
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <div style="width: 32px; height: 32px; border-radius: 9px; background: #1E242B; border: 1px solid rgba(255,255,255,0.075); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.45); position: relative;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8.5a6 6 0 1 0-12 0c0 6-2.5 7.5-2.5 7.5h17S18 14.5 18 8.5Z"></path><path d="M13.7 19.5a2 2 0 0 1-3.4 0"></path></svg>
+          <span style="position: absolute; top: -3px; right: -3px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; background: #FF2D3D; color: #fff; font-size: 9.5px; font-weight: 700; display: flex; align-items: center; justify-content: center; border: 2px solid #14171A;">7</span>
+        </div>
+        <div style="width: 32px; height: 32px; border-radius: 9px; background: linear-gradient(140deg, #4457FF, #001DF3); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700;">RB</div>
+        <div style="display: flex; flex-direction: column; gap: 1px;">
+          <span style="font-size: 12.5px; font-weight: 600; line-height: 1.15;">Cmdt. R. Bennani</span>
+          <span style="font-size: 10.5px; color: rgba(255,255,255,0.45); line-height: 1.15;">Protection Civile · Ops</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- CONTENT -->
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 16px; padding: 20px 24px; min-height: 0;">
+
+      <!-- PAGE HEADER -->
+      <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex: none;">
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <h1 style="margin: 0; font-size: 27px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1;">Live operations</h1>
+          <p style="margin: 0; font-size: 13px; color: rgba(255,255,255,0.45); line-height: 1.3;">Seismic event in progress — autonomous triage and dispatch running.</p>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding-top: 3px;">
+          <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 8px; background: #171B21; border: 1px solid rgba(255,255,255,0.075);">
+            <span class="mono" style="font-size: 11.5px; color: #8391FF; font-weight: 600;">AL-HAOUZ-01</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 8px; background: #171B21; border: 1px solid rgba(255,255,255,0.075);">
+            <span class="lbl">Magnitude</span>
+            <span class="mono" style="font-size: 12.5px; font-weight: 700;">6.8</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 8px; background: rgba(255,165,31,0.10); border: 1px solid rgba(255,165,31,0.28);">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#FFA51F" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5 22 20H2Z"></path><path d="M12 10v4M12 16.8v.2"></path></svg>
+            <span class="lbl" style="color: #FFA51F;">Aftershock high</span>
+          </div>
+          <button class="btn">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5"></path><path d="M4 20h16"></path></svg>
+            Export brief
+          </button>
+        </div>
+      </div>
+
+      <!-- KPI ROW -->
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; flex: none;">
+
+        <div class="pnl" style="padding: 15px 16px; gap: 0;">
+          <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; flex-direction: column; gap: 9px;">
+              <span class="lbl">Devices located</span>
+              <span class="mono" style="font-size: 30px; font-weight: 700; line-height: 1;">4,812</span>
+              <div style="display: flex; align-items: center; gap: 6px;">
+                <span style="display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; color: #22D07A;">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M6 11l6-6 6 6"></path></svg>142
+                </span>
+                <span style="font-size: 11.5px; color: rgba(255,255,255,0.34);">in last 30s</span>
+              </div>
+            </div>
+            <svg width="104" height="28" viewBox="0 0 104 28" fill="none" style="margin-top: 2px;">
+              <polygon points="2,26 2.0,26.0 18.7,26.0 35.3,26.0 52.0,19.8 68.7,6.1 85.3,3.5 102.0,2.0 102,26" fill="#4457FF" fill-opacity="0.14"></polygon>
+              <polyline points="2.0,26.0 18.7,26.0 35.3,26.0 52.0,19.8 68.7,6.1 85.3,3.5 102.0,2.0" fill="none" stroke="#4457FF" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"></polyline>
+              <circle cx="102" cy="2" r="2.6" fill="#4457FF"></circle>
+            </svg>
+          </div>
+        </div>
+
+        <div class="pnl" style="padding: 15px 16px; gap: 0;">
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <span class="lbl">Reachable now</span>
+            <div style="display: flex; align-items: baseline; gap: 8px;">
+              <span class="mono" style="font-size: 30px; font-weight: 700; line-height: 1;">4,296</span>
+              <span class="mono" style="font-size: 13px; font-weight: 600; color: #22D07A;">89.3%</span>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              <div style="height: 5px; border-radius: 3px; background: rgba(255,255,255,0.075); overflow: hidden; display: flex;">
+                <div style="width: 89.3%; background: #22D07A; border-radius: 3px;"></div>
+              </div>
+              <span style="font-size: 11.5px; color: rgba(255,255,255,0.34);">516 unreachable · no data or SMS path</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pnl" style="padding: 15px 16px; gap: 0; border-color: rgba(255,45,61,0.32); background: linear-gradient(160deg, rgba(255,45,61,0.09), #171B21 62%);">
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <div style="display: flex; align-items: center; gap: 7px;">
+              <span class="lbl" style="color: #FF2D3D;">Rescue flagged</span>
+              <span style="width: 5px; height: 5px; border-radius: 3px; background: #FF2D3D;" class="blink"></span>
+            </div>
+            <span class="mono" style="font-size: 30px; font-weight: 700; line-height: 1; color: #FF2D3D;">237</span>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 11.5px; color: rgba(255,255,255,0.70);"><b class="mono" style="font-weight: 700;">41</b> teams dispatched</span>
+              <span style="width: 1px; height: 11px; background: rgba(255,255,255,0.14);"></span>
+              <span style="font-size: 11.5px; color: #FFA51F;"><b class="mono" style="font-weight: 700;">196</b> awaiting</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="pnl" style="padding: 15px 16px; gap: 0;">
+          <div style="display: flex; flex-direction: column; gap: 9px;">
+            <span class="lbl">Dispatch latency</span>
+            <div style="display: flex; align-items: baseline; gap: 4px;">
+              <span class="mono" style="font-size: 30px; font-weight: 700; line-height: 1;">3.42</span>
+              <span class="mono" style="font-size: 15px; font-weight: 600; color: rgba(255,255,255,0.45);">s</span>
+              <span style="display: inline-flex; align-items: center; gap: 3px; margin-left: 6px; font-size: 11px; font-weight: 600; color: #22D07A;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7.5"></path></svg>under 4s
+              </span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 3px;">
+              <div style="flex: 1.18; height: 5px; border-radius: 3px 0 0 3px; background: #4457FF;" title="CAMARA 1.18s"></div>
+              <div style="flex: 1.64; height: 5px; background: #8391FF;" title="AI agent 1.64s"></div>
+              <div style="flex: 0.60; height: 5px; border-radius: 0 3px 3px 0; background: #22D07A;" title="SMS 0.60s"></div>
+            </div>
+            <span style="font-size: 11px; color: rgba(255,255,255,0.34);">CAMARA 1.18 · AI 1.64 · SMS 0.60</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- MAP + RIGHT COLUMN -->
+      <div style="display: flex; gap: 16px; height: 400px; flex: none;">
+
+        <!-- MAP -->
+        <div class="pnl" style="flex: 1; min-width: 0;">
+          <div class="pnl-h">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span style="font-size: 13.5px; font-weight: 600;">Live impact map</span>
+              <span class="mono" style="font-size: 10.5px; color: rgba(255,255,255,0.34); padding: 2px 6px; border-radius: 5px; background: rgba(255,255,255,0.05);">31.0625, -8.4144</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 14px;">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #FF2D3D;"></span><span class="lbl" style="color: rgba(255,255,255,0.70);">Red 0–17km</span></span>
+                <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #FFA51F;"></span><span class="lbl" style="color: rgba(255,255,255,0.70);">Orange 17–33</span></span>
+                <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 7px; height: 7px; border-radius: 4px; background: #22D07A;"></span><span class="lbl" style="color: rgba(255,255,255,0.70);">Green 33–50</span></span>
+                <span style="display: inline-flex; align-items: center; gap: 5px;"><span style="width: 8px; height: 8px; border-radius: 5px; border: 1.5px solid #FF2D3D;"></span><span class="lbl" style="color: rgba(255,255,255,0.70);">Rescue</span></span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px; padding-left: 12px; border-left: 1px solid rgba(255,255,255,0.075);">
+                <div style="width: 26px; height: 26px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.45);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 9 5-9 5-9-5Z"></path><path d="m3 13 9 5 9-5"></path></svg>
+                </div>
+                <div style="width: 26px; height: 26px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; color: rgba(255,255,255,0.45);">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3"></path></svg>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="flex: 1; position: relative; background: #0E1116; min-height: 0;">
+            <svg viewBox="0 0 880 400" preserveAspectRatio="xMidYMid slice" style="position: absolute; inset: 0; width: 100%; height: 100%; display: block;">
+              <defs>
+                <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+                  <path d="M44 0H0v44" fill="none" stroke="rgba(255,255,255,0.028)" stroke-width="1"></path>
+                </pattern>
+                <radialGradient id="epiGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#FF2D3D" stop-opacity="0.26"></stop>
+                  <stop offset="100%" stop-color="#FF2D3D" stop-opacity="0"></stop>
+                </radialGradient>
+              </defs>
+
+              <rect width="880" height="400" fill="#0E1116"></rect>
+              <rect width="880" height="400" fill="url(#grid)"></rect>
+
+              <!-- terrain: High Atlas ridges -->
+              <path d="M0 336 Q 170 272 340 300 T 660 240 Q 780 220 880 254 L880 400 L0 400 Z" fill="#12161C"></path>
+              <path d="M0 364 Q 200 312 380 334 T 700 282 Q 800 268 880 292 L880 400 L0 400 Z" fill="#161B22"></path>
+              <path d="M60 300 Q 230 240 400 268 T 720 206" fill="none" stroke="rgba(255,255,255,0.045)" stroke-width="1"></path>
+              <path d="M40 330 Q 220 274 400 300 T 740 240" fill="none" stroke="rgba(255,255,255,0.035)" stroke-width="1"></path>
+              <path d="M20 360 Q 210 308 400 332 T 760 274" fill="none" stroke="rgba(255,255,255,0.028)" stroke-width="1"></path>
+
+              <!-- roads -->
+              <path d="M300 0 Q 330 90 352 164 T 402 262 Q 420 320 436 400" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1.6"></path>
+              <path d="M880 118 Q 700 132 570 106 T 350 92 L120 132" fill="none" stroke="rgba(255,255,255,0.075)" stroke-width="1.4"></path>
+              <path d="M486 176 L 522 250 L 560 320" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="1.2" stroke-dasharray="5 5"></path>
+
+              <!-- zone rings -->
+              <circle cx="440" cy="210" r="186" fill="#22D07A" fill-opacity="0.030" stroke="#22D07A" stroke-opacity="0.30" stroke-width="1" stroke-dasharray="4 6"></circle>
+              <circle cx="440" cy="210" r="124" fill="#FFA51F" fill-opacity="0.038" stroke="#FFA51F" stroke-opacity="0.34" stroke-width="1" stroke-dasharray="4 6"></circle>
+              <circle cx="440" cy="210" r="62" fill="#FF2D3D" fill-opacity="0.055" stroke="#FF2D3D" stroke-opacity="0.42" stroke-width="1.1" stroke-dasharray="4 6"></circle>
+              <circle cx="440" cy="210" r="150" fill="url(#epiGlow)"></circle>
+
+              <!-- radar sweep -->
+              <g class="sweep">
+                <path d="M440 210 L440 24 A186 186 0 0 1 533 49 Z" fill="#4457FF" fill-opacity="0.07"></path>
+                <line x1="440" y1="210" x2="440" y2="24" stroke="#4457FF" stroke-opacity="0.45" stroke-width="1.2"></line>
+              </g>
+
+              <!-- devices -->
+              <circle cx="414.0" cy="223.3" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle><circle cx="391.4" cy="272.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="432.0" cy="231.4" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+              <circle cx="413.0" cy="226.1" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="387.4" cy="258.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="425.6" cy="263.9" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+              <circle cx="431.1" cy="270.6" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="426.9" cy="246.4" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle><circle cx="384.6" cy="248.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="432.9" cy="243.7" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="423.4" cy="252.7" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="404.1" cy="268.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="412.1" cy="258.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="426.2" cy="232.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="413.9" cy="256.1" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle>
+              <circle cx="415.7" cy="273.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="389.6" cy="251.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="430.0" cy="252.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+              <circle cx="501.9" cy="174.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="472.3" cy="179.0" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="474.4" cy="172.7" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+              <circle cx="499.9" cy="194.9" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="482.5" cy="185.9" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="487.8" cy="198.8" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle>
+              <circle cx="500.7" cy="155.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="466.4" cy="165.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="487.3" cy="185.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+              <circle cx="485.5" cy="154.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="488.0" cy="177.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="492.1" cy="183.3" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+              <circle cx="474.6" cy="192.7" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle><circle cx="467.1" cy="180.2" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="348.9" cy="188.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="325.1" cy="167.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="334.2" cy="172.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="338.2" cy="157.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="354.6" cy="136.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="335.1" cy="169.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="352.1" cy="137.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="381.1" cy="163.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="361.3" cy="183.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="325.0" cy="152.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="340.4" cy="181.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="363.7" cy="187.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="357.3" cy="135.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="367.8" cy="148.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="361.8" cy="174.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="367.0" cy="165.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="362.1" cy="131.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="321.3" cy="161.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="335.4" cy="188.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="359.9" cy="144.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="359.6" cy="153.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="374.0" cy="155.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="334.0" cy="164.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="331.9" cy="171.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="504.3" cy="230.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="496.1" cy="240.3" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="506.0" cy="265.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="517.7" cy="247.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="504.4" cy="235.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="518.8" cy="278.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="514.1" cy="277.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="532.2" cy="251.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="514.3" cy="254.0" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="547.8" cy="256.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="517.3" cy="234.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="509.7" cy="269.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="512.2" cy="231.0" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle>
+              <circle cx="520.6" cy="221.7" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="501.2" cy="235.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="510.3" cy="245.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="508.5" cy="229.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="519.7" cy="247.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="552.0" cy="251.1" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle>
+              <circle cx="520.4" cy="158.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="529.8" cy="181.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="528.6" cy="146.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="545.9" cy="172.0" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="523.9" cy="140.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="559.5" cy="167.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="566.9" cy="162.0" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="554.5" cy="173.1" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="541.9" cy="184.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+              <circle cx="521.9" cy="150.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="543.4" cy="178.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="558.1" cy="161.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="513.5" cy="157.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="596.8" cy="93.7" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="581.8" cy="82.8" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="561.9" cy="132.0" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="574.5" cy="100.9" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="592.3" cy="121.1" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="552.9" cy="100.6" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="568.4" cy="126.6" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="567.4" cy="107.8" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle>
+              <circle cx="568.9" cy="95.9" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="562.1" cy="110.6" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="568.6" cy="119.0" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="595.1" cy="121.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="555.4" cy="111.8" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="575.2" cy="87.7" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="577.1" cy="115.7" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="345.6" cy="100.9" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="320.9" cy="78.2" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="357.4" cy="94.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="312.4" cy="100.9" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="331.0" cy="69.3" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle>
+              <circle cx="341.9" cy="78.9" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="322.2" cy="87.5" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="336.5" cy="87.2" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="330.4" cy="64.5" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="311.1" cy="111.2" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="340.3" cy="111.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+              <circle cx="347.2" cy="79.8" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="328.1" cy="98.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+
+              <!-- locality labels -->
+              <g font-family="Outfit, system-ui, sans-serif" style="paint-order: stroke; stroke: #0E1116; stroke-width: 3.4px; stroke-linejoin: round;">
+                <text x="352" y="122" font-size="11.5" font-weight="600" fill="#FFA51F">Amizmiz</text>
+                <text x="352" y="134" font-size="10" font-weight="500" fill="rgba(255,255,255,0.45)" font-family="JetBrains Mono, monospace">1,129</text>
+                <text x="394" y="292" font-size="11.5" font-weight="600" fill="#FF2D3D">Talat N'Yaaqoub</text>
+                <text x="394" y="304" font-size="10" font-weight="500" fill="rgba(255,255,255,0.45)" font-family="JetBrains Mono, monospace">634</text>
+                <text x="504" y="140" font-size="11.5" font-weight="600" fill="#FF2D3D">Ouirgane</text>
+                <text x="504" y="152" font-size="10" font-weight="500" fill="rgba(255,255,255,0.45)" font-family="JetBrains Mono, monospace">495</text>
+                <text x="556" y="290" font-size="11.5" font-weight="600" fill="#FFA51F">Asni</text>
+                <text x="556" y="302" font-size="10" font-weight="500" fill="rgba(255,255,255,0.45)" font-family="JetBrains Mono, monospace">842</text>
+                <text x="576" y="196" font-size="11.5" font-weight="600" fill="#FFA51F">Moulay Brahim</text>
+                <text x="576" y="208" font-size="10" font-weight="500" fill="rgba(255,255,255,0.45)" font-family="JetBrains Mono, monospace">369</text>
+                <text x="610" y="72" font-size="11.5" font-weight="600" fill="#22D07A">Tahannaout</text>
+                <text x="610" y="84" font-size="10" font-weight="500" fill="rgba(255,255,255,0.45)" font-family="JetBrains Mono, monospace">721</text>
+                <text x="246" y="52" font-size="11.5" font-weight="600" fill="#22D07A">Marrakech Sud</text>
+                <text x="246" y="64" font-size="10" font-weight="500" fill="rgba(255,255,255,0.45)" font-family="JetBrains Mono, monospace">622</text>
+                <text x="726" y="46" font-size="11" font-weight="500" fill="rgba(255,255,255,0.34)">Marrakech · outside radius</text>
+              </g>
+
+              <!-- epicentre -->
+              <circle cx="440" cy="210" r="13" fill="none" stroke="#FF2D3D" stroke-width="1.4" class="ping"></circle>
+              <circle cx="440" cy="210" r="13" fill="none" stroke="#FF2D3D" stroke-width="1.2" stroke-opacity="0.45"></circle>
+              <path d="M440 196v-9M440 233v-9M426 210h-9M463 210h-9" stroke="#FF2D3D" stroke-width="1.6" stroke-linecap="round"></path>
+              <circle cx="440" cy="210" r="4.6" fill="#FF2D3D"></circle>
+              <text x="440" y="256" font-size="9.5" font-weight="700" letter-spacing="1.3" text-anchor="middle" fill="#FF2D3D" font-family="Outfit, system-ui, sans-serif" style="paint-order: stroke; stroke: #0E1116; stroke-width: 3.4px; stroke-linejoin: round;">EPICENTRE</text>
+
+              <!-- scale bar -->
+              <g transform="translate(28, 366)">
+                <path d="M0 6h74" stroke="rgba(255,255,255,0.34)" stroke-width="1.3"></path>
+                <path d="M0 2v8M74 2v8" stroke="rgba(255,255,255,0.34)" stroke-width="1.3"></path>
+                <text x="82" y="10" font-size="10" fill="rgba(255,255,255,0.34)" font-family="JetBrains Mono, monospace">20 km</text>
+              </g>
+            </svg>
+          </div>
+          <div style="flex: none; height: 38px; border-top: 1px solid rgba(255,255,255,0.075); display: flex; align-items: center; gap: 16px; padding: 0 14px; background: #14171A;">
+            <span style="font-size: 11.5px; color: rgba(255,255,255,0.45);">Impact radius <b class="mono" style="color: #fff; font-weight: 600;">50 km</b></span>
+            <span style="width: 1px; height: 12px; background: rgba(255,255,255,0.075);"></span>
+            <span style="font-size: 11.5px; color: rgba(255,255,255,0.45);">Depth <b class="mono" style="color: #fff; font-weight: 600;">10.5 km</b></span>
+            <span style="width: 1px; height: 12px; background: rgba(255,255,255,0.075);"></span>
+            <span style="font-size: 11.5px; color: rgba(255,255,255,0.45);">Network congestion <b style="color: #FFA51F; font-weight: 600;">HIGH</b> · QoS boost <b style="color: #22D07A; font-weight: 600;">active</b></span>
+            <div style="flex: 1;"></div>
+            <span class="mono" style="font-size: 11px; color: rgba(255,255,255,0.34);">updated 2s ago</span>
+          </div>
+        </div>
+
+        <!-- RIGHT COLUMN -->
+        <div style="width: 396px; flex: none; display: flex; flex-direction: column; gap: 16px;">
+
+          <!-- ZONE TRIAGE -->
+          <div class="pnl" style="flex: none;">
+            <div class="pnl-h">
+              <span style="font-size: 13.5px; font-weight: 600;">Zone triage</span>
+              <span class="lbl">Go haversine · live</span>
+            </div>
+            <div style="display: flex; flex-direction: column; padding: 4px 0;">
+
+              <div class="row-h" style="display: flex; align-items: center; gap: 12px; padding: 9px 14px;">
+                <span style="width: 8px; height: 8px; border-radius: 5px; background: #FF2D3D; flex: none;"></span>
+                <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+                    <span style="font-size: 12.5px; font-weight: 600; color: #FF2D3D;">Red zone</span>
+                    <span class="mono" style="font-size: 15px; font-weight: 700;">1,129</span>
+                  </div>
+                  <div style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.075); display: flex; overflow: hidden;">
+                    <div style="width: 79%; background: #FF2D3D;"></div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 11px; color: rgba(255,255,255,0.45);">892 reachable</span>
+                    <span style="font-size: 11px; font-weight: 600; color: #FF2D3D;">237 rescue</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row-h" style="display: flex; align-items: center; gap: 12px; padding: 9px 14px;">
+                <span style="width: 8px; height: 8px; border-radius: 5px; background: #FFA51F; flex: none;"></span>
+                <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+                    <span style="font-size: 12.5px; font-weight: 600; color: #FFA51F;">Orange zone</span>
+                    <span class="mono" style="font-size: 15px; font-weight: 700;">2,340</span>
+                  </div>
+                  <div style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.075); display: flex; overflow: hidden;">
+                    <div style="width: 90%; background: #FFA51F;"></div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 11px; color: rgba(255,255,255,0.45);">2,106 reachable</span>
+                    <span style="font-size: 11px; color: rgba(255,255,255,0.34);">evacuation SMS sent</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row-h" style="display: flex; align-items: center; gap: 12px; padding: 9px 14px;">
+                <span style="width: 8px; height: 8px; border-radius: 5px; background: #22D07A; flex: none;"></span>
+                <div style="display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 0;">
+                  <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 8px;">
+                    <span style="font-size: 12.5px; font-weight: 600; color: #22D07A;">Green zone</span>
+                    <span class="mono" style="font-size: 15px; font-weight: 700;">1,343</span>
+                  </div>
+                  <div style="height: 4px; border-radius: 2px; background: rgba(255,255,255,0.075); display: flex; overflow: hidden;">
+                    <div style="width: 97%; background: #22D07A;"></div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 11px; color: rgba(255,255,255,0.45);">1,298 reachable</span>
+                    <span style="font-size: 11px; color: rgba(255,255,255,0.34);">alert and monitor</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- AI SITUATION REPORT -->
+          <div class="pnl" style="flex: 1; min-height: 0;">
+            <div class="pnl-h">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#8391FF" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.2 13.9 9l6.1.2-4.8 3.7 1.7 5.9-4.9-3.4-4.9 3.4 1.7-5.9L4 9.2 10.1 9Z"></path></svg>
+                <span style="font-size: 13.5px; font-weight: 600;">AI situation report</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 4px;">
+                <span style="font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 5px; background: rgba(255,45,61,0.16); color: #FF2D3D;">RED</span>
+                <span style="font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 5px; color: rgba(255,255,255,0.34);">ORANGE</span>
+                <span style="font-size: 10.5px; font-weight: 600; padding: 3px 8px; border-radius: 5px; color: rgba(255,255,255,0.34);">GREEN</span>
+              </div>
+            </div>
+            <div style="flex: 1; padding: 13px 14px; display: flex; flex-direction: column; gap: 11px; min-height: 0;">
+              <p style="margin: 0; font-size: 12.5px; line-height: 1.55; color: rgba(255,255,255,0.70); text-wrap: pretty;">Red zone: 1,129 devices within 17&nbsp;km of the epicentre. 892 reachable — evacuation SMS dispatched with shelter routing to Lycée Ibn Sina and Centre Sportif Asni. 237 unreachable in high-collapse-risk terrain — rescue teams dispatched, 41 en route. Network congestion HIGH along the R203 corridor; QoS boost active and SMS delivery holding at 94%.</p>
+              <div style="margin-top: auto; display: flex; align-items: center; gap: 10px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.075);">
+                <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.45);">Confidence <b class="mono" style="color: #22D07A; font-weight: 700;">0.91</b></span>
+                <span style="width: 1px; height: 11px; background: rgba(255,255,255,0.14);"></span>
+                <span style="font-size: 11px; color: rgba(255,255,255,0.45);">3 zones escalated</span>
+                <div style="flex: 1;"></div>
+                <span class="mono" style="font-size: 10.5px; color: rgba(255,255,255,0.34);">batch 12 · 12s ago</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- BOTTOM ROW -->
+      <div style="display: flex; gap: 16px; height: 292px; flex: none;">
+
+        <!-- DEVICES BY LOCALITY -->
+        <div class="pnl" style="width: 396px; flex: none;">
+          <div class="pnl-h">
+            <span style="font-size: 13.5px; font-weight: 600;">People by locality</span>
+            <span class="lbl">Sorted by count</span>
+          </div>
+          <div class="scroll" style="flex: 1; overflow-y: auto; padding: 6px 0;">
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px;">
+              <span style="width: 7px; height: 7px; border-radius: 4px; background: #FFA51F; flex: none;"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 116px; flex: none;">Amizmiz</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 100%; height: 100%; background: #FFA51F; opacity: 0.75; border-radius: 3px;"></div></div>
+              <span class="mono" style="font-size: 12.5px; font-weight: 600; width: 46px; text-align: right; flex: none;">1,129</span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px;">
+              <span style="width: 7px; height: 7px; border-radius: 4px; background: #FFA51F; flex: none;"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 116px; flex: none;">Asni</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 74.6%; height: 100%; background: #FFA51F; opacity: 0.75; border-radius: 3px;"></div></div>
+              <span class="mono" style="font-size: 12.5px; font-weight: 600; width: 46px; text-align: right; flex: none;">842</span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px;">
+              <span style="width: 7px; height: 7px; border-radius: 4px; background: #22D07A; flex: none;"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 116px; flex: none;">Tahannaout</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 63.9%; height: 100%; background: #22D07A; opacity: 0.75; border-radius: 3px;"></div></div>
+              <span class="mono" style="font-size: 12.5px; font-weight: 600; width: 46px; text-align: right; flex: none;">721</span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px;">
+              <span style="width: 7px; height: 7px; border-radius: 4px; background: #FF2D3D; flex: none;"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 116px; flex: none;">Talat N'Yaaqoub</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 56.2%; height: 100%; background: #FF2D3D; opacity: 0.8; border-radius: 3px;"></div></div>
+              <span class="mono" style="font-size: 12.5px; font-weight: 600; width: 46px; text-align: right; flex: none;">634</span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px;">
+              <span style="width: 7px; height: 7px; border-radius: 4px; background: #22D07A; flex: none;"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 116px; flex: none;">Marrakech Sud</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 55.1%; height: 100%; background: #22D07A; opacity: 0.75; border-radius: 3px;"></div></div>
+              <span class="mono" style="font-size: 12.5px; font-weight: 600; width: 46px; text-align: right; flex: none;">622</span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px;">
+              <span style="width: 7px; height: 7px; border-radius: 4px; background: #FF2D3D; flex: none;"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 116px; flex: none;">Ouirgane</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 43.8%; height: 100%; background: #FF2D3D; opacity: 0.8; border-radius: 3px;"></div></div>
+              <span class="mono" style="font-size: 12.5px; font-weight: 600; width: 46px; text-align: right; flex: none;">495</span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 6px 14px;">
+              <span style="width: 7px; height: 7px; border-radius: 4px; background: #FFA51F; flex: none;"></span>
+              <span style="font-size: 12.5px; font-weight: 500; width: 116px; flex: none;">Moulay Brahim</span>
+              <div style="flex: 1; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.06); overflow: hidden;"><div style="width: 32.7%; height: 100%; background: #FFA51F; opacity: 0.75; border-radius: 3px;"></div></div>
+              <span class="mono" style="font-size: 12.5px; font-weight: 600; width: 46px; text-align: right; flex: none;">369</span>
+            </div>
+          </div>
+          <div style="flex: none; height: 34px; border-top: 1px solid rgba(255,255,255,0.075); display: flex; align-items: center; justify-content: space-between; padding: 0 14px;">
+            <span style="font-size: 11px; color: rgba(255,255,255,0.34);">7 localities in radius</span>
+            <span class="mono" style="font-size: 11.5px; font-weight: 600;">4,812 total</span>
+          </div>
+        </div>
+
+        <!-- RESCUE PRIORITY QUEUE -->
+        <div class="pnl" style="width: 496px; flex: none;">
+          <div class="pnl-h">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="font-size: 13.5px; font-weight: 600;">Rescue priority queue</span>
+              <span style="font-size: 10.5px; font-weight: 700; padding: 2px 7px; border-radius: 5px; background: rgba(255,45,61,0.16); color: #FF2D3D;">196 pending</span>
+            </div>
+            <span style="font-size: 11.5px; font-weight: 500; color: #8391FF; cursor: pointer;">Open queue</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px; padding: 7px 14px; border-bottom: 1px solid rgba(255,255,255,0.075);">
+            <span class="lbl" style="width: 30px; flex: none;">Pri</span>
+            <span class="lbl" style="width: 118px; flex: none;">Device</span>
+            <span class="lbl" style="width: 108px; flex: none;">Locality</span>
+            <span class="lbl" style="width: 46px; flex: none; text-align: right;">Dist</span>
+            <span class="lbl" style="flex: 1;">Status</span>
+          </div>
+          <div class="scroll" style="flex: 1; overflow-y: auto;">
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <span class="mono" style="width: 30px; flex: none; font-size: 11.5px; font-weight: 700; color: #FF2D3D;">P1</span>
+              <span class="mono" style="width: 118px; flex: none; font-size: 12px; color: rgba(255,255,255,0.70);">+212 6** *** 412</span>
+              <span style="width: 108px; flex: none; font-size: 12px;">Talat N'Yaaqoub</span>
+              <span class="mono" style="width: 46px; flex: none; font-size: 11.5px; text-align: right; color: rgba(255,255,255,0.45);">2.1km</span>
+              <span style="flex: 1; display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 3px; background: #22D07A;"></span><span style="font-size: 11.5px; color: #22D07A;">Team en route</span></span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <span class="mono" style="width: 30px; flex: none; font-size: 11.5px; font-weight: 700; color: #FF2D3D;">P1</span>
+              <span class="mono" style="width: 118px; flex: none; font-size: 12px; color: rgba(255,255,255,0.70);">+212 6** *** 087</span>
+              <span style="width: 108px; flex: none; font-size: 12px;">Ouirgane</span>
+              <span class="mono" style="width: 46px; flex: none; font-size: 11.5px; text-align: right; color: rgba(255,255,255,0.45);">3.4km</span>
+              <span style="flex: 1; display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 3px; background: #FFA51F;" class="blink"></span><span style="font-size: 11.5px; color: #FFA51F;">Awaiting team</span></span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <span class="mono" style="width: 30px; flex: none; font-size: 11.5px; font-weight: 700; color: #FF2D3D;">P2</span>
+              <span class="mono" style="width: 118px; flex: none; font-size: 12px; color: rgba(255,255,255,0.70);">+212 6** *** 733</span>
+              <span style="width: 108px; flex: none; font-size: 12px;">Talat N'Yaaqoub</span>
+              <span class="mono" style="width: 46px; flex: none; font-size: 11.5px; text-align: right; color: rgba(255,255,255,0.45);">4.0km</span>
+              <span style="flex: 1; display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 3px; background: #FFA51F;" class="blink"></span><span style="font-size: 11.5px; color: #FFA51F;">Awaiting team</span></span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <span class="mono" style="width: 30px; flex: none; font-size: 11.5px; font-weight: 700; color: #FFA51F;">P3</span>
+              <span class="mono" style="width: 118px; flex: none; font-size: 12px; color: rgba(255,255,255,0.70);">+212 6** *** 268</span>
+              <span style="width: 108px; flex: none; font-size: 12px;">Ouirgane</span>
+              <span class="mono" style="width: 46px; flex: none; font-size: 11.5px; text-align: right; color: rgba(255,255,255,0.45);">5.7km</span>
+              <span style="flex: 1; display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 3px; background: #22D07A;"></span><span style="font-size: 11.5px; color: #22D07A;">Team en route</span></span>
+            </div>
+            <div class="row-h" style="display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+              <span class="mono" style="width: 30px; flex: none; font-size: 11.5px; font-weight: 700; color: #FFA51F;">P3</span>
+              <span class="mono" style="width: 118px; flex: none; font-size: 12px; color: rgba(255,255,255,0.70);">+212 6** *** 954</span>
+              <span style="width: 108px; flex: none; font-size: 12px;">Amizmiz</span>
+              <span class="mono" style="width: 46px; flex: none; font-size: 11.5px; text-align: right; color: rgba(255,255,255,0.45);">8.2km</span>
+              <span style="flex: 1; display: flex; align-items: center; gap: 6px;"><span style="width: 6px; height: 6px; border-radius: 3px; background: #FFA51F;" class="blink"></span><span style="font-size: 11.5px; color: #FFA51F;">Awaiting team</span></span>
+            </div>
+          </div>
+          <div style="flex: none; height: 34px; border-top: 1px solid rgba(255,255,255,0.075); display: flex; align-items: center; gap: 12px; padding: 0 14px;">
+            <span style="font-size: 11px; color: rgba(255,255,255,0.34);">Unreachable devices in red zone only</span>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 11px; color: rgba(255,255,255,0.45);">Avg wait <b class="mono" style="color: #fff; font-weight: 600;">18m</b></span>
+          </div>
+        </div>
+
+        <!-- 7-DAY ACTIVITY -->
+        <div class="pnl" style="width: 396px; flex: none;">
+          <div class="pnl-h">
+            <span style="font-size: 13.5px; font-weight: 600;">Daily activity</span>
+            <div style="display: flex; align-items: center; gap: 8px; height: 26px; padding: 0 9px; border: 1px solid rgba(255,255,255,0.14); border-radius: 6px;">
+              <span style="font-size: 11px; font-weight: 500; color: rgba(255,255,255,0.70);">7 days</span>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.45)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg>
+            </div>
+          </div>
+          <div style="flex: 1; padding: 14px 14px 10px; display: flex; flex-direction: column; min-height: 0;">
+            <div style="display: flex; align-items: baseline; gap: 8px; margin-bottom: 14px;">
+              <span class="mono" style="font-size: 22px; font-weight: 700; line-height: 1;">9,733</span>
+              <span style="font-size: 11.5px; color: rgba(255,255,255,0.45);">people alerted this week</span>
+            </div>
+            <div style="flex: 1; display: flex; align-items: flex-end; gap: 10px; min-height: 0;">
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;"><span class="mono" style="font-size: 9.5px; color: rgba(255,255,255,0.34);">312</span><div style="width: 100%; height: 8px; border-radius: 3px; background: #4457FF; opacity: 0.4;"></div><span style="font-size: 10px; color: rgba(255,255,255,0.34);">M</span></div>
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;"><span class="mono" style="font-size: 9.5px; color: rgba(255,255,255,0.34);">0</span><div style="width: 100%; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.10);"></div><span style="font-size: 10px; color: rgba(255,255,255,0.34);">T</span></div>
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;"><span class="mono" style="font-size: 9.5px; color: rgba(255,255,255,0.34);">1,180</span><div style="width: 100%; height: 29px; border-radius: 3px; background: #4457FF; opacity: 0.5;"></div><span style="font-size: 10px; color: rgba(255,255,255,0.34);">W</span></div>
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;"><span class="mono" style="font-size: 9.5px; color: rgba(255,255,255,0.34);">640</span><div style="width: 100%; height: 16px; border-radius: 3px; background: #4457FF; opacity: 0.45;"></div><span style="font-size: 10px; color: rgba(255,255,255,0.34);">T</span></div>
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;"><span class="mono" style="font-size: 9.5px; color: rgba(255,255,255,0.34);">0</span><div style="width: 100%; height: 4px; border-radius: 3px; background: rgba(255,255,255,0.10);"></div><span style="font-size: 10px; color: rgba(255,255,255,0.34);">F</span></div>
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;"><span class="mono" style="font-size: 9.5px; color: rgba(255,255,255,0.34);">2,260</span><div style="width: 100%; height: 55px; border-radius: 3px; background: #4457FF; opacity: 0.7;"></div><span style="font-size: 10px; color: rgba(255,255,255,0.34);">S</span></div>
+              <div style="flex: 1; display: flex; flex-direction: column; align-items: center; gap: 7px;"><span class="mono" style="font-size: 10px; font-weight: 700; color: #fff;">4,812</span><div style="width: 100%; height: 118px; border-radius: 3px; background: #4457FF;"></div><span style="font-size: 10px; font-weight: 600; color: #8391FF;">S</span></div>
+            </div>
+          </div>
+          <div style="flex: none; height: 34px; border-top: 1px solid rgba(255,255,255,0.075); display: flex; align-items: center; gap: 12px; padding: 0 14px;">
+            <span style="display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: rgba(255,255,255,0.45);"><span style="width: 7px; height: 7px; border-radius: 2px; background: #4457FF;"></span>People alerted</span>
+            <div style="flex: 1;"></div>
+            <span style="font-size: 11px; color: rgba(255,255,255,0.45);">4 seismic events · <b style="color: #FFA51F; font-weight: 600;">escalating</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1440,"height":1024}}'>
+class Component extends DCLogic {}
+</script>
+</body>
+</html>

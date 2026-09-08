@@ -1,0 +1,53 @@
+<!-- DOTS -->
+        <circle cx="414.0" cy="223.3" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle><circle cx="391.4" cy="272.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="432.0" cy="231.4" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+        <circle cx="413.0" cy="226.1" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="387.4" cy="258.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="425.6" cy="263.9" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+        <circle cx="431.1" cy="270.6" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="426.9" cy="246.4" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle><circle cx="384.6" cy="248.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="432.9" cy="243.7" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="423.4" cy="252.7" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="404.1" cy="268.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="412.1" cy="258.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="426.2" cy="232.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="413.9" cy="256.1" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle>
+        <circle cx="415.7" cy="273.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="389.6" cy="251.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="430.0" cy="252.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+        <circle cx="501.9" cy="174.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="472.3" cy="179.0" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="474.4" cy="172.7" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+        <circle cx="499.9" cy="194.9" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="482.5" cy="185.9" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="487.8" cy="198.8" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle>
+        <circle cx="500.7" cy="155.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="466.4" cy="165.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="487.3" cy="185.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+        <circle cx="485.5" cy="154.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="488.0" cy="177.8" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="492.1" cy="183.3" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle>
+        <circle cx="474.6" cy="192.7" r="4.4" fill="#FF2D3D" fill-opacity="0.30" stroke="#FF2D3D" stroke-width="1.5"></circle><circle cx="467.1" cy="180.2" r="2.7" fill="#FF2D3D" fill-opacity="0.92"></circle><circle cx="348.9" cy="188.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="325.1" cy="167.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="334.2" cy="172.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="338.2" cy="157.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="354.6" cy="136.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="335.1" cy="169.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="352.1" cy="137.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="381.1" cy="163.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="361.3" cy="183.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="325.0" cy="152.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="340.4" cy="181.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="363.7" cy="187.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="357.3" cy="135.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="367.8" cy="148.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="361.8" cy="174.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="367.0" cy="165.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="362.1" cy="131.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="321.3" cy="161.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="335.4" cy="188.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="359.9" cy="144.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="359.6" cy="153.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="374.0" cy="155.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="334.0" cy="164.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="331.9" cy="171.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="504.3" cy="230.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="496.1" cy="240.3" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="506.0" cy="265.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="517.7" cy="247.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="504.4" cy="235.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="518.8" cy="278.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="514.1" cy="277.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="532.2" cy="251.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="514.3" cy="254.0" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="547.8" cy="256.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="517.3" cy="234.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="509.7" cy="269.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="512.2" cy="231.0" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle>
+        <circle cx="520.6" cy="221.7" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="501.2" cy="235.0" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="510.3" cy="245.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="508.5" cy="229.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="519.7" cy="247.7" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="552.0" cy="251.1" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle>
+        <circle cx="520.4" cy="158.4" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="529.8" cy="181.9" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="528.6" cy="146.6" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="545.9" cy="172.0" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="523.9" cy="140.3" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="559.5" cy="167.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="566.9" cy="162.0" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="554.5" cy="173.1" r="2.7" fill="#FFA51F" fill-opacity="0.38"></circle><circle cx="541.9" cy="184.8" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle>
+        <circle cx="521.9" cy="150.2" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="543.4" cy="178.1" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="558.1" cy="161.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="513.5" cy="157.5" r="2.7" fill="#FFA51F" fill-opacity="0.92"></circle><circle cx="596.8" cy="93.7" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="581.8" cy="82.8" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="561.9" cy="132.0" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="574.5" cy="100.9" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="592.3" cy="121.1" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="552.9" cy="100.6" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="568.4" cy="126.6" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="567.4" cy="107.8" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle>
+        <circle cx="568.9" cy="95.9" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="562.1" cy="110.6" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="568.6" cy="119.0" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="595.1" cy="121.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="555.4" cy="111.8" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="575.2" cy="87.7" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="577.1" cy="115.7" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="345.6" cy="100.9" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="320.9" cy="78.2" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="357.4" cy="94.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="312.4" cy="100.9" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle><circle cx="331.0" cy="69.3" r="2.7" fill="#22D07A" fill-opacity="0.38"></circle>
+        <circle cx="341.9" cy="78.9" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="322.2" cy="87.5" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="336.5" cy="87.2" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="330.4" cy="64.5" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="311.1" cy="111.2" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="340.3" cy="111.4" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+        <circle cx="347.2" cy="79.8" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle><circle cx="328.1" cy="98.3" r="2.7" fill="#22D07A" fill-opacity="0.92"></circle>
+<!-- total=116 {'red': 23, 'orange': 60, 'green': 33} rescue=5 -->
+<!-- SPARK line -->
+2.0,26.0 18.7,26.0 35.3,26.0 52.0,19.8 68.7,6.1 85.3,3.5 102.0,2.0
+<!-- SPARK area -->
+2,26 2.0,26.0 18.7,26.0 35.3,26.0 52.0,19.8 68.7,6.1 85.3,3.5 102.0,2.0 102,26
+<!-- BARS -->
+Mon v=312 h=8px event=0
+Tue v=0 h=3px event=0
+Wed v=1180 h=29px event=1
+Thu v=640 h=16px event=0
+Fri v=0 h=3px event=0
+Sat v=2260 h=55px event=1
+Sun v=4812 h=118px event=1

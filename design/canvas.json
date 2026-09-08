@@ -1,0 +1,13 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "x": 0, "y": 0, "w": 1440, "h": 1024, "title": "Live Operations Console" },
+    { "file": "RescueQueue.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 1024, "title": "Rescue Dispatch" },
+    { "file": "LightDirection.dc.html", "x": 0, "y": 1160, "w": 760, "h": 560, "title": "Alternate — light console" }
+  ],
+  "annotations": [
+    { "id": "note-scope", "x": 0, "y": -190, "w": 560, "text": "GeoDispatch — supervisor console for Protection Civile operators.\nDark is the lead direction: EOC wall displays, long shifts, and the red/amber/green zone colours read hardest on a dark ground. A light alternate sits below.\n\nAll data is the Al Haouz M6.8 scenario. Phone numbers are masked and the AI reasoning field is never shown — both are contract rules." },
+    { "id": "note-gaps", "x": 1560, "y": -190, "w": 560, "text": "Three panels need backend work that does not exist yet:\n· Region selector — supervisor has no region query, only radius-from-epicentre\n· People by locality — device_update carries lat/lng but no place name (needs reverse geocoding)\n· Daily activity — needs a REST read over the events table; the WebSocket is event-scoped only\n\nEverything else maps to fields already in ws_update.json." },
+    { "id": "note-light", "x": 840, "y": 1160, "w": 400, "text": "Alternate direction, in case you want the daylight feel of your three reference dashboards.\n\nNote the text colours shift (amber #A86200, green #0E8F52) — the bright zone colours fail contrast as text on white, though they still work as map dots." }
+  ],
+  "launch": { "view": "canvas" }
+}
