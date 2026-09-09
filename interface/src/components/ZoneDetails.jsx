@@ -9,8 +9,9 @@
 
 import { createSignal, Show } from 'solid-js'
 import { DetailCard, DetailRow, EmptyState, HideButton } from './DeviceDetails'
-import { ZONE_COLORS, ZONE_LABELS, ZONE_MEANING, zoneBand } from '../constants/zones'
-import { coords, decimal, num, titleCase, DASH } from '../lib/format'
+import { ZONE_COLORS, ZONE_LABELS, ZONE_MEANING } from '../constants/zones'
+import { useDisplay } from '../lib/settings'
+import { decimal, num, titleCase, DASH } from '../lib/format'
 
 // `?raw` + innerHTML, the same technique DeviceDetails uses: an <img> cannot
 // inherit `color`, so the icons are inlined and stroke="currentColor" resolves
@@ -41,6 +42,8 @@ const EMPTY_TEXT = {
 const EMPTY_HEIGHT = { overview: 56, status: 96, location: 60, ai: 96 }
 
 export default function ZoneDetails(props) {
+  const fmt = useDisplay()
+
   const [collapsed, setCollapsed] = createSignal({})
 
   const isCollapsed = (id) => !!collapsed()[id]
@@ -96,18 +99,18 @@ export default function ZoneDetails(props) {
   const bandText = () => {
     const e = event()
     if (!e?.radius_km || !zone()) return DASH
-    return `${zoneBand(zone(), e.radius_km)} from epicenter`
+    return `${fmt.band(zone(), e.radius_km)} from epicenter`
   }
 
   const epicentreText = () => {
     const e = event()
     if (!e?.epicenter) return DASH
-    return coords(e.epicenter.latitude, e.epicenter.longitude)
+    return fmt.coords(e.epicenter.latitude, e.epicenter.longitude)
   }
 
   const radiusText = () => {
     const e = event()
-    return typeof e?.radius_km === 'number' ? `${decimal(e.radius_km, 1)} km` : DASH
+    return typeof e?.radius_km === 'number' ? fmt.distance(e.radius_km) : DASH
   }
 
   const hasEvent = () => !!event() && !!zone()

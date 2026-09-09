@@ -18,7 +18,8 @@ import { For, Show } from 'solid-js'
 
 import { HideButton } from './DeviceDetails'
 import { ERROR_SEVERITY, ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
-import { DASH, ago, km, maskPhone, num, percent, reachabilityLabel } from '../lib/format'
+import { DASH, ago, maskPhone, num, percent, reachabilityLabel } from '../lib/format'
+import { useDisplay } from '../lib/settings'
 
 import './OpsPanels.css'
 
@@ -111,12 +112,15 @@ function priorityText(device) {
   return `P${device.rescue_priority}`
 }
 
-function distanceText(device) {
+// `fmt` comes from the panel, not from module scope: the operator's units are
+// context and a module-level helper cannot read it.
+function distanceText(device, fmt) {
   if (!isNumber(device.distance_km)) return DASH
-  return km(device.distance_km)
+  return fmt.distance(device.distance_km)
 }
 
 export function RescuePanel(props) {
+  const fmt = useDisplay()
   const queue = () => props.queue || []
   const shown = () => queue().slice(0, RESCUE_LIMIT)
 
@@ -146,7 +150,7 @@ export function RescuePanel(props) {
                     <span class="ops-row__main">
                       <span class="ops-row__title">{maskPhone(device.phone)}</span>
                       <span class="ops-row__sub">
-                        {distanceText(device)} from epicenter · {reachabilityLabel(device)}
+                        {distanceText(device, fmt)} from epicenter · {reachabilityLabel(device)}
                       </span>
                     </span>
                     <span class="ops-row__side">

@@ -8,9 +8,13 @@
 // Honesty rules that this file, and only this file, can enforce:
 //   - the toolbar is told where the frames really come from (stream.source()),
 //     so a demo can never be presented as the live supervisor;
+//   - the incident launcher is the ONE thing here that sends: it POSTs a sensor
+//     reading, the same way the seismic sensor does, and nothing else in this
+//     console ever talks back to the pipeline;
 //   - when the pipeline is fatal the console stops claiming to be live;
-//   - the auth controls have no service behind them, so they say so instead of
-//     pretending to sign anyone in;
+//   - there are no sign-in controls to be dishonest with: this console is only
+//     reachable from a station that already has an account, so the corner names
+//     that station and opens its profile instead;
 //   - nothing is invented to fill a row — missing values reach the panels as
 //     null and render as an em dash there.
 //
@@ -25,15 +29,23 @@ import MapToolbar from './components/MapToolbar'
 import DisasterMap from './components/DisasterMap'
 import DeviceDetails from './components/DeviceDetails'
 import ZoneDetails from './components/ZoneDetails'
+import IncidentDetailsPage from './components/IncidentDetailsPage'
+import SettingsModal from './components/SettingsModal'
+import IncidentLauncherModal from './components/IncidentLauncherModal'
+import NetworkTelemetryDrawer from './components/NetworkTelemetryDrawer'
 import { DevicesPanel, PanelShell, RescuePanel, SheltersPanel } from './components/OpsPanels'
 
 import { createConsoleStore } from './lib/store'
 import { createSelectors } from './lib/selectors'
-import { createStream } from './lib/socket'
+import { checkHealth, createStream } from './lib/socket'
+import { LANGUAGES, SettingsContext, createSettingsStore, makeDisplay } from './lib/settings'
+import { playAlert } from './lib/audio'
 import { SHELTERS } from './lib/mockStream'
 import { AL_HAOUZ_LOCALITIES, nearestLocality } from './lib/geo'
-import { coords, maskPhone, num } from './lib/format'
+import { maskPhone, num } from './lib/format'
 import { ZONE_LABELS } from './constants/zones'
+
+import { HEALTH_URL, SENSOR_URL } from './constants/zones'
 
 import { useNetworkStats } from './hooks/useNetworkStats'
 import { useOperatorLocation } from './hooks/useOperatorLocation'
@@ -58,12 +70,46 @@ const SHELTER_SITES = SHELTERS.map((shelter) => {
   }
 })
 
+// The health route lives on the same host as the socket. Derived rather than
+// configured separately, so an operator who points the console at a staging
+// supervisor does not also have to remember to move the ping.
+function healthUrlFor(wsUrl) {
+  try {
+    const url = new URL(wsUrl)
+    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:'
+    url.pathname = url.pathname.replace(/\/ws$/, '/health')
+    return url.toString()
+  } catch {
+    return HEALTH_URL
+  }
+}
+
+// Same reasoning as healthUrlFor: the endpoint is a setting, and an incident
+// fired at the compiled-in default while the operator watches a staging
+// supervisor would start a disaster on the wrong machine.
+function sensorUrlFor(wsUrl) {
+  try {
+    const url = new URL(wsUrl)
+    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:'
+    url.pathname = url.pathname.replace(/\/ws$/, '/sensor')
+    return url.toString()
+  } catch {
+    return SENSOR_URL
+  }
+}
+
 const SEARCH_LIMIT = 8
 const NOTE_MS = 6000
+
+// One chime covers a burst of rescue flags. The AI decides a batch of twenty
+// at a time and the demo dispatches two hundred, so a tone per flag would be
+// a solid tone — which tells the operator nothing except to mute it.
+const CHIME_HOLD_MS = 6000
 
 // The rail keys that own a left-overlay view. 'errors' is reached from the
 // notification bell rather than the rail.
 const PANEL_LABELS = {
+  details: 'Incident details',
   rescue: 'Rescue queue',
   devices: 'Devices',
   shelters: 'Shelters',
@@ -71,15 +117,29 @@ const PANEL_LABELS = {
 }
 
 export default function App() {
-  // ── store, selectors, stream ─────────────────────────────────────────────
+  // ── settings, store, selectors, stream ───────────────────────────────────
+  // Settings come first: the socket needs the operator's endpoint before it
+  // opens, and the map needs their basemap before it draws a tile.
+  const settingsStore = createSettingsStore()
+  const settings = settingsStore.settings
+
   const { state, actions } = createConsoleStore()
   const selectors = createSelectors(state)
 
   // The stream registers its own onCleanup, so it must be created inside the
   // component body. `source()` is the only truthful answer to "is this live?".
-  const stream = createStream(actions)
+  const stream = createStream(actions, { url: settings.wsUrl })
 
+  // No pingUrl: a background probe every ten seconds against a supervisor that
+  // is not running fills the console log with refused connections and tells the
+  // operator nothing they did not already see in the stream status. Settings
+  // has a Ping button for when the question is actually being asked.
   const net = useNetworkStats()
+
+  // The shell reads coordinates for the search list, so it needs the operator's
+  // format too. It binds the store directly rather than through the context it
+  // is itself about to provide.
+  const fmt = makeDisplay(settingsStore)
 
   // ── ui signals ───────────────────────────────────────────────────────────
   const [handle, setHandle] = createSignal(null)   // DisasterMap's imperative handle
@@ -88,6 +148,9 @@ export default function App() {
   const [query, setQuery] = createSignal('')
   const [note, setNote] = createSignal(null)
   const [layers, setLayers] = createSignal({ zones: true, devices: true, shelters: false })
+  const [settingsTab, setSettingsTab] = createSignal(null)   // null = dialog closed
+  const [launcherOpen, setLauncherOpen] = createSignal(false)
+  const [telemetryOpen, setTelemetryOpen] = createSignal(false)
 
   let mapEl                 // the element that goes fullscreen
   let noteTimer = null
@@ -99,10 +162,6 @@ export default function App() {
     if (noteTimer) clearTimeout(noteTimer)
     setNote(text)
     noteTimer = setTimeout(() => setNote(null), NOTE_MS)
-  }
-
-  function authNote(label) {
-    showNote(`${label} is not wired — this console has no auth service behind it.`)
   }
 
   onCleanup(() => {
@@ -168,7 +227,7 @@ export default function App() {
       const zoneWord = ZONE_LABELS[device.zone] || ''
       const locality = nearestLocality(device.latitude, device.longitude)
       const place = locality ? locality.name : ''
-      const point = coords(device.latitude, device.longitude)
+      const point = fmt.coords(device.latitude, device.longitude)
       const raw = `${device.latitude} ${device.longitude}`
 
       const haystack = `${masked} ${device.zone || ''} ${zoneWord} ${place} ${point} ${raw}`
@@ -265,6 +324,98 @@ export default function App() {
     if (map) map.invalidate()
   })
 
+  // ── settings side effects ────────────────────────────────────────────────
+
+  // The document language is the one part of the language setting that is
+  // real: assistive technology and the browser's own text handling read it.
+  // `dir` is deliberately NOT set — mirroring this layout is a piece of work
+  // that has not been done, and a half-mirrored console is worse than an
+  // honest left-to-right one. The settings screen says so.
+  createEffect(() => {
+    const language = LANGUAGES.find((l) => l.key === settings.language)
+    document.documentElement.lang = language ? language.key : 'en'
+  })
+
+  // ── audio alerts ─────────────────────────────────────────────────────────
+  //
+  // Both of these watch the store rather than the socket, so a flag that
+  // arrives in a burst of frames is still one event here.
+
+  const announced = new Set()
+  let lastChimeAt = 0
+
+  createEffect(() => {
+    const queue = selectors.rescueQueue()
+    if (!settings.rescueChime) return
+
+    // P1 only. Every red-zone device that stops answering is flagged; the
+    // sound is reserved for the ones the AI put at the top of the queue.
+    const fresh = queue.filter(
+      (device) => device.rescue_priority === 1 && !announced.has(device.phone),
+    )
+    if (!fresh.length) return
+    for (const device of fresh) announced.add(device.phone)
+
+    const now = Date.now()
+    if (now - lastChimeAt < CHIME_HOLD_MS) return
+    lastChimeAt = now
+    playAlert('rescue', settings.volume)
+  })
+
+  // event_start clears the board, so the announced set has to clear with it or
+  // a second event would run silent.
+  createEffect(() => {
+    if (!state.event) return
+    state.event.event_id
+    announced.clear()
+    lastChimeAt = 0
+  })
+
+  let alarmed = false
+  createEffect(() => {
+    if (!state.fatal) {
+      alarmed = false
+      return
+    }
+    if (alarmed || !settings.fatalAlarm) return
+    alarmed = true
+    playAlert('fatal', settings.volume)
+  })
+
+  // ── settings dialog ──────────────────────────────────────────────────────
+  const settingsOpen = () => settingsTab() !== null
+
+  function openSettings(tab) {
+    setSettingsTab(tab || 'station')
+  }
+
+  function applyWsUrl(url) {
+    if (stream.setUrl(url)) {
+      showNote(`Now listening on ${url}. The board clears until it sends a frame.`)
+    }
+  }
+
+  // ── incident launcher ────────────────────────────────────────────────────
+  // The dialog does the POST itself and hands back exactly what it sent, so the
+  // note names the real event rather than what was asked for.
+  function onLaunched(sent) {
+    setLauncherOpen(false)
+    const magnitude = typeof sent.severity === 'number' ? ` M ${sent.severity}` : ''
+    showNote(
+      `${sent.event_id} sent to the supervisor —${magnitude} ${sent.disaster_type}. ` +
+        'Devices appear as it works through the radius.',
+    )
+  }
+
+  function endShift() {
+    setSettingsTab(null)
+    // The store is back to its defaults, endpoint included. Put the socket back
+    // on it too, or the settings screen would name one supervisor while the
+    // console went on listening to another. A no-op if it never moved.
+    stream.setUrl(settings.wsUrl)
+    showNote('Station cleared. Profile and preferences are back to their defaults.')
+  }
+
   // ── export ───────────────────────────────────────────────────────────────
   // A real Blob download of what this console is actually holding, stamped with
   // where the frames came from so an exported demo is never mistaken for a
@@ -348,6 +499,7 @@ export default function App() {
   const toggleHidden = () => setPanelHidden(!panelHidden())
 
   return (
+    <SettingsContext.Provider value={settingsStore}>
     <div class="app-shell">
       <TopBar
         locationLabel={locationLabel()}
@@ -360,121 +512,147 @@ export default function App() {
         onQueryInput={(value) => setQuery(value)}
         onPickResult={pickResult}
         errorCount={state.errors.length}
-        errorGroups={selectors.errorGroups()}
-        onClearErrors={() => actions.clearErrors()}
-        onAuthNote={authNote}
+        telemetryOpen={telemetryOpen()}
+        onOpenTelemetry={() => setTelemetryOpen(!telemetryOpen())}
+        onLaunchIncident={() => setLauncherOpen(true)}
+        operator={settings.operator}
+        onOpenAccount={() => openSettings('station')}
       />
 
       <NavRail
         active={activeView()}
         badges={badges()}
+        settingsOpen={settingsOpen()}
         onNavigate={navigate}
-        onAuthNote={authNote}
+        onOpenSettings={openSettings}
       />
 
-      <main class="app-map" ref={mapEl}>
-        <DisasterMap
+      {/* 'details' is the one rail view that replaces the map instead of
+          floating over it, so it takes the whole map area to itself. The map
+          is unmounted while it is open — Leaflet keeps no useful state here,
+          and a hidden map still pays for every dot it is holding. */}
+      <Show when={activeView() === 'details'}>
+        <IncidentDetailsPage
           event={state.event}
           devices={state.devices}
-          selectedPhone={state.selectedPhone}
-          selectedZone={state.selectedZone}
-          operator={state.region}
-          layers={layers()}
+          narratives={state.narratives}
+          counts={selectors.counts()}
           shelters={SHELTER_SITES}
-          onSelect={(phone) =>
-            phone ? pickDevice(phone, { focus: false }) : actions.clearSelection()
-          }
-          onSelectZone={pickZone}
-          onReady={(api) => setHandle(() => api)}
+          connection={state.connection}
+          status={toolbarStatus()}
+          source={stream.source()}
+          onSelectDevice={pickDevice}
+          onSwitchToMap={() => setActiveView('map')}
         />
+      </Show>
 
-        {/* Left overlay — whichever view the rail is on. */}
-        <div class="map-overlay map-overlay--stack">
-          <Show when={activeView() === 'map'}>
-            <Show
-              when={state.selectedZone}
-              fallback={
-                <DeviceDetails
-                  device={selectors.selectedDevice()}
+      <Show when={activeView() !== 'details'}>
+        <main class="app-map" ref={mapEl}>
+          <DisasterMap
+            event={state.event}
+            devices={state.devices}
+            selectedPhone={state.selectedPhone}
+            selectedZone={state.selectedZone}
+            operator={state.region}
+            layers={layers()}
+            shelters={SHELTER_SITES}
+            basemap={settings.basemap}
+            units={settings.units}
+            onSelect={(phone) =>
+              phone ? pickDevice(phone, { focus: false }) : actions.clearSelection()
+            }
+            onSelectZone={pickZone}
+            onReady={(api) => setHandle(() => api)}
+          />
+
+          {/* Left overlay — whichever view the rail is on. */}
+          <div class="map-overlay map-overlay--stack">
+            <Show when={activeView() === 'map'}>
+              <Show
+                when={state.selectedZone}
+                fallback={
+                  <DeviceDetails
+                    device={selectors.selectedDevice()}
+                    hidden={panelHidden()}
+                    onToggleHidden={toggleHidden}
+                  />
+                }
+              >
+                <ZoneDetails
+                  zone={state.selectedZone}
+                  event={state.event}
+                  counts={selectors.counts()}
+                  narrative={state.narratives[state.selectedZone]?.text}
                   hidden={panelHidden()}
                   onToggleHidden={toggleHidden}
                 />
+              </Show>
+            </Show>
+
+            <Show when={activeView() === 'rescue'}>
+              <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
+                <RescuePanel
+                  queue={selectors.rescueQueue()}
+                  selectedPhone={state.selectedPhone}
+                  onSelect={pickDevice}
+                />
+              </PanelShell>
+            </Show>
+
+            <Show when={activeView() === 'devices'}>
+              <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
+                <DevicesPanel counts={selectors.counts()} areas={selectors.byLocality()} />
+              </PanelShell>
+            </Show>
+
+            <Show when={activeView() === 'shelters'}>
+              <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
+                <SheltersPanel shelters={SHELTER_SITES} onFocus={focusShelter} />
+              </PanelShell>
+            </Show>
+
+          </div>
+
+          {/* Right overlay — simulation control, then the map toolbar. */}
+          <div class="map-overlay map-overlay--tr app-tr">
+            <button
+              type="button"
+              class="app-sim"
+              classList={{ 'is-running': isDemo() }}
+              onClick={isDemo() ? useLiveStream : useDemoStream}
+              title={
+                isDemo()
+                  ? 'Stop the simulation and retry the live supervisor'
+                  : 'Run the bundled Al Haouz simulation'
               }
             >
-              <ZoneDetails
-                zone={state.selectedZone}
-                event={state.event}
-                counts={selectors.counts()}
-                narrative={state.narratives[state.selectedZone]?.text}
-                hidden={panelHidden()}
-                onToggleHidden={toggleHidden}
-              />
-            </Show>
+              <span class="app-sim__glyph" aria-hidden="true" />
+              <span class="app-sim__label">
+                {isDemo() ? 'Simulation running' : 'Run simulation'}
+              </span>
+            </button>
+
+            <MapToolbar
+              status={toolbarStatus()}
+              source={stream.source()}
+              fps={state.connection.fps}
+              layers={layers()}
+              netLabel={net.label()}
+              netQuality={net.quality()}
+              onToggleLayer={toggleLayer}
+              onFullscreen={toggleFullscreen}
+              onExport={exportJson}
+            />
+          </div>
+
+          {/* Transient note — what the console cannot do, said plainly. */}
+          <Show when={note()}>
+            <p class="map-overlay app-note" role="status" aria-live="polite">
+              {note()}
+            </p>
           </Show>
-
-          <Show when={activeView() === 'rescue'}>
-            <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
-              <RescuePanel
-                queue={selectors.rescueQueue()}
-                selectedPhone={state.selectedPhone}
-                onSelect={pickDevice}
-              />
-            </PanelShell>
-          </Show>
-
-          <Show when={activeView() === 'devices'}>
-            <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
-              <DevicesPanel counts={selectors.counts()} areas={selectors.byLocality()} />
-            </PanelShell>
-          </Show>
-
-          <Show when={activeView() === 'shelters'}>
-            <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
-              <SheltersPanel shelters={SHELTER_SITES} onFocus={focusShelter} />
-            </PanelShell>
-          </Show>
-
-        </div>
-
-        {/* Right overlay — simulation control, then the map toolbar. */}
-        <div class="map-overlay map-overlay--tr app-tr">
-          <button
-            type="button"
-            class="app-sim"
-            classList={{ 'is-running': isDemo() }}
-            onClick={isDemo() ? useLiveStream : useDemoStream}
-            title={
-              isDemo()
-                ? 'Stop the simulation and retry the live supervisor'
-                : 'Run the bundled Al Haouz simulation'
-            }
-          >
-            <span class="app-sim__glyph" aria-hidden="true" />
-            <span class="app-sim__label">
-              {isDemo() ? 'Simulation running' : 'Run simulation'}
-            </span>
-          </button>
-
-          <MapToolbar
-            status={toolbarStatus()}
-            source={stream.source()}
-            fps={state.connection.fps}
-            layers={layers()}
-            netLabel={net.label()}
-            netQuality={net.quality()}
-            onToggleLayer={toggleLayer}
-            onFullscreen={toggleFullscreen}
-            onExport={exportJson}
-          />
-        </div>
-
-        {/* Transient note — what the console cannot do, said plainly. */}
-        <Show when={note()}>
-          <p class="map-overlay app-note" role="status" aria-live="polite">
-            {note()}
-          </p>
-        </Show>
-      </main>
+        </main>
+      </Show>
 
       {/* The fatal banner sits outside the map so it survives whichever rail
           view is open, and whether or not the panel is hidden. */}
@@ -486,6 +664,51 @@ export default function App() {
           </p>
         )}
       </Show>
+
+      {/* The launcher is the one control that writes. It is deliberately a
+          modal: firing an event is not something to do while half-looking at
+          something else. */}
+      <Show when={launcherOpen()}>
+        <IncidentLauncherModal
+          sensorUrl={sensorUrlFor(settings.wsUrl)}
+          source={stream.source()}
+          onLaunched={onLaunched}
+          onClose={() => setLauncherOpen(false)}
+        />
+      </Show>
+
+      {/* Telemetry is a drawer rather than a modal for the opposite reason:
+          faults are read WHILE watching the map, so it takes the right edge and
+          leaves the left column and the map itself visible. */}
+      <Show when={telemetryOpen()}>
+        <NetworkTelemetryDrawer
+          errors={state.errors}
+          counts={selectors.counts()}
+          onClear={() => actions.clearErrors()}
+          onClose={() => setTelemetryOpen(false)}
+        />
+      </Show>
+
+      {/* Settings sit above every view, so the operator can change the basemap
+          while watching the map they are changing. */}
+      <Show when={settingsOpen()}>
+        <SettingsModal
+          tab={settingsTab()}
+          event={state.event}
+          connection={state.connection}
+          status={toolbarStatus()}
+          source={stream.source()}
+          netLabel={net.label()}
+          netQuality={net.quality()}
+          onClose={() => setSettingsTab(null)}
+          onApplyWsUrl={applyWsUrl}
+          onUseDemo={useDemoStream}
+          onUseLive={useLiveStream}
+          onPing={() => checkHealth({ url: healthUrlFor(settings.wsUrl), timeout: 3000 })}
+          onEndShift={endShift}
+        />
+      </Show>
     </div>
+    </SettingsContext.Provider>
   )
 }

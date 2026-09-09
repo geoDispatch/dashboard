@@ -1,6 +1,5 @@
 import { createSignal, onMount, onCleanup, Show, For } from 'solid-js'
 import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
-import { maskPhone } from '../lib/format'
 import logoLockup from '../assets/icons/geo-dispatch-logo.svg'
 // Icons are inlined with Vite's ?raw suffix rather than loaded through <img>.
 // An SVG behind <img src> is an isolated document, so its stroke="currentColor"
@@ -9,6 +8,7 @@ import logoLockup from '../assets/icons/geo-dispatch-logo.svg'
 import pinIcon from '../assets/icons/location-pin.svg?raw'
 import chevronIcon from '../assets/icons/chevron-down-up.svg?raw'
 import searchIcon from '../assets/icons/search.svg?raw'
+import accountIcon from '../assets/icons/nav-account.svg?raw'
 import notificationsIcon from '../assets/icons/notifications.svg?raw'
 import './TopBar.css'
 
@@ -16,19 +16,23 @@ import './TopBar.css'
 //
 // Every control here is a real control: the location pill is a dropdown wired
 // to the operator-location hook, the search field is a live <input> over the
-// device index, and the two auth buttons are honest about there being no auth
-// service behind them (they call props.onAuthNote instead of faking a login).
+// device index, and the right-hand control names the station this console is
+// signed in as.
+//
+// There is no Sign in and no Get Started. This is not a product anyone signs
+// up to from this screen — reaching it at all means being inside a Protection
+// Civile operations room on a station that already has an account, so a
+// sign-in button could only ever have been decoration. What the corner needs
+// to answer is "whose console is this", and that is what it answers now.
 //
 // props is never destructured — in Solid that would read each value once, at
 // setup, and freeze it.
 export default function TopBar(props) {
   const [menuOpen, setMenuOpen] = createSignal(false)
   const [searchFocused, setSearchFocused] = createSignal(false)
-  const [notifOpen, setNotifOpen] = createSignal(false)
 
   let locationRef
   let searchRef
-  let notifRef
 
   const locationText = () => props.locationLabel || 'Set Location'
   const results = () => props.results || []
@@ -41,7 +45,12 @@ export default function TopBar(props) {
 
   const badgeText = () => (errorCount() > 99 ? '99+' : String(errorCount()))
 
-  const errorGroups = () => props.errorGroups || []
+  // An operator who clears the name field should still get a labelled control,
+  // not an empty one.
+  const operatorName = () => {
+    const name = props.operator && props.operator.name
+    return name && name.trim() ? name : 'Unnamed station'
+  }
 
   const notificationsLabel = () =>
     errorCount() > 0
@@ -51,7 +60,6 @@ export default function TopBar(props) {
   function closeAll() {
     setMenuOpen(false)
     setSearchFocused(false)
-    setNotifOpen(false)
   }
 
   // Outside click / Escape. pointerdown (not click) so the panel is already
@@ -59,7 +67,6 @@ export default function TopBar(props) {
   function handlePointerDown(event) {
     if (locationRef && !locationRef.contains(event.target)) setMenuOpen(false)
     if (searchRef && !searchRef.contains(event.target)) setSearchFocused(false)
-    if (notifRef && !notifRef.contains(event.target)) setNotifOpen(false)
   }
 
   function handleKeyDown(event) {
@@ -218,95 +225,54 @@ export default function TopBar(props) {
           </Show>
         </div>
 
-        {/* Notifications open under the bell rather than in the left column:
-            the trigger and its detail belong together, and the left column is
-            the device/zone panel's. */}
-        <div class="gd-notif" ref={notifRef}>
-          <button
-            type="button"
-            class="gd-notifications"
-            classList={{ 'is-open': notifOpen() }}
-            aria-label={notificationsLabel()}
-            aria-expanded={notifOpen()}
-            aria-haspopup="dialog"
-            onClick={() => {
-              setNotifOpen(!notifOpen())
-              props.onNotifications?.()
-            }}
-            data-node-id="62:2"
-          >
-            <span class="gd-notifications__icon" aria-hidden="true" innerHTML={notificationsIcon} />
-            <Show when={errorCount() > 0}>
-              <span class="gd-notifications__badge">{badgeText()}</span>
-            </Show>
-          </button>
-
-          <Show when={notifOpen()}>
-            <div class="gd-notif__panel" role="dialog" aria-label="Notifications">
-              <div class="gd-notif__head">
-                <p class="gd-notif__title">Notifications</p>
-                <Show when={errorCount() > 0}>
-                  <button
-                    type="button"
-                    class="gd-notif__clear"
-                    onClick={() => props.onClearErrors?.()}
-                  >
-                    Clear
-                  </button>
-                </Show>
-              </div>
-
-              <Show
-                when={errorGroups().length}
-                fallback={
-                  <p class="gd-notif__empty">
-                    Nothing reported. Errors from the supervisor appear here as they arrive.
-                  </p>
-                }
-              >
-                <ul class="gd-notif__list">
-                  <For each={errorGroups()}>
-                    {(group) => (
-                      <li
-                        class="gd-notif__item"
-                        classList={{ 'is-fatal': !!group.fatal }}
-                      >
-                        <div class="gd-notif__row">
-                          <span class="gd-notif__code">{group.code}</span>
-                          <Show when={group.count > 1}>
-                            <span class="gd-notif__count">&times;{group.count}</span>
-                          </Show>
-                        </div>
-                        <p class="gd-notif__meaning">{group.reads}</p>
-                        <p class="gd-notif__detail">{group.latest?.message}</p>
-                        <Show when={group.latest?.phone}>
-                          <p class="gd-notif__phone">{maskPhone(group.latest.phone)}</p>
-                        </Show>
-                      </li>
-                    )}
-                  </For>
-                </ul>
-              </Show>
-            </div>
-          </Show>
-        </div>
-
+        {/* Launch incident.
+            Every other control on this bar reads. This one writes: it opens
+            the dialog that POSTs a sensor reading to the supervisor, which is
+            the only request the console ever sends. It is styled as the one
+            filled button on the bar for exactly that reason. */}
         <button
           type="button"
-          class="gd-signin"
-          onClick={() => props.onAuthNote?.('Sign in')}
-          data-node-id="62:3"
+          class="gd-launch"
+          onClick={() => props.onLaunchIncident?.()}
         >
-          Sign in
+          <span class="gd-launch__plus" aria-hidden="true">+</span>
+          <span class="gd-launch__label">Launch incident</span>
+        </button>
+
+        {/* The bell used to open a popover that listed error codes. It now
+            opens the telemetry drawer, which lists the same codes plus the
+            reachability split and the recent warnings — one surface for the
+            fault picture instead of two that disagree about how much of it
+            to show. */}
+        <button
+          type="button"
+          class="gd-notifications"
+          classList={{ 'is-open': !!props.telemetryOpen }}
+          aria-label={notificationsLabel()}
+          aria-expanded={!!props.telemetryOpen}
+          aria-haspopup="dialog"
+          onClick={() => props.onOpenTelemetry?.()}
+        >
+          <span class="gd-notifications__icon" aria-hidden="true" innerHTML={notificationsIcon} />
+          <Show when={errorCount() > 0}>
+            <span class="gd-notifications__badge">{badgeText()}</span>
+          </Show>
         </button>
 
         <button
           type="button"
-          class="gd-getstarted"
-          onClick={() => props.onAuthNote?.('Get Started')}
-          data-node-id="62:4"
+          class="gd-account"
+          aria-label={`Account — ${operatorName()}. Open the station profile.`}
+          title="Station profile and console settings"
+          onClick={() => props.onOpenAccount?.()}
         >
-          Get Started
+          <span class="gd-account__icon" innerHTML={accountIcon} aria-hidden="true" />
+          <span class="gd-account__text">
+            <span class="gd-account__name">{operatorName()}</span>
+            <Show when={props.operator && props.operator.badge}>
+              {(badge) => <span class="gd-account__badge">{badge()}</span>}
+            </Show>
+          </span>
         </button>
       </div>
     </header>

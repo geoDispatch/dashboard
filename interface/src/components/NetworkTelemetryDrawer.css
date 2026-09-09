@@ -1,0 +1,420 @@
+/* ============================================================================
+   Network telemetry drawer.
+
+   Slides in from the right, full height, 420 wide. Right rather than left
+   because the left column belongs to the device and zone panels, and an
+   operator reading a fault usually wants those still open beside it.
+
+   The scrim is barely there — 18% rather than the 34% the two dialogs use —
+   so the map stays readable behind the drawer and dots keep arriving in view.
+   It is still a scrim, though: a click on the map closes the drawer rather
+   than reaching the map, which is the right trade for a panel this easy to
+   reopen from the bell.
+
+   Tokens from src/styles/tokens.css.
+   ========================================================================= */
+
+.ntd-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--gd-z-modal, 1500);
+  background: rgba(23, 33, 43, 0.18);
+  animation: ntd-fade var(--gd-dur) var(--gd-ease);
+}
+
+@keyframes ntd-fade {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+.ntd {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: min(420px, 100%);
+  background: var(--gd-surface);
+  box-shadow: var(--gd-shadow-pop);
+  font-family: var(--gd-font);
+  font-variation-settings: 'opsz' 14;
+  color: var(--gd-ink);
+  animation: ntd-slide var(--gd-dur-slow) var(--gd-ease);
+}
+
+@keyframes ntd-slide {
+  from { transform: translateX(24px); opacity: 0 }
+  to   { transform: none; opacity: 1 }
+}
+
+/* ── Head ─────────────────────────────────────────────────────────────── */
+
+.ntd-head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px var(--gd-card-pad);
+  border-bottom: 1px solid var(--gd-hairline);
+}
+
+.ntd-head__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ntd-head__title {
+  margin: 0;
+  font-size: var(--gd-fs-title);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-title);
+}
+
+.ntd-head__sub {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+.ntd-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  color: var(--gd-ink-2);
+  transition: background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.ntd-close:hover {
+  background: var(--gd-field);
+  color: var(--gd-ink);
+}
+
+.ntd-icon {
+  display: flex;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: inherit;
+}
+
+.ntd-icon svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+
+.ntd-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--gd-gap);
+  min-height: 0;
+  padding: var(--gd-card-pad);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--gd-field);
+}
+
+.ntd-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px var(--gd-gap);
+  border-radius: var(--gd-radius-card);
+  background: var(--gd-surface);
+  box-shadow: var(--gd-shadow-card);
+}
+
+.ntd-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.ntd-card__title {
+  margin: 0;
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-base);
+}
+
+.ntd-card__meta {
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.ntd-clear {
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-3);
+  transition: color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.ntd-clear:hover {
+  color: var(--gd-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.ntd-empty {
+  margin: 0;
+  font-size: var(--gd-fs-sm);
+  line-height: 20px;
+  color: var(--gd-ink-4);
+}
+
+.ntd-note {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-4);
+}
+
+.ntd-note.is-warn {
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--gd-orange-soft);
+  color: var(--gd-orange-ink);
+}
+
+/* The gap statement is the last thing in the drawer and reads as a footnote to
+   the whole of it, not to any one card. */
+.ntd-gap {
+  margin: 0;
+  padding: 0 4px 8px;
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-4);
+}
+
+/* ── Reachability ─────────────────────────────────────────────────────── */
+
+.ntd-split {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ntd-split__figure {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ntd-split__value {
+  font-size: 22px;
+  font-weight: var(--gd-fw-bold);
+  line-height: 28px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gd-ink);
+}
+
+.ntd-split__value.is-red {
+  color: var(--gd-red);
+}
+
+.ntd-split__label {
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+/* Green measures the share that is answering; the remainder is the red-zone
+   problem, so the track itself carries the second colour. */
+.ntd-bar {
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  height: 6px;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-red-soft);
+}
+
+.ntd-bar__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-zone-green);
+  transition: width var(--gd-dur) var(--gd-ease);
+}
+
+/* ── Fault counters ───────────────────────────────────────────────────── */
+
+.ntd-codes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.ntd-code {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px;
+  border-radius: var(--gd-radius-control);
+  transition: background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+/* A code at zero is still worth a row — it says the console is watching for it
+   — but it should not compete with the ones that are actually firing. */
+.ntd-code.is-quiet {
+  opacity: 0.5;
+}
+
+.ntd-code.is-fatal {
+  background: var(--gd-red-soft);
+}
+
+.ntd-code__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.ntd-code__title {
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink);
+}
+
+.ntd-code__blurb {
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-4);
+}
+
+.ntd-code__id {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: var(--gd-fw-medium);
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  color: var(--gd-ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.ntd-code__surface {
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--gd-field);
+  font-weight: var(--gd-fw-regular);
+  letter-spacing: 0;
+  color: var(--gd-ink-4);
+}
+
+.ntd-code__count {
+  flex: 0 0 auto;
+  min-width: 32px;
+  font-size: var(--gd-fs-lg);
+  font-weight: var(--gd-fw-bold);
+  line-height: 24px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--gd-ink);
+}
+
+.ntd-code.is-fatal .ntd-code__count {
+  color: var(--gd-red);
+}
+
+/* ── Recent list ──────────────────────────────────────────────────────── */
+
+.ntd-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.ntd-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+}
+
+.ntd-item.is-fatal {
+  background: var(--gd-red-soft);
+}
+
+.ntd-item__top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ntd-item__code {
+  font-size: 11px;
+  font-weight: var(--gd-fw-bold);
+  line-height: 15px;
+  letter-spacing: 0.04em;
+  color: var(--gd-ink-2);
+}
+
+.ntd-item.is-fatal .ntd-item__code {
+  color: var(--gd-red);
+}
+
+.ntd-item__time {
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Supervisor error text is raw Go output — unbounded, and not written for a
+   human. It wraps and breaks rather than being clipped to a tidy lie. */
+.ntd-item__message {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-3);
+  overflow-wrap: anywhere;
+}
+
+.ntd-item__phone {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--gd-ink-2);
+}
+
+.ntd-item__phone.is-none {
+  color: var(--gd-ink-4);
+  font-variant-numeric: normal;
+}
+
+/* ── Narrow windows ───────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .ntd {
+    width: 100%;
+  }
+}

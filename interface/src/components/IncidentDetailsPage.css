@@ -1,0 +1,994 @@
+/* ============================================================================
+   Incident details — the rail's full-page view.
+
+   Geometry, in one picture:
+
+       +---------------------------------------------------------------+
+       | .idp-head            fixed, 72 tall, hairline under it         |
+       +---------------------------------------------------------------+
+       | .idp-body            the only thing that scrolls               |
+       |   .idp-facts         one card, eight facts on a fluid grid     |
+       |   .idp-metrics       4 counters                                |
+       |   .idp-zones         3 columns: counts + the AI's report       |
+       |   .idp-table-card    toolbar / table / pager / note            |
+       |   .idp-columns       shelters (2fr) + network (1fr)            |
+       +---------------------------------------------------------------+
+
+   Everything here is built from src/styles/tokens.css. No colour is invented:
+   a colour the page needs is a token, and a zone colour arrives on a `--zone`
+   custom property set from ZONE_COLORS in the JSX, so a chip can never drift
+   away from the map dot it stands for.
+
+   Two type rules the rest of the console already follows and this page now
+   follows too: one label style (.idp-label) rather than six ad-hoc uppercase
+   variants, and tabular numerals on every figure, because every figure on this
+   screen is live and digits that change width jitter.
+   ========================================================================= */
+
+.idp {
+  grid-area: map;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  border-top-left-radius: var(--gd-radius-card);
+  background: var(--gd-field);
+  color: var(--gd-ink);
+  font-family: var(--gd-font);
+  font-variation-settings: 'opsz' 14;
+}
+
+/* ── Header ───────────────────────────────────────────────────────────────
+   Outside the scroll container: which event this is must not be something the
+   operator has to scroll back up to check. */
+
+.idp-head {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gd-gap);
+  padding: 20px var(--gd-map-inset);
+  background: var(--gd-surface);
+  border-bottom: 1px solid var(--gd-hairline);
+  border-top-left-radius: var(--gd-radius-card);
+}
+
+.idp-head__id {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  min-width: 0;
+}
+
+.idp-head__title {
+  margin: 0;
+  font-size: var(--gd-fs-title);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-title);
+  color: var(--gd-ink);
+  white-space: nowrap;
+}
+
+.idp-head__sub {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-4);
+}
+
+/* Only the hazard word is capitalised, by the span around it. Putting
+   `capitalize` on the whole line turned "50 km radius" into "50 Km Radius". */
+.idp-head__meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The event id is an identifier, so it gets the figure treatment rather than
+   the prose one. */
+.idp-chip {
+  flex: 0 0 auto;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--gd-field);
+  color: var(--gd-ink-2);
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-xs);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+
+.idp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: var(--gd-map-inset) var(--gd-map-inset) 40px;
+}
+
+/* ── Shared primitives ────────────────────────────────────────────────── */
+
+.idp-card {
+  box-sizing: border-box;
+  background: var(--gd-surface);
+  border-radius: var(--gd-radius-card);
+  box-shadow: var(--gd-shadow-card);
+}
+
+/* ONE label style for the whole page. Every uppercase micro-label — facts,
+   counters, zone stats, shelter stats, network rows, table headers — is this
+   one rule, so nothing on the page is uppercase at a size the design never
+   chose. */
+.idp-label {
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gd-ink-4);
+}
+
+.idp-empty {
+  margin: 0;
+  font-size: var(--gd-fs-sm);
+  line-height: 20px;
+  color: var(--gd-ink-4);
+}
+
+/* A footnote that names a backend gap. Quiet on purpose — it is a caveat, not
+   a warning. */
+.idp-note {
+  margin: 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--gd-hairline);
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+.idp-rule {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  background: var(--gd-hairline);
+}
+
+/* Missing is not zero. A value the supervisor never sent is drawn lighter and
+   at regular weight so it can never be misread as a figure. */
+.idp .is-missing {
+  color: var(--gd-ink-4);
+  font-weight: var(--gd-fw-regular);
+}
+
+.idp .is-capital {
+  text-transform: capitalize;
+}
+
+.idp .is-tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+.idp .is-red {
+  color: var(--gd-red);
+}
+
+/* ── Buttons ──────────────────────────────────────────────────────────── */
+
+.idp-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: var(--gd-control-h);
+  padding: 0 16px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+  color: var(--gd-ink-2);
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-base);
+  white-space: nowrap;
+  transition: background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.idp-ghost:hover {
+  background: var(--gd-field-hover);
+  color: var(--gd-ink);
+}
+
+.idp-ghost:disabled {
+  opacity: 0.45;
+}
+
+.idp-ghost:disabled:hover {
+  background: var(--gd-field);
+  color: var(--gd-ink-2);
+}
+
+.idp-ghost--sm {
+  height: 36px;
+  padding: 0 14px;
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+}
+
+.idp-ghost__icon {
+  display: flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: inherit;
+}
+
+.idp-ghost__icon svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Event facts ──────────────────────────────────────────────────────── */
+
+.idp-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 20px var(--gd-card-pad);
+  padding: 20px var(--gd-card-pad);
+}
+
+.idp-fact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.idp-fact__value {
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-base);
+  color: var(--gd-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.idp-fact__value.is-strong {
+  font-weight: var(--gd-fw-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* A risk level is a word first. The tint is the second channel and the word
+   is never dropped. */
+.idp-tone {
+  width: fit-content;
+  padding: 1px 8px;
+  border-radius: 6px;
+  font-weight: var(--gd-fw-medium);
+  font-size: var(--gd-fs-sm);
+  line-height: 22px;
+  letter-spacing: 0.02em;
+}
+
+.idp-tone--red {
+  background: var(--gd-red-soft);
+  color: var(--gd-red);
+}
+
+.idp-tone--orange {
+  background: var(--gd-orange-soft);
+  color: var(--gd-orange-ink);
+}
+
+.idp-tone--green {
+  background: var(--gd-zone-green-soft);
+  color: var(--gd-green);
+}
+
+.idp-facts__note {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding-top: 4px;
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+/* ── Counters ─────────────────────────────────────────────────────────── */
+
+.idp-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--gd-gap);
+}
+
+.idp-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px var(--gd-card-pad);
+}
+
+.idp-metric__value {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 30px;
+  font-weight: var(--gd-fw-bold);
+  line-height: 34px;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gd-ink);
+}
+
+.idp-metric__unit {
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.idp-metric__sub {
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+/* One 4px rule under every counter, so the four cards read as a row rather
+   than as four unrelated boxes. */
+.idp-bar,
+.idp-split {
+  display: flex;
+  overflow: hidden;
+  width: 100%;
+  height: 4px;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-field);
+}
+
+.idp-bar__fill {
+  height: 100%;
+  border-radius: var(--gd-radius-pill);
+  transition: width var(--gd-dur) var(--gd-ease);
+}
+
+/* The located counter's rule is the zone split — the one place on the page
+   where red / orange / green appear in proportion. */
+.idp-split__seg {
+  height: 100%;
+  transition: width var(--gd-dur) var(--gd-ease);
+}
+
+/* ── Sections ─────────────────────────────────────────────────────────── */
+
+.idp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.idp-section__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.idp-section__title {
+  margin: 0;
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-base);
+  color: var(--gd-ink);
+}
+
+.idp-section__meta {
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* ── Zones ────────────────────────────────────────────────────────────── */
+
+.idp-zones {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--gd-gap);
+}
+
+.idp-zone {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px var(--gd-card-pad) var(--gd-card-pad);
+  border-top: 3px solid var(--zone);
+  border-top-left-radius: var(--gd-radius-card);
+  border-top-right-radius: var(--gd-radius-card);
+}
+
+.idp-zone__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.idp-zone__word {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-base);
+  color: var(--gd-ink);
+}
+
+.idp-zone__dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--zone);
+}
+
+.idp-zone__band {
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.idp-zone__meaning {
+  margin: 0;
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-3);
+}
+
+/* Red carries three figures, orange and green two. The columns are sized by
+   content rather than split into thirds, so the missing rescue number reads as
+   absent by design and not as an empty slot. */
+.idp-zone__stats {
+  display: flex;
+  gap: 28px;
+  margin: 0;
+  padding: 12px 0;
+  border-top: 1px solid var(--gd-hairline);
+  border-bottom: 1px solid var(--gd-hairline);
+}
+
+.idp-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.idp-stat__value {
+  margin: 0;
+  font-size: var(--gd-fs-lg);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-lg);
+  color: var(--gd-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.idp-stat__value small {
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-regular);
+  color: var(--gd-ink-4);
+}
+
+/* The AI's report is the product's own voice; it gets prose measure and
+   leading, not the dense-table treatment the rest of the page uses. */
+.idp-zone__report {
+  margin: 0;
+  flex: 1 1 auto;
+  font-size: var(--gd-fs-sm);
+  line-height: 22px;
+  color: var(--gd-ink-2);
+}
+
+.idp-zone__stamp {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Table ────────────────────────────────────────────────────────────── */
+
+.idp-table-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0 0 var(--gd-card-pad);
+  overflow: hidden;
+}
+
+.idp-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gd-gap);
+  flex-wrap: wrap;
+  padding: var(--gd-gap) var(--gd-card-pad);
+}
+
+.idp-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1 1 280px;
+  max-width: 380px;
+  height: var(--gd-control-h);
+  padding: 0 16px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+  color: var(--gd-ink-2);
+  transition: background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.idp-search:focus-within {
+  background: var(--gd-field-hover);
+}
+
+.idp-search__icon {
+  display: flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: var(--gd-ink-4);
+}
+
+.idp-search__icon svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.idp-search__input {
+  width: 100%;
+  min-width: 0;
+  font-size: var(--gd-fs-base);
+  line-height: var(--gd-lh-base);
+  color: var(--gd-ink);
+}
+
+/* One segmented control instead of five loose pills: the filters are mutually
+   exclusive, so they are drawn as one thing with one selection. */
+.idp-segment {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: var(--gd-control-h);
+  padding: 4px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+}
+
+.idp-segment__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: var(--gd-segment-h);
+  padding: 0 12px;
+  border-radius: 8px;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-3);
+  white-space: nowrap;
+  transition: background-color var(--gd-dur-fast) var(--gd-ease),
+              color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.idp-segment__btn:hover {
+  color: var(--gd-ink);
+}
+
+.idp-segment__btn.is-active {
+  background: var(--gd-surface);
+  color: var(--gd-ink);
+  box-shadow: 0 1px 2px rgba(23, 33, 43, 0.10);
+}
+
+/* The selected zone filter carries its zone colour as a 2px underline — the
+   word "Red" is still the label, so colour stays the second channel. */
+.idp-segment__btn.is-active.is-red    { box-shadow: 0 1px 2px rgba(23,33,43,.10), inset 0 -2px 0 var(--gd-red); }
+.idp-segment__btn.is-active.is-orange { box-shadow: 0 1px 2px rgba(23,33,43,.10), inset 0 -2px 0 var(--gd-orange); }
+.idp-segment__btn.is-active.is-green  { box-shadow: 0 1px 2px rgba(23,33,43,.10), inset 0 -2px 0 var(--gd-zone-green); }
+.idp-segment__btn.is-active.is-rescue { box-shadow: 0 1px 2px rgba(23,33,43,.10), inset 0 -2px 0 var(--gd-ink); }
+
+.idp-segment__count {
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.idp-segment__btn.is-active .idp-segment__count {
+  color: var(--gd-ink-3);
+}
+
+/* The table gets its own viewport, in both directions. Sideways, because nine
+   columns do not fit a laptop and the page itself must never scroll sideways.
+   Downwards, because that is what lets the column header stay put over a page
+   of rows — a header that scrolls away leaves fifty unlabelled numbers. */
+.idp-table-scroll {
+  overflow: auto;
+  max-height: 540px;
+  overscroll-behavior: contain;
+  border-top: 1px solid var(--gd-hairline);
+}
+
+.idp-table {
+  width: 100%;
+  min-width: 1080px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.idp-th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  background: var(--gd-surface);
+  border-bottom: 1px solid var(--gd-hairline-strong);
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gd-ink-4);
+  white-space: nowrap;
+}
+
+/* A plain header cell and a sortable one must sit on the same baseline, so the
+   padding lives on the button and is repeated here rather than on the cell. */
+.idp-th:not(:has(.idp-th__btn)) {
+  padding: 12px 16px;
+}
+
+.idp-th__btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 12px 16px;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  color: inherit;
+  transition: color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.idp-th__btn:hover {
+  color: var(--gd-ink-2);
+}
+
+.idp-th--right .idp-th__btn {
+  justify-content: flex-end;
+}
+
+.idp-th--right:not(:has(.idp-th__btn)) {
+  text-align: right;
+}
+
+.idp-th.is-active {
+  color: var(--gd-ink);
+}
+
+.idp-th__arrow {
+  width: 8px;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.idp-td {
+  padding: 11px 16px;
+  border-bottom: 1px solid var(--gd-hairline);
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink);
+  white-space: nowrap;
+}
+
+.idp-table tbody tr:last-child .idp-td {
+  border-bottom: 0;
+}
+
+.idp-table tbody tr:hover .idp-td {
+  background: var(--gd-field);
+}
+
+/* A rescue row is marked by a rule in the gutter, not by a wash across nine
+   cells — the wash tinted every value in the row and made the zone chips fight
+   their own background. */
+.idp-table tbody tr.is-rescue .idp-td:first-child {
+  box-shadow: inset 3px 0 0 var(--gd-red);
+}
+
+.idp-td--num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.idp-td--phone {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.idp-td--shelter {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--gd-ink-2);
+}
+
+.idp-link {
+  font: inherit;
+  font-weight: var(--gd-fw-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--gd-ink);
+  text-align: left;
+  transition: color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.idp-link:hover {
+  color: var(--gd-ink-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.idp-zoneword {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: var(--gd-fw-medium);
+  color: var(--gd-ink-2);
+}
+
+.idp-zoneword__dot {
+  flex: 0 0 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--zone);
+}
+
+.idp-state {
+  color: var(--gd-ink-2);
+}
+
+.idp-state.is-down {
+  color: var(--gd-red);
+}
+
+.idp-action {
+  color: var(--gd-ink-2);
+}
+
+.idp-action.is-rescue {
+  color: var(--gd-red);
+  font-weight: var(--gd-fw-medium);
+}
+
+.idp-action.is-none {
+  color: var(--gd-ink-4);
+}
+
+/* A rank, not an alarm. The row already carries its red in the gutter rule and
+   in the action word; a third red pill per row turned the rescue filter into a
+   wall of red with no hierarchy left in it. */
+.idp-priority {
+  display: inline-block;
+  min-width: 32px;
+  padding: 1px 7px;
+  border-radius: 6px;
+  background: var(--gd-field);
+  color: var(--gd-ink);
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-bold);
+  line-height: 18px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A number and its meter, in that reading order: the figure is the value, the
+   track is only there to make a column of them comparable at a glance. */
+.idp-confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+  color: var(--gd-ink-2);
+}
+
+.idp-confidence__track {
+  display: block;
+  width: 44px;
+  height: 4px;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-field-hover);
+  overflow: hidden;
+}
+
+.idp-confidence__fill {
+  display: block;
+  height: 100%;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-ink-3);
+}
+
+.idp-table__empty {
+  padding: 48px 16px;
+  text-align: center;
+  font-size: var(--gd-fs-sm);
+  color: var(--gd-ink-4);
+}
+
+/* ── Pager ────────────────────────────────────────────────────────────── */
+
+.idp-pager {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gd-gap);
+  flex-wrap: wrap;
+  padding: var(--gd-gap) var(--gd-card-pad) 0;
+}
+
+.idp-pager__range,
+.idp-pager__page {
+  margin: 0;
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+.idp-pager__controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.idp-table-card .idp-note {
+  margin: var(--gd-gap) var(--gd-card-pad) 0;
+}
+
+/* ── Shelters and network ─────────────────────────────────────────────── */
+
+.idp-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--gd-gap);
+  align-items: start;
+}
+
+.idp-shelters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: var(--gd-gap);
+}
+
+.idp-shelter {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px var(--gd-card-pad);
+}
+
+.idp-shelter__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.idp-shelter__name {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-base);
+  color: var(--gd-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The one state that must not read as routine. */
+.idp-shelter__word {
+  flex: 0 0 auto;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-3);
+  white-space: nowrap;
+}
+
+.idp-shelter__word.is-full {
+  color: var(--gd-red);
+}
+
+.idp-shelter__stats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.idp-network {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gd-gap);
+  padding: 20px var(--gd-card-pad) var(--gd-card-pad);
+}
+
+.idp-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+/* Label left, value right — the same row shape the ops panels use. */
+.idp-stat--row {
+  flex-direction: row;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.idp-stat--row .idp-stat__value {
+  font-size: var(--gd-fs-base);
+  line-height: var(--gd-lh-base);
+  text-align: right;
+}
+
+.idp-network .idp-note {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* ── Narrower windows ─────────────────────────────────────────────────────
+   This is a desk and wall console, not a phone (agent.md §11), so the only
+   breakpoints are the two where a 1920 layout stops fitting a laptop. */
+
+@media (max-width: 1440px) {
+  .idp-columns {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 1180px) {
+  .idp-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .idp-zones {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -418,66 +418,139 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Sign in (62:3) / Get Started (62:4) ─────────────────────── */
+/* ── Account ─────────────────────────────────────────────────
+   Replaces the Sign in / Get Started pair. Nobody reaches this console
+   without a station account, so the corner's job is to say WHICH station,
+   not to offer a way in. It is a button because it opens the station profile,
+   and it carries the same field fill every other header control uses so the
+   row still reads as one set of controls. */
 
-.gd-signin {
+.gd-account {
   display: flex;
-  flex: 0 0 80px;
+  flex: 0 0 auto;
   align-items: center;
-  justify-content: center;
+  gap: 10px;
   box-sizing: border-box;
-  width: 80px;
+  max-width: 260px;
   height: var(--gd-control-h, 44px);
   margin: 0;
-  padding: 0;
+  padding: 0 14px;
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
-  background: transparent;
+  background: var(--gd-field, #f6f7f9);
   color: var(--gd-ink-2, #47525e);
   font: inherit;
-  font-size: 16px;
-  font-weight: 500;
-  line-height: 24px;
-  white-space: nowrap;
-  overflow: hidden;
+  text-align: left;
   cursor: pointer;
+  transition: background-color 120ms ease, color 120ms ease;
 }
 
-.gd-signin:hover {
-  background: var(--gd-field, #f6f7f9);
+.gd-account:hover {
+  background: var(--gd-field-hover, #eef0f3);
+  color: var(--gd-ink, #17212b);
 }
 
-.gd-getstarted {
+.gd-account:focus-visible {
+  outline: 2px solid var(--gd-ink, #17212b);
+  outline-offset: 2px;
+}
+
+.gd-account__icon {
   display: flex;
-  flex: 0 0 128px;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: inherit;
+}
+
+.gd-account__icon svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+/* Name over badge, both single-line: Moroccan names and a station code are
+   both longer than the corner has room for. */
+.gd-account__text {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.gd-account__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 18px;
+  color: var(--gd-ink, #17212b);
+}
+
+.gd-account__badge {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--gd-ink-4, #8a93a0);
+}
+
+/* ── Launch incident ─────────────────────────────────────────
+   The only filled button on the bar, and the only control on it that sends
+   anything. Its weight is the affordance: a dispatcher scanning this row for
+   "how do I start an event" should land on it without reading. */
+
+.gd-launch {
+  display: flex;
+  flex: 0 0 auto;
   align-items: center;
-  justify-content: center;
+  gap: 8px;
   box-sizing: border-box;
-  width: 128px;
   height: var(--gd-control-h, 44px);
   margin: 0;
-  padding: 0;
+  padding: 0 18px;
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
   background: var(--gd-ink, #17212b);
   color: #ffffff;
   font: inherit;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 24px;
+  line-height: 20px;
   white-space: nowrap;
-  overflow: hidden;
   cursor: pointer;
+  transition: background-color 120ms ease;
 }
 
-.gd-getstarted:hover {
+.gd-launch:hover {
   background: #22303d;
 }
 
-.gd-signin:focus-visible,
-.gd-getstarted:focus-visible {
+.gd-launch:focus-visible {
   outline: 2px solid var(--gd-ink, #17212b);
   outline-offset: 2px;
+}
+
+/* A drawn plus rather than an icon file: it is a glyph, it has to sit on the
+   text baseline, and no 24px stroke icon in the set is a plus. */
+.gd-launch__plus {
+  display: block;
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 19px;
+}
+
+/* ── Notifications ───────────────────────────────────────────
+   Open state now means "the telemetry drawer is showing", not "a popover is
+   hanging under this button". */
+
+.gd-notifications.is-open {
+  background: var(--gd-field, #f6f7f9);
+  color: var(--gd-ink, #17212b);
 }
 
 /* ── Narrower consoles ───────────────────────────────────────── */
@@ -498,140 +571,29 @@
   .gd-logo__lockup {
     width: 132px;
   }
+}
 
-  .gd-signin {
+/* The station name is the first thing to go when the row runs out of room —
+   later than the old Sign in button did, because the account control replaced
+   two buttons with one. The icon still identifies it and the accessible name
+   still carries the station, so nothing is lost to a screen reader. */
+@media (max-width: 1180px) {
+  /* The plus alone still reads as "new", and the dialog it opens is titled. */
+  .gd-launch__label {
     display: none;
+  }
+
+  .gd-launch {
+    padding: 0 14px;
   }
 }
 
-/* ── Notifications popover ──────────────────────────────────────────────────
-   Anchored under the bell, right-aligned to it. Errors used to open a panel in
-   the left column, which put the detail a long way from the control that
-   summoned it and stole the column the device panel owns. */
+@media (max-width: 880px) {
+  .gd-account__text {
+    display: none;
+  }
 
-.gd-notif {
-  position: relative;
-  flex: none;
-}
-
-.gd-notifications.is-open {
-  background: #eef0f3;
-  color: var(--gd-ink, #17212b);
-}
-
-.gd-notif__panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 60;
-  width: 380px;
-  max-height: 60vh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  border: 1px solid rgba(23, 33, 43, 0.08);
-  border-radius: var(--gd-radius-card);
-  background: var(--gd-surface);
-  box-shadow: 0 1px 2px rgba(23, 33, 43, 0.06), 0 12px 32px rgba(23, 33, 43, 0.14);
-}
-
-.gd-notif__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(23, 33, 43, 0.08);
-}
-
-.gd-notif__title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 24px;
-  color: var(--gd-ink);
-}
-
-.gd-notif__clear {
-  padding: 0;
-  border: 0;
-  background: none;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--gd-ink-2);
-  cursor: pointer;
-}
-
-.gd-notif__clear:hover { color: var(--gd-ink); }
-
-.gd-notif__empty {
-  margin: 0;
-  padding: 20px;
-  font-size: 14px;
-  line-height: 22px;
-  color: var(--gd-ink-3);
-}
-
-.gd-notif__list {
-  margin: 0;
-  padding: 4px 0;
-  list-style: none;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-}
-
-/* A left edge carries the severity so it is not colour-on-text alone. */
-.gd-notif__item {
-  padding: 12px 20px 12px 17px;
-  border-left: 3px solid var(--gd-orange);
-}
-
-.gd-notif__item.is-fatal { border-left-color: var(--gd-red); }
-
-.gd-notif__item + .gd-notif__item {
-  border-top: 1px solid rgba(23, 33, 43, 0.06);
-}
-
-.gd-notif__row {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-}
-
-.gd-notif__code {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--gd-ink);
-}
-
-.gd-notif__count {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--gd-ink-3);
-}
-
-.gd-notif__meaning {
-  margin: 2px 0 0;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 20px;
-  color: var(--gd-ink);
-}
-
-/* Raw Go error text — not written for humans and not length-bounded. */
-.gd-notif__detail {
-  margin: 4px 0 0;
-  font-size: 13px;
-  line-height: 19px;
-  color: var(--gd-ink-3);
-  overflow-wrap: anywhere;
-}
-
-.gd-notif__phone {
-  margin: 4px 0 0;
-  font-size: 12px;
-  line-height: 18px;
-  color: var(--gd-ink-3);
+  .gd-account {
+    padding: 0 12px;
+  }
 }

@@ -2,6 +2,7 @@ import { onMount, onCleanup, createEffect } from 'solid-js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ZONE_COLORS } from '../constants/zones'
+import { basemapFor } from '../constants/basemaps'
 import { maskPhone } from '../lib/format'
 import { haversine } from '../lib/geo'
 
@@ -19,10 +20,12 @@ import { haversine } from '../lib/geo'
 //              prop entirely and zones + devices draw, shelters do not.
 //   shelters — [{ name, latitude, longitude, occupied, capacity, anchor }];
 //              entries without coordinates are skipped, never guessed at.
+//   basemap  — a key from constants/basemaps.js. Changing it swaps the ground
+//              underneath everything else: the dots, rings and current view
+//              are untouched, because only the tile layers are replaced.
 
 const DEFAULT_CENTER = [31.0625, -8.4144]   // Al Haouz
 const DEFAULT_ZOOM   = 9
-const TILE_MAX_ZOOM  = 16   // the Esri light-gray canvas stops here
 
 // Defaults for when no `layers` prop is passed at all. Once it IS passed it is
 // read literally, so a key the caller left out means "off", not "on".
@@ -36,6 +39,7 @@ export default function DisasterMap(props) {
   let epicenterMarker = null
   let operatorMarker = null
   let shelterMarkers = []
+  let tileLayers = []         // the current basemap's ground + label layers
   const markers = new Map()   // phone → L.CircleMarker
 
   // Leaflet fires the marker's click and then the map's click in the same tick,
@@ -92,19 +96,31 @@ export default function DisasterMap(props) {
     return best
   }
 
+  // Per-band fill. The three discs are concentric and STACK — green covers
+  // everything, orange the inner two thirds, red the inner third — so what the
+  // operator sees over the red band is all three composited, not 0.15 alone.
+  // These are chosen for the composite: roughly 6% at the rim, 15% in the
+  // middle band, 28% over the epicentre. That is the hazard gradient the map
+  // is supposed to read as from across a room, and it still leaves the device
+  // dots the contrast they need on top.
+  const ZONE_FILL = { red: 0.15, orange: 0.10, green: 0.06 }
+
   // One place decides how a ring looks in each state.
   function ringStyle(zone, color, selectedZone, hovered) {
     const isSelected = selectedZone === zone
     const isHovered = hovered === zone
+    const fill = ZONE_FILL[zone] ?? 0.06
 
     return {
       color,
       // The edge is the click target, so it stays visible enough to aim at.
       weight: isSelected ? 3 : isHovered ? 3 : 1.5,
-      opacity: isSelected ? 0.95 : isHovered ? 0.85 : 0.5,
+      opacity: isSelected ? 0.95 : isHovered ? 0.85 : 0.6,
       dashArray: isSelected || isHovered ? null : '5 7',
       fillColor: color,
-      fillOpacity: isSelected ? 0.08 : 0.03,
+      // Selecting a band lifts it rather than replacing its identity, so the
+      // gradient survives a selection instead of flattening to one value.
+      fillOpacity: isSelected ? fill + 0.08 : fill,
     }
   }
 
@@ -120,41 +136,93 @@ export default function DisasterMap(props) {
     return !!props.layers[key]
   }
 
+  // Swap the ground without touching anything drawn on it.
+  //
+  // The new tiles are added BEFORE the old ones are removed. Do it the other
+  // way round and there is a frame where the map is the bare container colour,
+  // which reads as the map having crashed. Leaflet fades the new layer in over
+  // the old, so this way the change is a dissolve.
+  function applyBasemap(key) {
+    if (!map) return
+    const basemap = basemapFor(key)
+    const previous = tileLayers
+    const next = []
+
+    next.push(
+      L.tileLayer(basemap.base, {
+        maxZoom: basemap.maxZoom,
+        attribution: basemap.attribution,
+      }).addTo(map),
+    )
+
+    // Place names ride above the data so the operator can name a locality.
+    if (basemap.labels) {
+      next.push(
+        L.tileLayer(basemap.labels, {
+          maxZoom: basemap.maxZoom,
+          pane: 'shadowPane',
+          attribution: '',
+        }).addTo(map),
+      )
+    }
+
+    tileLayers = next
+    for (const layer of previous) map.removeLayer(layer)
+
+    // Each basemap stops at a different zoom: the grey canvases run out at 16,
+    // imagery and streets go to 19. Raising the cap without telling the map
+    // would let the operator zoom into empty tiles; lowering it while they are
+    // already deeper than the new maximum needs an explicit pull back, which
+    // setMaxZoom does not do on its own.
+    map.setMaxZoom(basemap.maxZoom)
+    if (map.getZoom() > basemap.maxZoom) map.setZoom(basemap.maxZoom)
+  }
+
   onMount(() => {
+    const initial = basemapFor(props.basemap)
+
     map = L.map(container, {
       center: DEFAULT_CENTER,
       zoom: DEFAULT_ZOOM,
       zoomControl: false,
       preferCanvas: true,
       attributionControl: false,
-      maxZoom: TILE_MAX_ZOOM,
+      maxZoom: initial.maxZoom,
     })
 
     renderer = L.canvas({ padding: 0.5 })
 
-    // Esri's World Light Gray canvas — the muted grey base the design uses,
-    // and genuinely keyless. (CARTO's basemaps are not: they now watermark
-    // "API KEY REQUIRED" straight into the tile image and still return HTTP 200,
-    // so a failed key check looks like a successful fetch.)
-    L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-      {
-        maxZoom: TILE_MAX_ZOOM,
-        attribution: 'Tiles © Esri — Esri, DeLorme, NAVTEQ',
-      },
-    ).addTo(map)
+    // The attribution control has to exist BEFORE the first basemap is added.
+    // Leaflet only wires up "remove this credit when that layer goes away" for
+    // layers added after the control; anything already on the map when the
+    // control is built gets its credit added and never taken off again — so
+    // swapping the ground would accumulate the credit of every basemap the
+    // operator had ever looked at.
+    L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map)
 
-    // Place names ride above the data so the operator can name a locality.
-    L.tileLayer(
-      'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
-      { maxZoom: TILE_MAX_ZOOM, pane: 'shadowPane', attribution: '' },
-    ).addTo(map)
+    applyBasemap(props.basemap)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
-    L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map)
+
     // Bottom-left is the details column's corner — the scale bar rendered
     // half-hidden behind the cards, reading "2C" instead of "20 km".
-    L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 120 }).addTo(map)
+    //
+    // Leaflet reads metric/imperial once, at construction, so following the
+    // operator's units setting means rebuilding the control rather than
+    // setting an option on it.
+    let scaleControl = null
+    createEffect(() => {
+      const imperial = props.units === 'mi'
+      if (!map) return
+      if (scaleControl) map.removeControl(scaleControl)
+      scaleControl = L.control.scale({
+        position: 'bottomright',
+        metric: !imperial,
+        imperial,
+        maxWidth: 120,
+      })
+      scaleControl.addTo(map)
+    })
 
     // Zone selection is an EDGE hit, not an area hit.
     //
@@ -217,6 +285,19 @@ export default function DisasterMap(props) {
       }),
     })
 
+    // Reading props.basemap here is what subscribes the swap to the setting.
+    // It is inside onMount because applyBasemap needs the map to exist, and it
+    // skips the first run because onMount already drew that basemap.
+    let firstBasemapRun = true
+    createEffect(() => {
+      const key = props.basemap
+      if (firstBasemapRun) {
+        firstBasemapRun = false
+        return
+      }
+      applyBasemap(key)
+    })
+
     // The map lives inside a flex panel that resizes with the layout.
     const ro = new ResizeObserver(() => map.invalidateSize())
     ro.observe(container)
@@ -226,7 +307,13 @@ export default function DisasterMap(props) {
   onCleanup(() => {
     markers.clear()
     shelterMarkers = []
+    tileLayers = []
     map?.remove()
+    map = null
+    // The shell holds this handle across view switches. Retract it on the way
+    // out, or the next invalidate() lands on a Leaflet map that no longer has
+    // a container and throws.
+    props.onReady?.(null)
   })
 
   function fitToEvent() {

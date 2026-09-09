@@ -27,6 +27,10 @@
   /* ── Semantic accents ──────────────────────────────────────────────────── */
   --gd-green:          #246e47;   /* "Green zone" text — reads on white, unlike
                                      --gd-zone-green, which is a map-dot colour */
+  --gd-orange-ink:     #8a5200;   /* same job for orange: --gd-orange is tuned to
+                                     be seen as an 8px dot on a basemap and drops
+                                     under 3:1 as text, so any orange WORD on a
+                                     light surface uses this instead */
 
   /* ── Zone colours — map dots + zone words (mirrors constants/zones.js).
      A zone is NEVER encoded by colour alone; these always ship with the word. */
@@ -96,5 +100,6 @@
   --gd-z-overlay:  1100;   /* details panel, Hide button, map toolbar */
   --gd-z-chrome:   1200;   /* top bar and rail */
   --gd-z-pop:      1400;   /* dropdowns, search results */
+  --gd-z-modal:    1500;   /* the settings dialog and its scrim */
   --gd-z-toast:    1600;   /* error toasts */
 }

@@ -27,6 +27,7 @@ import {
   reachabilityLabel,
 } from '../lib/format'
 import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
+import { useDisplay } from '../lib/settings'
 
 // Icons are inlined with Vite's `?raw` suffix and written into a sized <span>
 // with innerHTML. An <img src="...svg"> is an isolated document and cannot see
@@ -171,6 +172,10 @@ export default function DeviceDetails(props) {
   const isCollapsed = (id) => collapsed()[id] === true
   const toggle = (id) => setCollapsed((prev) => ({ ...prev, [id]: !prev[id] }))
 
+  // Coordinates and distances are drawn the way the operator asked for them
+  // in settings; every screen reads the same formatters so they cannot drift.
+  const fmt = useDisplay()
+
   const device = () => props.device || null
 
   // Every accessor below is null-safe on its own, so a frame that arrives
@@ -217,13 +222,13 @@ export default function DeviceDetails(props) {
   const distanceValue = () => {
     const d = device()
     if (!d || !isNumber(d.distance_km)) return DASH
-    return `${km(d.distance_km)} from epicenter`
+    return `${fmt.distance(d.distance_km)} from epicenter`
   }
 
   const coordsValue = () => {
     const d = device()
     if (!d) return DASH
-    return coords(d.latitude, d.longitude)
+    return fmt.coords(d.latitude, d.longitude)
   }
 
   const actionValue = () => {

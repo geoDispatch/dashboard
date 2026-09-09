@@ -22,6 +22,12 @@ export function createStream(actions, {
   const [source, setSource] = createSignal('live')   // live | demo
   const [lastError, setLastError] = createSignal(null)
 
+  // The endpoint is a setting, not a constant: an operator can point this
+  // console at a staging supervisor from the settings screen. Exposed as a
+  // signal so anything showing "where are these frames from" stays truthful
+  // when it changes.
+  const [endpoint, setEndpoint] = createSignal(url)
+
   let ws = null
   let stopMock = null
   let reconnectTimer = null
@@ -99,7 +105,7 @@ export function createStream(actions, {
     actions.setStatus(attempts === 0 ? 'connecting' : 'reconnecting', 'live')
 
     try {
-      ws = new WebSocket(url)
+      ws = new WebSocket(endpoint())
     } catch (err) {
       setLastError(String(err))
       scheduleReconnect()
@@ -129,7 +135,7 @@ export function createStream(actions, {
     }
 
     ws.onerror = () => {
-      setLastError(`cannot reach supervisor at ${url}`)
+      setLastError(`cannot reach supervisor at ${endpoint()}`)
     }
 
     // If the supervisor never answers, fall back to the demo rather than
@@ -183,6 +189,45 @@ export function createStream(actions, {
   return {
     source,
     lastError,
+    endpoint,
+
+    /**
+     * Point the console at a different supervisor.
+     *
+     * This drops the open socket and connects to the new one, which means the
+     * board is cleared: there is no state snapshot on connect (agent.md §6.1),
+     * so nothing is on screen again until the new supervisor sends its next
+     * frame. That is the honest behaviour — carrying the previous
+     * supervisor's devices over would attribute them to this one.
+     */
+    setUrl(next) {
+      if (typeof next !== 'string' || next === endpoint()) return false
+
+      // Detach before closing. The old socket's onclose would otherwise fire
+      // after the swap and schedule its own reconnect, leaving two connect
+      // loops racing at the new address.
+      if (ws) {
+        ws.onopen = null
+        ws.onmessage = null
+        ws.onclose = null
+        ws.onerror = null
+        try { ws.close() } catch { /* already closing */ }
+        ws = null
+      }
+
+      clearTimeout(reconnectTimer)
+      clearTimeout(demoTimer)
+      demoTimer = null
+      stopDemo()
+
+      setEndpoint(next)
+      actions.reset()
+      setLastError(null)
+      attempts = 0
+      setSource('live')
+      connect()
+      return true
+    },
 
     /** Force the built-in Al Haouz demo, whatever the socket is doing. */
     useDemo() {
@@ -211,8 +256,15 @@ export function createStream(actions, {
 
 // ── supervisor REST ───────────────────────────────────────────
 
-/** POST /sensor — the only way to start a real event. */
-export async function triggerEvent(overrides = {}) {
+/**
+ * POST /sensor — the only way to start a real event, and the only request this
+ * console ever sends. Everything else here listens.
+ *
+ * `url` is a parameter for the same reason checkHealth's is: the endpoint is a
+ * setting, and firing an incident at the compiled-in default while the operator
+ * is watching a staging supervisor would start a disaster on the wrong machine.
+ */
+export async function triggerEvent(overrides = {}, { url = SENSOR_URL } = {}) {
   const body = {
     event_id:        overrides.event_id ?? `${EVENT_ID}-${Date.now().toString(36).toUpperCase()}`,
     disaster_type:   overrides.disaster_type ?? AL_HAOUZ_EVENT.disaster_type,
@@ -225,7 +277,7 @@ export async function triggerEvent(overrides = {}) {
     tsunami_risk:    overrides.tsunami_risk ?? AL_HAOUZ_EVENT.tsunami_risk,
   }
 
-  const res = await fetch(SENSOR_URL, {
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -234,12 +286,18 @@ export async function triggerEvent(overrides = {}) {
   return body
 }
 
-/** GET /health — used by the connection panel. */
-export async function checkHealth({ timeout = 3000 } = {}) {
+/**
+ * GET /health — used by the settings screen's Ping button.
+ *
+ * The URL is a parameter because the endpoint is a setting: pinging the
+ * compiled-in default while the console listens to a staging supervisor would
+ * answer a question nobody asked.
+ */
+export async function checkHealth({ url = HEALTH_URL, timeout = 3000 } = {}) {
   try {
     const ctrl = new AbortController()
     const timer = setTimeout(() => ctrl.abort(), timeout)
-    const res = await fetch(HEALTH_URL, { signal: ctrl.signal })
+    const res = await fetch(url, { signal: ctrl.signal })
     clearTimeout(timer)
     return res.ok
   } catch {

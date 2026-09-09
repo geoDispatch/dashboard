@@ -18,6 +18,7 @@ import { For, Show } from 'solid-js'
 import { num } from '../lib/format'
 
 import mapIcon from '../assets/icons/nav-map.svg?raw'
+import detailsIcon from '../assets/icons/nav-details.svg?raw'
 import rescueIcon from '../assets/icons/nav-rescue.svg?raw'
 import sheltersIcon from '../assets/icons/nav-shelters.svg?raw'
 import devicesIcon from '../assets/icons/nav-devices.svg?raw'
@@ -31,15 +32,26 @@ import './NavRail.css'
 // no per-item size correction any more — the wrapper is a flat 24x24 slot.
 const PRIMARY_NAV = [
   { key: 'map',      label: 'Map',      hint: 'Live map',        icon: mapIcon },
+  { key: 'details',  label: 'Details',  hint: 'Incident details', icon: detailsIcon },
   { key: 'rescue',   label: 'Rescue',   hint: 'Rescue queue',    icon: rescueIcon },
   { key: 'shelters', label: 'Shelters', hint: 'Shelters',        icon: sheltersIcon },
   { key: 'devices',  label: 'Devices',  hint: 'Devices by area', icon: devicesIcon },
 ]
 
+// All three open the same dialog, on the tab that answers what the word
+// promises. Nothing here pretends to a session service: reaching this console
+// at all means being on a station that already has an account, so the honest
+// end of a shift is handing the desk over — which is what Station does.
+//
+// `highlight` is false for Sign out so that opening the dialog does not light
+// up three tiles at once; it is a door, not a place you can be.
 const UTILITY_NAV = [
-  { key: 'account',  label: 'Account',  icon: accountIcon },
-  { key: 'settings', label: 'Settings', icon: settingsIcon },
-  { key: 'signout',  label: 'Sign out', icon: signOutIcon },
+  { key: 'account',  label: 'Account',  icon: accountIcon,  opens: 'station', highlight: true,
+    hint: 'Station profile' },
+  { key: 'settings', label: 'Settings', icon: settingsIcon, opens: 'basemap', highlight: true,
+    hint: 'Console settings' },
+  { key: 'signout',  label: 'Sign out', icon: signOutIcon,  opens: 'station', highlight: false,
+    hint: 'End shift — clears this station' },
 ]
 
 // A four-digit count would blow past the 48px tile, so the pill caps its own
@@ -108,9 +120,11 @@ export default function NavRail(props) {
                 <button
                   type="button"
                   class="navrail__btn navrail__btn--utility"
+                  classList={{ 'navrail__btn--active': item.highlight && !!props.settingsOpen }}
                   aria-label={item.label}
-                  title={item.label}
-                  onClick={() => props.onAuthNote?.(item.label)}
+                  aria-expanded={!!props.settingsOpen}
+                  title={item.hint}
+                  onClick={() => props.onOpenSettings?.(item.opens)}
                 >
                   <NavIcon markup={item.icon} />
                 </button>

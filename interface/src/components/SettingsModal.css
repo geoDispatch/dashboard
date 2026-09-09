@@ -1,0 +1,805 @@
+/* ============================================================================
+   Operator settings dialog.
+
+       +--------------------------------------------------------------+
+       | .set-rail 208 |  .set-panel__head        title + close        |
+       |   Station     +----------------------------------------------+
+       |   Basemap     |  .set-panel__body        the only scroller    |
+       |   Alerts      |     .set-card    white, hairline, 16px        |
+       |   Stream      |       .set-row   text left / control right    |
+       |   Region      |                                               |
+       +--------------------------------------------------------------+
+
+   Vertical tabs rather than a row of chips: five labels sit comfortably in a
+   column, the panel keeps its full width for the controls, and the list can
+   grow without the header turning into a scroller.
+
+   Colours, radii, type and motion all come from src/styles/tokens.css.
+   ========================================================================= */
+
+.set-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--gd-z-modal, 1500);
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: rgba(23, 33, 43, 0.34);
+  animation: set-fade var(--gd-dur) var(--gd-ease);
+}
+
+@keyframes set-fade {
+  from { opacity: 0 }
+  to   { opacity: 1 }
+}
+
+.set-dialog {
+  display: grid;
+  grid-template-columns: 208px minmax(0, 1fr);
+  width: min(940px, 100%);
+  height: min(660px, 100%);
+  overflow: hidden;
+  border-radius: var(--gd-radius-card);
+  background: var(--gd-surface);
+  box-shadow: var(--gd-shadow-pop);
+  font-family: var(--gd-font);
+  font-variation-settings: 'opsz' 14;
+  color: var(--gd-ink);
+  animation: set-rise var(--gd-dur) var(--gd-ease);
+}
+
+@keyframes set-rise {
+  from { opacity: 0; transform: translateY(8px) }
+  to   { opacity: 1; transform: none }
+}
+
+/* ── Tab rail ─────────────────────────────────────────────────────────── */
+
+.set-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gd-gap);
+  padding: 20px 16px;
+  background: var(--gd-field);
+  border-right: 1px solid var(--gd-hairline);
+}
+
+.set-rail__title {
+  margin: 0;
+  padding: 0 8px;
+  font-size: var(--gd-fs-title);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-title);
+  color: var(--gd-ink);
+}
+
+.set-rail__list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.set-rail__btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  height: 40px;
+  padding: 0 10px;
+  border-radius: var(--gd-radius-control);
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-3);
+  text-align: left;
+  transition: background-color var(--gd-dur-fast) var(--gd-ease),
+              color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.set-rail__btn:hover {
+  background: var(--gd-field-hover);
+  color: var(--gd-ink);
+}
+
+/* The same selected treatment the nav rail uses, so "which section am I in"
+   reads the same way in both places. */
+.set-rail__btn.is-active {
+  background: #e5f0f7;
+  color: #1f5278;
+}
+
+.set-rail__foot {
+  margin: 0;
+  padding: 0 8px;
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+.set-icon {
+  display: flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  color: inherit;
+}
+
+.set-icon svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+/* ── Panel ────────────────────────────────────────────────────────────── */
+
+.set-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.set-panel__head {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gd-gap);
+  padding: 20px var(--gd-card-pad);
+  border-bottom: 1px solid var(--gd-hairline);
+}
+
+.set-panel__title {
+  margin: 0;
+  font-size: var(--gd-fs-title);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-title);
+}
+
+.set-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--gd-radius-control);
+  color: var(--gd-ink-2);
+  transition: background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.set-close:hover {
+  background: var(--gd-field);
+  color: var(--gd-ink);
+}
+
+.set-panel__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--gd-gap);
+  min-height: 0;
+  padding: var(--gd-card-pad);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--gd-field);
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────── */
+
+.set-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gd-gap);
+  padding: 20px var(--gd-card-pad);
+  border-radius: var(--gd-radius-card);
+  background: var(--gd-surface);
+  box-shadow: var(--gd-shadow-card);
+}
+
+.set-card__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.set-card__title {
+  margin: 0;
+  font-size: var(--gd-fs-base);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-base);
+}
+
+.set-card__meta {
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+/* A caveat, not a warning: quiet, and always the last thing in its card. */
+.set-note {
+  margin: 0;
+  padding-top: 4px;
+  border-top: 1px solid var(--gd-hairline);
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-4);
+}
+
+.set-warn {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-orange-soft);
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-orange-ink);
+}
+
+/* ── Row ──────────────────────────────────────────────────────────────── */
+
+.set-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gd-card-pad);
+}
+
+.set-row + .set-row {
+  padding-top: var(--gd-gap);
+  border-top: 1px solid var(--gd-hairline);
+}
+
+.set-row.is-stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.set-row__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.set-row__label {
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink);
+}
+
+.set-row__hint {
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-4);
+}
+
+.set-row__control {
+  flex: 0 0 auto;
+}
+
+.set-row.is-stacked .set-row__control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.set-inline {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.set-inline__value {
+  min-width: 92px;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-2);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.set-inline__value.is-good { color: var(--gd-green) }
+.set-inline__value.is-bad  { color: var(--gd-red) }
+
+/* ── Controls ─────────────────────────────────────────────────────────── */
+
+.set-btn {
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-2);
+  white-space: nowrap;
+  transition: background-color var(--gd-dur-fast) var(--gd-ease),
+              color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.set-btn:hover:not(:disabled) {
+  background: var(--gd-field-hover);
+  color: var(--gd-ink);
+}
+
+.set-btn:disabled {
+  opacity: 0.45;
+}
+
+.set-btn--primary {
+  background: var(--gd-ink);
+  color: var(--gd-surface);
+}
+
+.set-btn--primary:hover:not(:disabled) {
+  background: var(--gd-ink-2);
+  color: var(--gd-surface);
+}
+
+.set-btn--danger {
+  background: var(--gd-red-soft);
+  color: var(--gd-red);
+}
+
+.set-btn--danger:hover:not(:disabled) {
+  background: var(--gd-red);
+  color: var(--gd-surface);
+}
+
+.set-confirm {
+  display: flex;
+  gap: 8px;
+}
+
+.set-switch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 26px;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-hairline-strong);
+  transition: background-color var(--gd-dur) var(--gd-ease);
+}
+
+.set-switch.is-on {
+  background: var(--gd-green);
+}
+
+.set-switch__knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--gd-surface);
+  box-shadow: 0 1px 2px rgba(23, 33, 43, 0.28);
+  transition: transform var(--gd-dur) var(--gd-ease);
+}
+
+.set-switch.is-on .set-switch__knob {
+  transform: translateX(18px);
+}
+
+/* A switch that is on and cannot be turned off. It keeps its colour — the
+   state it reports is true — and loses its affordance. */
+.set-switch.is-locked {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.set-segment {
+  display: flex;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+}
+
+.set-segment__btn {
+  height: var(--gd-segment-h);
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-3);
+  white-space: nowrap;
+  transition: background-color var(--gd-dur-fast) var(--gd-ease),
+              color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.set-segment__btn:hover {
+  color: var(--gd-ink);
+}
+
+.set-segment__btn.is-active {
+  background: var(--gd-surface);
+  color: var(--gd-ink);
+  box-shadow: 0 1px 2px rgba(23, 33, 43, 0.10);
+}
+
+.set-range {
+  width: 180px;
+  height: 4px;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-field-hover);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.set-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--gd-ink);
+  box-shadow: 0 1px 3px rgba(23, 33, 43, 0.3);
+}
+
+.set-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--gd-ink);
+}
+
+/* ── Fields ───────────────────────────────────────────────────────────── */
+
+.set-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px var(--gd-gap);
+}
+
+/* The badge is short; everything else wants the full width to itself. */
+.set-fields .set-field:nth-child(2),
+.set-fields .set-field:nth-child(3),
+.set-fields .set-field:nth-child(4) {
+  grid-column: 1 / -1;
+}
+
+.set-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.set-field__label {
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-xs);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gd-ink-4);
+}
+
+.set-field__input {
+  width: 100%;
+  height: var(--gd-control-h);
+  padding: 0 14px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink);
+  transition: background-color var(--gd-dur-fast) var(--gd-ease),
+              box-shadow var(--gd-dur-fast) var(--gd-ease);
+}
+
+.set-field__input:focus {
+  background: var(--gd-field-hover);
+  box-shadow: inset 0 0 0 1px var(--gd-hairline-strong);
+}
+
+.set-field__input.is-invalid {
+  box-shadow: inset 0 0 0 1px var(--gd-red);
+}
+
+.set-url {
+  display: flex;
+  gap: 8px;
+}
+
+.set-url .set-field__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.set-url .set-btn {
+  height: var(--gd-control-h);
+  flex: 0 0 auto;
+}
+
+/* ── Basemap picker ───────────────────────────────────────────────────── */
+
+.set-basemaps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gd-gap);
+}
+
+.set-basemap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: 14px;
+  background: var(--gd-surface);
+  box-shadow: inset 0 0 0 1px var(--gd-hairline);
+  text-align: left;
+  transition: box-shadow var(--gd-dur-fast) var(--gd-ease),
+              background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.set-basemap:hover {
+  background: var(--gd-field);
+  box-shadow: inset 0 0 0 1px var(--gd-hairline-strong);
+}
+
+.set-basemap.is-active {
+  background: var(--gd-field);
+  box-shadow: inset 0 0 0 2px var(--gd-ink);
+}
+
+/* One real tile of that basemap, cropped to a wide strip. `ground` sits behind
+   it as the fill, so a tile that fails to load leaves the right colour rather
+   than a broken-image box. */
+.set-basemap__preview {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  width: 100%;
+  aspect-ratio: 16 / 7;
+  border-radius: 10px;
+}
+
+.set-basemap__preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.set-basemap__tick {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gd-ink);
+  color: var(--gd-surface);
+  box-shadow: 0 1px 4px rgba(23, 33, 43, 0.4);
+}
+
+.set-basemap__tick .set-icon,
+.set-basemap__tick .set-icon svg {
+  width: 15px;
+  height: 15px;
+  flex-basis: 15px;
+}
+
+.set-basemap__name {
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink);
+}
+
+.set-basemap__blurb {
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-3);
+}
+
+.set-basemap__meta {
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Language picker ──────────────────────────────────────────────────── */
+
+.set-langs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.set-lang {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px;
+  border-radius: 14px;
+  box-shadow: inset 0 0 0 1px var(--gd-hairline);
+  text-align: left;
+  transition: box-shadow var(--gd-dur-fast) var(--gd-ease),
+              background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.set-lang:hover {
+  background: var(--gd-field);
+}
+
+.set-lang.is-active {
+  background: var(--gd-field);
+  box-shadow: inset 0 0 0 2px var(--gd-ink);
+}
+
+.set-lang__native {
+  font-size: var(--gd-fs-lg);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-lg);
+  color: var(--gd-ink);
+}
+
+.set-lang__label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--gd-fs-xs);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-4);
+}
+
+.set-tag {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--gd-hairline);
+  font-size: 10px;
+  font-weight: var(--gd-fw-bold);
+  line-height: 15px;
+  letter-spacing: 0.06em;
+  color: var(--gd-ink-3);
+}
+
+/* ── The gated control ────────────────────────────────────────────────── */
+
+.set-gate {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-field);
+}
+
+.set-gate__icon {
+  display: flex;
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  color: var(--gd-ink-3);
+}
+
+.set-gate__icon svg {
+  display: block;
+  width: 20px;
+  height: 20px;
+}
+
+.set-gate__text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.set-gate__title {
+  margin: 0;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-2);
+}
+
+.set-gate__body {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  color: var(--gd-ink-4);
+}
+
+/* ── Readout ──────────────────────────────────────────────────────────── */
+
+.set-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.set-readout__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.set-readout__row dt {
+  font-size: var(--gd-fs-sm);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink-3);
+}
+
+.set-readout__row dd {
+  margin: 0;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.set-readout__row dd small {
+  font-weight: var(--gd-fw-regular);
+  color: var(--gd-ink-4);
+}
+
+.set-readout__row dd.is-capital {
+  text-transform: capitalize;
+}
+
+/* ── Narrow windows ───────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .set-scrim {
+    padding: 16px;
+  }
+
+  .set-dialog {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+    height: min(720px, 100%);
+  }
+
+  /* The rail lies down into a scrolling strip of tabs. */
+  .set-rail {
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--gd-hairline);
+  }
+
+  .set-rail__title,
+  .set-rail__foot {
+    display: none;
+  }
+
+  .set-rail__list {
+    flex-direction: row;
+    gap: 6px;
+  }
+
+  .set-rail__btn {
+    width: auto;
+  }
+
+  .set-basemaps,
+  .set-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .set-fields .set-field {
+    grid-column: 1 / -1;
+  }
+}
