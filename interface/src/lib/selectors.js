@@ -2,6 +2,7 @@ import { createMemo } from 'solid-js'
 import { haversine, nearestLocality } from './geo'
 import { ZONE_ORDER, ERROR_SEVERITY } from '../constants/zones'
 import { deriveAction } from './format'
+import { streamPhase } from './streamState'
 
 // Derived views over the store. Counts, queues and groupings are computed here
 // rather than stored, so there is no second copy of the truth to keep in sync.
@@ -81,8 +82,13 @@ export function createSelectors(state) {
     return counts().total !== server.total
   })
 
-  // Red zone only, ever. rescue_priority is a backend gap: when it is absent
-  // the queue falls back to distance from the epicentre.
+  // Whatever the supervisor flagged, in the order it gave.
+  //
+  // NOT filtered to the red zone. The AI can escalate a device's zone and can
+  // flag an orange-zone device it judges to be in trouble; the dashboard's job
+  // is to show the flag it was sent, not to second-guess which band deserves
+  // one. rescue_priority is a backend gap — when it is absent the queue falls
+  // back to distance from the epicentre.
   const rescueQueue = createMemo(() =>
     devicesWithDistance()
       .filter(d => d.rescue_flag)
@@ -155,20 +161,25 @@ export function createSelectors(state) {
     }
   })
 
-  // The ten states from agent.md §11, collapsed into what the UI switches on.
-  const streamState = createMemo(() => {
-    const conn = state.connection
-    const nDevices = counts().total
-    const idleMs = conn.lastFrameAt ? Date.now() - conn.lastFrameAt : 0
+  // What the TRANSPORT is doing. Reads connection.now, which is ticked twice a
+  // second, so "stalled" is a state the UI actually reaches instead of one it
+  // could only reach if a frame happened to arrive and prove it wrong.
+  const phase = createMemo(() => streamPhase({
+    status:          state.connection.status,
+    framesSinceOpen: state.connection.framesSinceOpen,
+    lastFrameAt:     state.connection.lastFrameAt,
+    now:             state.connection.now,
+  }))
 
-    if (state.fatal) return 'fatal'
-    if (conn.status === 'reconnecting' || conn.status === 'lost') return 'reconnecting'
+  // What the INCIDENT is doing. Separate from the transport on purpose: an
+  // open socket delivering nothing and a halted pipeline on a healthy socket
+  // are different problems with different fixes.
+  const incidentState = createMemo(() => {
+    if (state.pipeline.fatal) return 'halted'
     if (state.joinedLate && !state.event) return 'joined_late'
     if (!state.event) return 'idle'
-    if (nDevices === 0 && idleMs > 8000) return 'no_devices'
-    if (nDevices === 0) return 'opening'
-    if (idleMs > 30_000) return 'quiet'
-    return 'streaming'
+    if (counts().total === 0) return 'opening'
+    return 'running'
   })
 
   const zoneRows = createMemo(() => {
@@ -196,7 +207,8 @@ export function createSelectors(state) {
     byLocality,
     errorGroups,
     selectedDevice,
-    streamState,
+    phase,
+    incidentState,
     zoneRows,
   }
 }

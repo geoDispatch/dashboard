@@ -15,6 +15,7 @@ import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid
 import { BASEMAPS, basemapPreview } from '../constants/basemaps'
 import { LANGUAGES, isWsUrl, useSettings } from '../lib/settings'
 import { playAlert } from '../lib/audio'
+import { SOURCE_DETAIL, SOURCE_LABEL, streamChip } from '../lib/streamState'
 import { DASH, ago, coords, distance, dms, num, percent } from '../lib/format'
 
 import accountIcon from '../assets/icons/nav-account.svg?raw'
@@ -511,26 +512,23 @@ export default function SettingsModal(props) {
 
               <Card
                 title="Frame source"
-                note="A demo that presents itself as live is worse than no demo, so this choice is repeated on the map toolbar and on the incident page. Switching either way resets the board and starts the chosen source from its beginning."
+                note="Choosing the bundled demo keeps the console there: the socket is closed and no reconnect is scheduled, so nothing drags you back to a supervisor you deliberately left. Choosing the supervisor closes the demo and connects. Either way the board is cleared first — there is no snapshot to carry over."
               >
                 <Row
                   label="Where frames come from"
-                  hint={
-                    isDemo()
-                      ? 'The bundled Al Haouz M6.8 scenario, generated in this browser.'
-                      : 'The live supervisor at the endpoint above.'
-                  }
+                  hint={SOURCE_DETAIL[isDemo() ? 'demo' : 'supervisor']}
+                  stacked
                 >
                   <Segmented
                     label="Frame source"
-                    value={isDemo() ? 'demo' : 'live'}
+                    value={isDemo() ? 'demo' : 'supervisor'}
                     options={[
-                      { key: 'live', label: 'Live supervisor' },
-                      { key: 'demo', label: 'Al Haouz demo' },
+                      { key: 'supervisor', label: 'Connected supervisor' },
+                      { key: 'demo', label: 'Bundled demo' },
                     ]}
                     onChange={(key) => {
                       if (key === 'demo') props.onUseDemo && props.onUseDemo()
-                      else props.onUseLive && props.onUseLive()
+                      else props.onUseSupervisor && props.onUseSupervisor()
                     }}
                   />
                 </Row>
@@ -539,8 +537,12 @@ export default function SettingsModal(props) {
               <Card title="Live readout">
                 <dl class="set-readout">
                   <div class="set-readout__row">
-                    <dt>Stream</dt>
-                    <dd class="is-capital">{props.status || connection().status || DASH}</dd>
+                    <dt>Source</dt>
+                    <dd>{SOURCE_LABEL[isDemo() ? 'demo' : 'supervisor']}</dd>
+                  </div>
+                  <div class="set-readout__row">
+                    <dt>Transport</dt>
+                    <dd>{streamChip(props.phase, isDemo() ? 'demo' : 'supervisor').text}</dd>
                   </div>
                   <div class="set-readout__row">
                     <dt>Frames</dt>
@@ -566,7 +568,9 @@ export default function SettingsModal(props) {
                 <p class="set-note">
                   "Console link" is this browser's own connection, not the disaster area's cell
                   network. CAMARA congestion for the impact zone is read by the supervisor but
-                  never forwarded here.
+                  never forwarded here. "Transport" describes the socket only — whether the
+                  supervisor behind it is reading Nokia CAMARA or its own bundled mocks is not
+                  visible from this console.
                 </p>
               </Card>
             </Show>

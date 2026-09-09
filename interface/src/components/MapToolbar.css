@@ -42,18 +42,20 @@
   --mt-label: var(--gd-ink-2, #47525e);
 }
 
-.mt-stream[data-status='live'] {
+/* Coloured by tone rather than by transport state. "Stalled" — socket open,
+   nothing arriving for thirty seconds — has to be able to look wrong, and it
+   could not while green was keyed to the socket being open. */
+.mt-stream[data-tone='ok'] {
   --mt-dot: var(--gd-zone-green, #22d07a);
   --mt-label: var(--gd-green, #246e47);
 }
 
-.mt-stream[data-status='connecting'],
-.mt-stream[data-status='reconnecting'] {
+.mt-stream[data-tone='warn'] {
   --mt-dot: var(--gd-orange, #ffa51f);
   --mt-label: var(--mt-amber-ink);
 }
 
-.mt-stream[data-status='lost'] {
+.mt-stream[data-tone='bad'] {
   --mt-dot: var(--gd-red, #ff2d3d);
   --mt-label: var(--mt-red-ink);
 }
@@ -76,9 +78,9 @@
   background: var(--mt-dot);
 }
 
-/* A gentle pulse means frames are actually arriving. It runs only while the
-   status is live — a stalled stream must look stalled. */
-.mt-stream[data-status='live'] .mt-dot::after {
+/* A gentle pulse means frames are actually arriving — it is keyed to the
+   receiving tone, so a stalled or waiting stream sits still. */
+.mt-stream[data-tone='ok'] .mt-dot::after {
   content: '';
   position: absolute;
   inset: -3px;
@@ -234,7 +236,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .mt-stream[data-status='live'] .mt-dot::after {
+  .mt-stream[data-tone='ok'] .mt-dot::after {
     animation: none;
     transform: scale(1);
     opacity: 0.28;

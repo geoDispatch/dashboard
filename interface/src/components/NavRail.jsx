@@ -1,6 +1,8 @@
 // Left navigation rail — Figma nodes 65:2 ("Primary navigation") and
-// 68:2 ("Utility navigation"), converted from the React+Tailwind reference
-// to SolidJS + plain CSS.
+// 68:2 ("Utility navigation"). The Figma export shipped a React + Tailwind
+// reference; this file is the SolidJS + plain CSS rewrite of it, and nothing
+// React-shaped survives in it — props are read, never destructured, and the
+// component body runs once.
 //
 // The rail is icon-only, so every button carries both an aria-label (for
 // screen readers) and a title (for the pointer tooltip). The active primary

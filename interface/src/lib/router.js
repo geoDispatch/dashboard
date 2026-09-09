@@ -1,6 +1,11 @@
-// Pure ingestion: (actions, message) => void.
+// Pure ingestion: (actions, message) => result.
 // No Solid, no DOM, no socket — so fixtures replay through the exact same path
-// the live stream uses, and the whole ingestion layer is testable in node.
+// the real stream uses, and the whole ingestion layer is testable in node.
+//
+// The envelope's `event_id` is handed to every action. The store decides
+// whether a frame belongs to the incident on screen; this file's job is only
+// to make sure the id is never dropped on the way there, which is what let
+// two incidents merge before.
 
 const HANDLED = new Set([
   'event_start',
@@ -25,19 +30,19 @@ export function routeMessage(actions, msg) {
 
     case 'device_update':
       if (!p?.phone) return { ok: false, reason: 'device_update without phone' }
-      actions.deviceUpdate(p)
+      actions.deviceUpdate(p, msg.event_id)
       return { ok: true }
 
     case 'zone_summary':
-      actions.zoneSummary(p ?? {})
+      actions.zoneSummary(p ?? {}, msg.event_id)
       return { ok: true }
 
     case 'narrative_update':
-      actions.narrative(p ?? {})
+      actions.narrative(p ?? {}, msg.event_id)
       return { ok: true }
 
     case 'error':
-      actions.error(p ?? {})
+      actions.error(p ?? {}, msg.event_id)
       return { ok: true }
 
     default:

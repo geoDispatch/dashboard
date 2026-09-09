@@ -36,6 +36,7 @@ import {
   ZONE_ORDER,
 } from '../constants/zones'
 import { useDisplay } from '../lib/settings'
+import { SOURCE_LABEL, streamChip } from '../lib/streamState'
 import { haversine } from '../lib/geo'
 
 import searchIcon from '../assets/icons/search.svg?raw'
@@ -416,7 +417,7 @@ export default function IncidentDetailsPage(props) {
                 }}
               />
             </span>
-            <span class="idp-metric__sub">Red zone, unreachable — teams sent</span>
+            <span class="idp-metric__sub">Flagged by the AI — not confined to one zone</span>
           </article>
         </section>
 
@@ -453,9 +454,12 @@ export default function IncidentDetailsPage(props) {
                       <dt class="idp-label">Reachable</dt>
                       <dd class="idp-stat__value">{num(zoneCount(zone)?.reachable, '0')}</dd>
                     </div>
-                    {/* Rescue is a red-zone count by design. Orange and green
-                        have one fewer number — never a placeholder. */}
-                    <Show when={zone === 'red'}>
+                    {/* Shown wherever the supervisor actually flagged one.
+                        The AI can escalate a zone and can flag an orange-zone
+                        device, so gating this on `zone === 'red'` silently hid
+                        real flags. A zone with none simply has one fewer
+                        number rather than a placeholder. */}
+                    <Show when={zone === 'red' || (zoneCount(zone)?.rescue || 0) > 0}>
                       <div class="idp-stat">
                         <dt class="idp-label">Rescue</dt>
                         <dd
@@ -749,9 +753,10 @@ export default function IncidentDetailsPage(props) {
             </div>
 
             <p class="idp-note">
-              Occupancy comes from the bundled Al Haouz scenario and is not live. "Routed by the
-              AI" counts devices in this stream that were pointed at the shelter — the two are
-              separate numbers and are never added together.
+              DEMONSTRATION DATA. Shelter names, capacities and occupancy come from the bundled
+              Al Haouz scenario; the supervisor publishes no shelters, so none of it is live.
+              "Routed by the AI" counts devices in this stream that were pointed at the shelter
+              — also demo-only, and never added to the occupancy figure.
             </p>
           </section>
 
@@ -799,12 +804,14 @@ export default function IncidentDetailsPage(props) {
               <dl class="idp-rows">
                 <div class="idp-stat idp-stat--row">
                   <dt class="idp-label">Frame source</dt>
-                  <dd class="idp-stat__value is-capital">{props.source || DASH}</dd>
+                  <dd class="idp-stat__value">
+                    {SOURCE_LABEL[props.source === 'demo' ? 'demo' : 'supervisor']}
+                  </dd>
                 </div>
                 <div class="idp-stat idp-stat--row">
-                  <dt class="idp-label">Stream</dt>
-                  <dd class="idp-stat__value is-capital">
-                    {props.status || DASH}
+                  <dt class="idp-label">Transport</dt>
+                  <dd class="idp-stat__value">
+                    {streamChip(props.phase, props.source === 'demo' ? 'demo' : 'supervisor').text}
                     <small>
                       {props.connection && props.connection.fps
                         ? ` · ${num(props.connection.fps)} frames/s`

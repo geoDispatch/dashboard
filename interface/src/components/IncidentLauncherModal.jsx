@@ -18,6 +18,8 @@ import { For, Show, createMemo, createSignal, onCleanup, onMount } from 'solid-j
 import { createStore } from 'solid-js/store'
 
 import { triggerEvent } from '../lib/socket'
+import { buildLaunchPayload, depthFor, makeEventId } from '../lib/launch'
+import { SOURCE_DETAIL } from '../lib/streamState'
 import { useDisplay } from '../lib/settings'
 import { decimal } from '../lib/format'
 
@@ -182,17 +184,15 @@ export default function IncidentLauncherModal(props) {
   const canLaunch = () =>
     status().state !== 'sending' && (!isCustom() || Object.keys(customErrors()).length === 0)
 
-  // ── the payload that will actually be sent ────────────────────────────
+  // ── the scenario that will be sent ────────────────────────────────────
   //
-  // The event id is stamped from the scenario rather than left to
-  // triggerEvent's default, which prefixes everything with the demo's
-  // AL-HAOUZ-01 — a Casablanca quake labelled AL-HAOUZ is the kind of thing
-  // that survives all the way into a screenshot.
-  const eventId = () => `${preset().idPrefix}-${Date.now().toString(36).toUpperCase()}`
-
-  const payload = createMemo(() => {
-    if (!isCustom()) return preset().payload
+  // The summary below renders from this, and lib/launch.js turns it into the
+  // SensorInput. Two things that are NOT decided here: the event id and
+  // depth_km, both of which are stamped once at the moment a launch begins.
+  const scenario = createMemo(() => {
+    if (!isCustom()) return { ...preset().payload, idPrefix: preset().idPrefix }
     return {
+      idPrefix: preset().idPrefix,
       disaster_type: custom.disaster_type,
       severity: numberOf(custom.severity),
       epicenter: {
@@ -207,25 +207,48 @@ export default function IncidentLauncherModal(props) {
 
   async function launch() {
     if (!canLaunch()) return
+
+    // ONE id and ONE timestamp per attempt, taken here and carried through the
+    // payload, the request and the confirmation. Deriving them further down
+    // would let the summary, the POST body and the note disagree about which
+    // incident had just been started.
+    const now = Date.now()
+    const body = buildLaunchPayload(scenario(), {
+      now,
+      eventId: makeEventId(preset().idPrefix, now),
+    })
+
     setStatus({ state: 'sending', message: null })
     try {
-      const sent = await triggerEvent(
-        { ...payload(), event_id: eventId() },
-        { url: props.sensorUrl },
-      )
+      // triggerEvent throws unless /sensor answers 2xx, so reaching the next
+      // line is the only thing that counts as "launched". A request that was
+      // merely sent is not a request that was accepted.
+      const sent = await triggerEvent(body, { url: props.sensorUrl })
       setStatus({ state: 'idle', message: null })
       props.onLaunched && props.onLaunched(sent)
     } catch (err) {
-      // fetch() throws a bare TypeError when the request never reached
-      // anything — wrong host, nothing listening, blocked by CORS. "Failed to
-      // fetch" tells an operator nothing; the address does.
+      // Three different failures that all look the same from a form:
+      //
+      //   TypeError    the request never reached anything — wrong host,
+      //                nothing listening, or a refused CORS preflight.
+      //                "Failed to fetch" tells an operator nothing; the
+      //                address does.
+      //   502/503/504  the dev proxy answered because the supervisor did not.
+      //                Blaming the supervisor for "refusing" it would be
+      //                wrong — it never saw the request.
+      //   anything     the supervisor really did answer, and said no.
+      //   else
       const raw = String((err && err.message) || err)
-      const unreachable = err instanceof TypeError
+      const target = props.sensorTarget || props.sensorUrl
+      const gateway = /\b(502|503|504)\b/.test(raw)
+
       setStatus({
         state: 'failed',
-        message: unreachable
-          ? `No supervisor answered at ${props.sensorUrl}.`
-          : `The supervisor refused it — ${raw}.`,
+        message: err instanceof TypeError
+          ? `Nothing answered at ${target}.`
+          : gateway
+            ? `Nothing answered at ${target} — the request got as far as the dev proxy and no further.`
+            : `The supervisor answered, and refused it — ${raw}.`,
       })
     }
   }
@@ -362,9 +385,9 @@ export default function IncidentLauncherModal(props) {
               </div>
 
               <p class="ilm-note">
-                Depth is not on this form. The supervisor needs one, so 10.5 km is sent —
-                it never reaches this console anyway, and a made-up number in a visible
-                field would read as a measurement.
+                Depth is not on this form. It is set from the disaster type — 10.5 km for an
+                earthquake, 0 for a flood or a heatwave, which have no hypocentre — and never
+                reaches this console again either way.
               </p>
             </div>
           </Show>
@@ -374,33 +397,41 @@ export default function IncidentLauncherModal(props) {
             <dl class="ilm-summary">
               <div class="ilm-summary__row">
                 <dt>Epicentre</dt>
-                <dd>{fmt.coords(payload().epicenter.latitude, payload().epicenter.longitude)}</dd>
+                <dd>{fmt.coords(scenario().epicenter.latitude, scenario().epicenter.longitude)}</dd>
               </div>
               <div class="ilm-summary__row">
                 <dt>Impact radius</dt>
-                <dd>{fmt.distance(payload().radius_km, 0)}</dd>
+                <dd>{fmt.distance(scenario().radius_km, 0)}</dd>
               </div>
               <div class="ilm-summary__row">
                 <dt>Severity</dt>
                 <dd>
-                  {payload().disaster_type === 'earthquake'
-                    ? `M ${decimal(payload().severity, 1)}`
-                    : decimal(payload().severity, 1)}
+                  {scenario().disaster_type === 'earthquake'
+                    ? `M ${decimal(scenario().severity, 1)}`
+                    : decimal(scenario().severity, 1)}
                 </dd>
               </div>
               <div class="ilm-summary__row">
                 <dt>Risks</dt>
                 <dd>
-                  Aftershock {payload().aftershock_risk.toLowerCase()}
-                  {payload().tsunami_risk ? ' · tsunami warning' : ' · no tsunami'}
+                  Aftershock {scenario().aftershock_risk.toLowerCase()}
+                  {scenario().tsunami_risk ? ' · tsunami warning' : ' · no tsunami'}
+                </dd>
+              </div>
+              <div class="ilm-summary__row">
+                <dt>Depth</dt>
+                <dd>
+                  {scenario().disaster_type === 'earthquake'
+                    ? `${depthFor(scenario().disaster_type)} km`
+                    : `0 — ${scenario().disaster_type}s have no hypocentre`}
                 </dd>
               </div>
               <div class="ilm-summary__row">
                 <dt>Zones</dt>
                 <dd>
-                  Red {fmt.band('red', payload().radius_km)} · orange{' '}
-                  {fmt.band('orange', payload().radius_km)} · green{' '}
-                  {fmt.band('green', payload().radius_km)}
+                  Red {fmt.band('red', scenario().radius_km)} · orange{' '}
+                  {fmt.band('orange', scenario().radius_km)} · green{' '}
+                  {fmt.band('green', scenario().radius_km)}
                 </dd>
               </div>
             </dl>
@@ -410,8 +441,9 @@ export default function IncidentLauncherModal(props) {
           <Show when={props.source === 'demo'}>
             <p class="ilm-warn">
               The frames on screen are coming from the bundled demo, not from a supervisor.
-              A launch still goes out, but nothing will appear here until the console is
-              switched back to the live stream.
+              {' '}{SOURCE_DETAIL.demo} A launch still goes out to the endpoint below, but
+              nothing from it will appear here until the console is switched to the
+              supervisor.
             </p>
           </Show>
 
@@ -425,7 +457,15 @@ export default function IncidentLauncherModal(props) {
         <footer class="ilm-foot">
           <p class="ilm-foot__target">
             <span class="ilm-label">Sensor endpoint</span>
-            <span class="ilm-foot__url">{props.sensorUrl}</span>
+            {/* The absolute target, never the relative "/sensor" the dev proxy
+                is given: a path tells the operator nothing about WHICH
+                supervisor is about to be handed an incident. */}
+            <span class="ilm-foot__url">{props.sensorTarget || props.sensorUrl}</span>
+            <Show when={props.viaDevProxy}>
+              <span class="ilm-foot__hint">
+                via the dev proxy — development only, not how this works in production
+              </span>
+            </Show>
           </p>
           <div class="ilm-foot__actions">
             <button type="button" class="ilm-btn" onClick={() => props.onClose && props.onClose()}>

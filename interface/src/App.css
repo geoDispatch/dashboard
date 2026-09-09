@@ -623,21 +623,88 @@
 /* ── Fatal banner ────────────────────────────────────────────────────────
    Outside the map, so it survives every rail view and the hidden panel. */
 
+/* ── Halted pipeline ────────────────────────────────────────────────────────
+   Reports the SUPERVISOR's health, never the socket's. It carries its own
+   recovery buttons because a banner that states a problem and offers nothing
+   is a banner the operator learns to ignore. */
+
 .app-fatal {
   position: fixed;
   left: 50%;
   bottom: var(--gd-map-inset);
   transform: translateX(-50%);
   z-index: var(--gd-z-toast);
+  display: flex;
+  align-items: center;
+  gap: 16px;
   margin: 0;
-  max-width: min(680px, calc(100vw - 48px));
-  padding: 12px 18px;
+  max-width: min(760px, calc(100vw - 48px));
+  padding: 12px 14px 12px 18px;
   border-radius: var(--gd-radius-control);
   background: var(--gd-red);
+  color: #ffffff;
+  box-shadow: var(--gd-shadow-pop);
+}
+
+.app-fatal__text {
+  margin: 0;
+  min-width: 0;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-regular);
+  line-height: 19px;
+}
+
+.app-fatal__text strong {
+  font-weight: var(--gd-fw-bold);
+}
+
+.app-fatal__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+.app-fatal__btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.18);
   color: #ffffff;
   font-size: var(--gd-fs-sm);
   font-weight: var(--gd-fw-medium);
   line-height: 20px;
+  white-space: nowrap;
+  transition: background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+.app-fatal__btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.app-fatal__btn:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+/* ── Foreign frames ─────────────────────────────────────────────────────────
+   Frames belonging to another incident were dropped rather than merged. Not an
+   error — a fact about what is NOT on screen. Quieter than the fatal banner
+   and stacked above it. */
+
+.app-foreign {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--gd-map-inset) + 64px);
+  transform: translateX(-50%);
+  z-index: var(--gd-z-toast);
+  margin: 0;
+  max-width: min(680px, calc(100vw - 48px));
+  padding: 10px 16px;
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-surface);
+  color: var(--gd-ink-2);
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
   box-shadow: var(--gd-shadow-pop);
 }
 

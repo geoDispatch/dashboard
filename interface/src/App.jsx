@@ -46,6 +46,7 @@ import { maskPhone, num } from './lib/format'
 import { ZONE_LABELS } from './constants/zones'
 
 import { HEALTH_URL, SENSOR_URL } from './constants/zones'
+import { healthTarget, sensorTarget } from './lib/endpoints'
 
 import { useNetworkStats } from './hooks/useNetworkStats'
 import { useOperatorLocation } from './hooks/useOperatorLocation'
@@ -69,34 +70,6 @@ const SHELTER_SITES = SHELTERS.map((shelter) => {
     anchor: anchor.name,
   }
 })
-
-// The health route lives on the same host as the socket. Derived rather than
-// configured separately, so an operator who points the console at a staging
-// supervisor does not also have to remember to move the ping.
-function healthUrlFor(wsUrl) {
-  try {
-    const url = new URL(wsUrl)
-    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:'
-    url.pathname = url.pathname.replace(/\/ws$/, '/health')
-    return url.toString()
-  } catch {
-    return HEALTH_URL
-  }
-}
-
-// Same reasoning as healthUrlFor: the endpoint is a setting, and an incident
-// fired at the compiled-in default while the operator watches a staging
-// supervisor would start a disaster on the wrong machine.
-function sensorUrlFor(wsUrl) {
-  try {
-    const url = new URL(wsUrl)
-    url.protocol = url.protocol === 'wss:' ? 'https:' : 'http:'
-    url.pathname = url.pathname.replace(/\/ws$/, '/sensor')
-    return url.toString()
-  } catch {
-    return SENSOR_URL
-  }
-}
 
 const SEARCH_LIMIT = 8
 const NOTE_MS = 6000
@@ -135,6 +108,12 @@ export default function App() {
   // operator nothing they did not already see in the stream status. Settings
   // has a Ping button for when the question is actually being asked.
   const net = useNetworkStats()
+
+  // /sensor and /health, derived from whichever supervisor is configured, and
+  // routed through the dev proxy only when that supervisor is the one the
+  // proxy forwards to. See lib/endpoints.js for why the proxy is dev-only.
+  const sensor = () => sensorTarget(settings.wsUrl, { fallback: SENSOR_URL })
+  const health = () => healthTarget(settings.wsUrl, { fallback: HEALTH_URL })
 
   // The shell reads coordinates for the search list, so it needs the operator's
   // format too. It binds the store directly rather than through the context it
@@ -373,7 +352,7 @@ export default function App() {
 
   let alarmed = false
   createEffect(() => {
-    if (!state.fatal) {
+    if (!state.pipeline.fatal) {
       alarmed = false
       return
     }
@@ -426,10 +405,19 @@ export default function App() {
       source: stream.source(),
       connection: {
         status: state.connection.status,
+        phase: phase(),
         source: state.connection.source,
+        manual_demo: state.connection.manualDemo,
         fps: state.connection.fps,
         frames: state.connection.frames,
       },
+      pipeline: {
+        fatal: state.pipeline.fatal,
+        frames_after_fatal: state.pipeline.framesAfterFatal,
+      },
+      active_event_id: state.activeEventId,
+      joined_late: state.joinedLate,
+      dropped_foreign_frames: state.dropped.foreign,
       event: state.event,
       devices: Object.values(state.devices),
       summary: state.summary,
@@ -456,31 +444,44 @@ export default function App() {
   }
 
   // ── stream honesty ───────────────────────────────────────────────────────
-  // A dead pipeline must never leave a green "live" pill on screen. The toolbar
-  // is handed 'lost' the moment a fatal error lands, whatever the socket thinks.
-  const toolbarStatus = () => {
-    if (state.fatal) return 'lost'
-    // While the demo is the source, the socket's own retry state belongs to the
-    // supervisor, not to the frames on screen: reporting "lost" for a demo that
-    // is still producing frames would be as false as calling a demo live. The
-    // pill describes what is actually arriving; the strip names the source.
-    if (stream.source() === 'demo') {
-      return state.connection.fps > 0 ? 'live' : 'reconnecting'
-    }
-    return state.connection.status
-  }
-
+  //
+  // The toolbar shows the TRANSPORT phase and nothing else. It used to be
+  // handed 'lost' whenever a fatal error landed, which put a socket problem's
+  // wording on a pipeline problem and left the operator with no way to tell
+  // which had actually happened. The halted pipeline has its own banner.
+  //
+  // It also used to report 'live' for any open socket, and for the demo it
+  // read frames-per-second as a stand-in for health. Both are now one pure
+  // derivation over lastFrameAt — see lib/streamState.js.
+  const phase = () => selectors.phase()
   const isDemo = () => stream.source() === 'demo'
 
-  // "Degraded" means frames have actually stopped. A demo that is streaming
   function useDemoStream() {
     stream.useDemo()
-    showNote('Switched to the bundled demo stream.')
+    showNote('Bundled demo. The console will stay here until you choose the supervisor.')
   }
 
-  function useLiveStream() {
-    stream.useLive()
-    showNote('Retrying the live supervisor.')
+  function useSupervisorStream() {
+    stream.useSupervisor()
+    showNote(`Connecting to ${stream.endpoint()}. The board clears until it sends a frame.`)
+  }
+
+  // ── halted pipeline ──────────────────────────────────────────────────────
+  // Two separate recoveries, because they are two separate decisions: ask for
+  // a new socket, or stop showing an incident nobody is updating. There is no
+  // third option — the supervisor sends no snapshot on connect and supports no
+  // replay, so nothing here can offer to "resume".
+  function reconnectNow() {
+    if (stream.reconnect()) {
+      showNote('Reconnecting to the supervisor.')
+    } else {
+      showNote('The console is on the bundled demo. Choose the supervisor first.')
+    }
+  }
+
+  function clearIncident() {
+    actions.reset()
+    showNote('Incident cleared. The board waits for the next event_start.')
   }
 
   // ── rail ─────────────────────────────────────────────────────────────────
@@ -539,7 +540,7 @@ export default function App() {
           counts={selectors.counts()}
           shelters={SHELTER_SITES}
           connection={state.connection}
-          status={toolbarStatus()}
+          phase={phase()}
           source={stream.source()}
           onSelectDevice={pickDevice}
           onSwitchToMap={() => setActiveView('map')}
@@ -619,21 +620,21 @@ export default function App() {
               type="button"
               class="app-sim"
               classList={{ 'is-running': isDemo() }}
-              onClick={isDemo() ? useLiveStream : useDemoStream}
+              onClick={isDemo() ? useSupervisorStream : useDemoStream}
               title={
                 isDemo()
-                  ? 'Stop the simulation and retry the live supervisor'
-                  : 'Run the bundled Al Haouz simulation'
+                  ? 'Leave the bundled demo and connect to the supervisor'
+                  : 'Run the bundled Al Haouz demo in this browser'
               }
             >
               <span class="app-sim__glyph" aria-hidden="true" />
               <span class="app-sim__label">
-                {isDemo() ? 'Simulation running' : 'Run simulation'}
+                {isDemo() ? 'Bundled demo' : 'Run bundled demo'}
               </span>
             </button>
 
             <MapToolbar
-              status={toolbarStatus()}
+              phase={phase()}
               source={stream.source()}
               fps={state.connection.fps}
               layers={layers()}
@@ -654,15 +655,46 @@ export default function App() {
         </main>
       </Show>
 
-      {/* The fatal banner sits outside the map so it survives whichever rail
-          view is open, and whether or not the panel is hidden. */}
-      <Show when={state.fatal}>
+      {/* The halted-pipeline banner sits outside the map so it survives
+          whichever rail view is open, and whether or not the panel is hidden.
+
+          It reports the PIPELINE, never the socket. The old wording claimed
+          the console was "no longer receiving updates", which it had no way to
+          know: a fatal DB_ERROR kills the supervisor's pipeline and leaves the
+          WebSocket wide open, and frames genuinely do keep arriving on it. So
+          this says what was reported and what that means, and offers the two
+          recoveries that actually exist. */}
+      <Show when={state.pipeline.fatal}>
         {(fatal) => (
-          <p class="app-fatal" role="alert">
-            Pipeline stopped — {fatal().code || 'unknown code'}. This console is no longer
-            receiving updates from the supervisor.
-          </p>
+          <div class="app-fatal" role="alert">
+            <p class="app-fatal__text">
+              <strong>Pipeline reported {fatal().code || 'a fatal error'}.</strong>{' '}
+              {fatal().message || 'No detail was sent.'} Dispatch has stopped at the
+              supervisor. Anything that still arrives on the connection is applied to this
+              board, and {num(state.pipeline.framesAfterFatal)} frame
+              {state.pipeline.framesAfterFatal === 1 ? ' has' : 's have'} arrived since.
+            </p>
+            <span class="app-fatal__actions">
+              <button type="button" class="app-fatal__btn" onClick={reconnectNow}>
+                Reconnect
+              </button>
+              <button type="button" class="app-fatal__btn" onClick={clearIncident}>
+                Clear incident
+              </button>
+            </span>
+          </div>
         )}
+      </Show>
+
+      {/* Frames from a DIFFERENT incident were dropped rather than merged.
+          The supervisor gives no snapshot and no replay, so there is nothing to
+          request; what the console can do is say that it happened. */}
+      <Show when={state.dropped.foreign > 0}>
+        <p class="app-foreign" role="status">
+          {num(state.dropped.foreign)} frame{state.dropped.foreign === 1 ? '' : 's'} from
+          incident {state.dropped.lastId} {state.dropped.foreign === 1 ? 'was' : 'were'}{' '}
+          ignored — this board is showing {state.activeEventId || 'the current incident'}.
+        </p>
       </Show>
 
       {/* The launcher is the one control that writes. It is deliberately a
@@ -670,7 +702,9 @@ export default function App() {
           something else. */}
       <Show when={launcherOpen()}>
         <IncidentLauncherModal
-          sensorUrl={sensorUrlFor(settings.wsUrl)}
+          sensorUrl={sensor().url}
+          sensorTarget={sensor().absolute}
+          viaDevProxy={sensor().viaProxy}
           source={stream.source()}
           onLaunched={onLaunched}
           onClose={() => setLauncherOpen(false)}
@@ -696,15 +730,15 @@ export default function App() {
           tab={settingsTab()}
           event={state.event}
           connection={state.connection}
-          status={toolbarStatus()}
+          phase={phase()}
           source={stream.source()}
           netLabel={net.label()}
           netQuality={net.quality()}
           onClose={() => setSettingsTab(null)}
           onApplyWsUrl={applyWsUrl}
           onUseDemo={useDemoStream}
-          onUseLive={useLiveStream}
-          onPing={() => checkHealth({ url: healthUrlFor(settings.wsUrl), timeout: 3000 })}
+          onUseSupervisor={useSupervisorStream}
+          onPing={() => checkHealth({ url: health().url, timeout: 3000 })}
           onEndShift={endShift}
         />
       </Show>

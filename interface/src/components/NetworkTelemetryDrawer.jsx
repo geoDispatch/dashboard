@@ -33,14 +33,23 @@ import './NetworkTelemetryDrawer.css'
 const CODES = [
   {
     code: 'CAMARA_TIMEOUT',
-    title: 'Location lookups timed out',
-    blurb: 'Carrier location or reachability query gave up. Those devices were never placed.',
+    title: 'Carrier query timed out',
+    // NOT "never placed". The supervisor makes two CAMARA calls per device —
+    // location and reachability — and a timeout on either one produces this
+    // code. A device whose location came back and whose reachability check
+    // timed out is on the map, marked unreachable. The only honest statement
+    // is that something about that device is missing.
+    blurb: 'A location or reachability call to the carrier did not answer in time. Those devices may be missing from the map, or on it with incomplete detail.',
     surface: 'carrier',
   },
   {
     code: 'SMS_FAILED',
-    title: 'Evacuation SMS undelivered',
-    blurb: 'The gateway accepted the send and then dropped it. Those people were not warned.',
+    title: 'Evacuation SMS not delivered',
+    // NOT "accepted and then dropped". The supervisor emits this whenever its
+    // send attempt fails, which covers a refusal at submission, a transport
+    // error, and a gateway that accepted and then dropped it. The console
+    // cannot tell those apart and should not pick one.
+    blurb: 'The send failed. The message text and the reason are not forwarded here, so which stage failed is not visible.',
     surface: 'carrier',
   },
   {
@@ -170,8 +179,10 @@ export default function NetworkTelemetryDrawer(props) {
 
               <p class="ntd-note">
                 A device is reachable when the carrier reports CONNECTED_DATA or
-                CONNECTED_SMS. Anything else is a person the network cannot warn, which is
-                why the red-zone ones become rescue flags.
+                CONNECTED_SMS. Anything else is a person the network cannot warn. The AI
+                decides which of them are flagged for rescue and can flag outside the red
+                zone; this console shows the flags it was sent rather than inferring them
+                from the band.
               </p>
             </Show>
           </section>

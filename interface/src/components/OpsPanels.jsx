@@ -131,8 +131,9 @@ export function RescuePanel(props) {
           when={queue().length > 0}
           fallback={
             <p class="ops-empty">
-              No device is flagged for rescue. Red-zone devices that stop answering are
-              added here by the supervisor.
+              No device is flagged for rescue. Devices the AI flags are added here by the
+              supervisor — usually unreachable ones near the epicentre, but the flag is the
+              AI's decision and is not confined to the red zone.
             </p>
           }
         >
@@ -317,9 +318,10 @@ export function SheltersPanel(props) {
             </For>
           </ul>
           <p class="ops-note">
-            Shelter capacity comes from the bundled Al Haouz scenario. The supervisor does
-            not publish shelters, so these figures are not live. A shelter is only plotted on
-            the map when its name matches a known locality — the others carry no coordinates.
+            DEMONSTRATION DATA. Shelter names, capacities and occupancy all come from the
+            bundled Al Haouz scenario — the supervisor publishes no shelters at all, so not
+            one figure here reflects a real building. A shelter is only plotted on the map
+            when its name matches a known locality; the others carry no coordinates.
           </p>
         </Show>
       </Card>
