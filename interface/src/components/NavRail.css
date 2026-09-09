@@ -8,8 +8,9 @@
  * padding produces both anchors without any magic offsets. */
 
 .navrail {
-  /* Local tokens. The two nav colours are baked into the Figma icon exports;
-     they are declared here so the tile background and the glyph stay in sync. */
+  /* Local tokens. The icons are stroked with currentColor, so these are the
+     single source of truth for the glyph colour as well as the tile. */
+  --nav-idle-ink: #5e6b75;
   --nav-active-bg: #e5f0f7;
   --nav-active-ink: #1f5278;
 
@@ -58,11 +59,13 @@
   border: 0;
   border-radius: 12px;
   background: transparent;
-  color: inherit;
+  /* The inlined SVG strokes with currentColor, so `color` here IS the glyph
+     colour. Transitioned alongside the tile so both states change together. */
+  color: var(--nav-idle-ink, #5e6b75);
   font: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: background-color 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .navrail__btn--primary {
@@ -87,17 +90,20 @@
 }
 
 /* Selected treatment from the frame: the tinted tile behind the glyph. The
-   glyph itself changes colour by swapping to the *-active.svg export. */
+   glyph recolours with it — `color` cascades into the inlined SVG, which is
+   why the *-active.svg duplicates no longer exist. */
 .navrail__btn--active,
 .navrail__btn--active:hover,
 .navrail__btn--active:active {
   background: var(--nav-active-bg);
+  color: var(--nav-active-ink);
 }
 
 /* --- icon --------------------------------------------------------------- */
 
-/* A fixed 24px slot; the image is drawn at its own artboard size (27–30px)
-   and allowed to bleed symmetrically, matching Figma's negative insets. */
+/* A fixed 24px slot holding the inlined <svg>. Every glyph is drawn on the
+   same 24px grid at stroke 1.75, so no per-icon size correction is needed and
+   both dimensions are set explicitly (never `auto`). */
 .navrail__icon {
   display: grid;
   place-items: center;
@@ -106,10 +112,10 @@
   pointer-events: none;
 }
 
-.navrail__icon img {
+.navrail__icon > svg {
   display: block;
-  width: var(--nav-icon-size, 24px);
-  height: var(--nav-icon-size, 24px);
+  width: 24px;
+  height: 24px;
   max-width: none;
 }
 

@@ -87,20 +87,21 @@
   outline-offset: 2px;
 }
 
+/* The pin is now an inlined 24-grid SVG, so the box is a plain 18x18 square
+   with both dimensions set and the glyph filling it — no negative offsets to
+   compensate for a hand-trimmed export. `color` is inherited from the trigger,
+   which is what the icon's currentColor stroke resolves against. */
 .gd-location__pin {
-  position: relative;
-  flex: 0 0 9.1px;
-  width: 9.1px;
-  height: 14px;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: inherit;
 }
 
-.gd-location__pin img {
-  position: absolute;
-  left: -1.4px;
-  top: -1.4px;
+.gd-location__pin svg {
   display: block;
-  width: 11.9px;
-  height: 18.0212px;
+  width: 100%;
+  height: 100%;
 }
 
 .gd-location__label {
@@ -119,19 +120,16 @@
 }
 
 .gd-location__chevron {
-  position: relative;
-  flex: 0 0 12px;
-  width: 12px;
-  height: 14px;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  color: inherit;
 }
 
-.gd-location__chevron img {
-  position: absolute;
-  left: -0.3px;
-  top: -0.3122px;
+.gd-location__chevron svg {
   display: block;
-  width: 12.6px;
-  height: 14.6244px;
+  width: 100%;
+  height: 100%;
 }
 
 /* ── Location dropdown ───────────────────────────────────────── */
@@ -212,18 +210,22 @@
 }
 
 .gd-search__icon {
-  position: relative;
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
+  color: var(--gd-ink-2, #47525e);
 }
 
-.gd-search__icon img {
-  position: absolute;
-  inset: 0;
+.gd-search__icon svg {
   display: block;
-  width: 20px;
-  height: 20px;
+  width: 100%;
+  height: 100%;
+}
+
+/* The magnifier belongs to the field: once the operator is typing in it, the
+   glyph darkens with the text rather than staying a placeholder grey. */
+.gd-search:focus-within .gd-search__icon {
+  color: var(--gd-ink, #17212b);
 }
 
 .gd-search__input {
@@ -363,17 +365,30 @@
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
   background: var(--gd-field, #f6f7f9);
+  color: var(--gd-ink-2, #47525e);
   cursor: pointer;
 }
 
-.gd-notifications img {
+/* The bell keeps its 20x22 slot inside the 44x44 button. The glyph is drawn on
+   the shared 24x24 grid, so it scales down to fit that slot and centres in it
+   rather than being stretched to a non-square box. */
+.gd-notifications__icon {
   display: block;
   width: 20px;
   height: 22px;
 }
 
+.gd-notifications__icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Hover and open now move the glyph as well as the plate, because the inlined
+   SVG inherits `color` — that is the point of the currentColor conversion. */
 .gd-notifications:hover {
-  filter: brightness(0.97);
+  background: #eef0f3;
+  color: var(--gd-ink, #17212b);
 }
 
 .gd-notifications:focus-visible {
@@ -500,7 +515,8 @@
 }
 
 .gd-notifications.is-open {
-  background: var(--gd-field);
+  background: #eef0f3;
+  color: var(--gd-ink, #17212b);
 }
 
 .gd-notif__panel {

@@ -28,14 +28,18 @@ import {
 } from '../lib/format'
 import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
 
-import overviewIcon from '../assets/icons/panel-device-overview.svg'
-import statusIcon from '../assets/icons/panel-status.svg'
-import locationIcon from '../assets/icons/panel-location.svg'
-import aiIcon from '../assets/icons/panel-ai-decision.svg'
-import minusIcon from '../assets/icons/panel-collapse-minus.svg'
-import phoneIcon from '../assets/icons/device-phone.svg'
-import zoneIcon from '../assets/icons/device-zone.svg'
-import hideChevron from '../assets/icons/panel-hide-chevron.svg'
+// Icons are inlined with Vite's `?raw` suffix and written into a sized <span>
+// with innerHTML. An <img src="...svg"> is an isolated document and cannot see
+// this page's `color`, so `stroke="currentColor"` inside it would resolve to
+// black; inlined, the colour cascades in and hover/active/disabled states work.
+import overviewIcon from '../assets/icons/panel-device-overview.svg?raw'
+import statusIcon from '../assets/icons/panel-status.svg?raw'
+import locationIcon from '../assets/icons/panel-location.svg?raw'
+import aiIcon from '../assets/icons/panel-ai-decision.svg?raw'
+import minusIcon from '../assets/icons/panel-collapse-minus.svg?raw'
+import phoneIcon from '../assets/icons/device-phone.svg?raw'
+import zoneIcon from '../assets/icons/device-zone.svg?raw'
+import hideChevron from '../assets/icons/panel-hide-chevron.svg?raw'
 
 import './DeviceDetails.css'
 
@@ -82,9 +86,7 @@ export function HideButton(props) {
       aria-label={`${label()} device details`}
       onClick={() => props.onClick && props.onClick()}
     >
-      <span class="dd-hide__chevron">
-        <img src={hideChevron} alt="" aria-hidden="true" />
-      </span>
+      <span class="dd-hide__chevron" aria-hidden="true" innerHTML={hideChevron} />
       <span class="dd-hide__label">{label()}</span>
     </button>
   )
@@ -124,9 +126,11 @@ export function DetailCard(props) {
   return (
     <section class="dd-card" aria-labelledby={`dd-title-${props.id}`}>
       <div class="dd-card__heading">
-        <span class={`dd-card__icon dd-card__icon--${props.id}`}>
-          <img src={props.icon} alt="" aria-hidden="true" />
-        </span>
+        <span
+          class={`dd-card__icon dd-card__icon--${props.id}`}
+          aria-hidden="true"
+          innerHTML={props.icon}
+        />
         <h2 class="dd-card__title" id={`dd-title-${props.id}`}>
           {props.title}
         </h2>
@@ -139,8 +143,12 @@ export function DetailCard(props) {
           onClick={() => props.onToggle()}
         >
           <span class="dd-card__glyph" classList={{ 'is-plus': !!props.collapsed }}>
-            <img src={minusIcon} alt="" aria-hidden="true" />
-            <img class="dd-card__glyph-cross" src={minusIcon} alt="" aria-hidden="true" />
+            <span class="dd-card__glyph-icon" aria-hidden="true" innerHTML={minusIcon} />
+            <span
+              class="dd-card__glyph-icon dd-card__glyph-cross"
+              aria-hidden="true"
+              innerHTML={minusIcon}
+            />
           </span>
         </button>
       </div>
@@ -277,15 +285,11 @@ export default function DeviceDetails(props) {
             >
               <div class="dd-identity">
                 <div class="dd-identity__row">
-                  <span class="dd-identity__icon">
-                    <img src={phoneIcon} alt="" aria-hidden="true" />
-                  </span>
+                  <span class="dd-identity__icon" aria-hidden="true" innerHTML={phoneIcon} />
                   <p class="dd-identity__phone">{maskedPhone()}</p>
                 </div>
                 <div class="dd-identity__row">
-                  <span class="dd-identity__icon">
-                    <img src={zoneIcon} alt="" aria-hidden="true" />
-                  </span>
+                  <span class="dd-identity__icon" aria-hidden="true" innerHTML={zoneIcon} />
                   <p class="dd-identity__zone" style={{ color: zoneColor() }}>
                     {zoneLabel()}
                   </p>

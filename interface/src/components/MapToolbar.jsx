@@ -1,7 +1,11 @@
 import { For, Show } from 'solid-js'
 import { DASH } from '../lib/format'
-import fullscreenIcon from '../assets/icons/fullscreen.svg'
-import exportIcon from '../assets/icons/export.svg'
+// Inlined with Vite's ?raw suffix, not <img src>. An SVG behind <img> is an
+// isolated document, so stroke="currentColor" would resolve to that document's
+// own black; inlining lets the button's `color` reach the glyph, which is what
+// makes the hover and active states move the icon with the surface.
+import fullscreenIcon from '../assets/icons/fullscreen.svg?raw'
+import exportIcon from '../assets/icons/export.svg?raw'
 import './MapToolbar.css'
 
 // The three map layers. More than one may be on at a time, so these are
@@ -113,9 +117,11 @@ export default function MapToolbar(props) {
         title="Fullscreen"
         onClick={() => props.onFullscreen?.()}
       >
-        <span class="mt-icon-box mt-icon-box-22">
-          <img src={fullscreenIcon} alt="" />
-        </span>
+        <span
+          class="mt-icon-box mt-icon-box-22"
+          aria-hidden="true"
+          innerHTML={fullscreenIcon}
+        />
       </button>
 
       <button
@@ -125,9 +131,11 @@ export default function MapToolbar(props) {
         title="Export JSON"
         onClick={() => props.onExport?.()}
       >
-        <span class="mt-icon-box mt-icon-box-22">
-          <img src={exportIcon} alt="" />
-        </span>
+        <span
+          class="mt-icon-box mt-icon-box-22"
+          aria-hidden="true"
+          innerHTML={exportIcon}
+        />
       </button>
     </div>
   )

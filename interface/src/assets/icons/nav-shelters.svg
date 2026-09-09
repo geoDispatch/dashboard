@@ -1,7 +1,5 @@
-<svg overflow="visible" style="display: block;" width="27.0001" height="27" viewBox="0 0 27.0001 27" fill="none" xmlns="http://www.w3.org/2000/svg">
-<g id="Group">
-<path id="Vector" d="M1.50003 11.6818L13.5 1.5L25.5 11.6818" stroke="#5E6B75" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<path id="Vector_2" d="M4.32356 10.3727V25.5H22.6765V10.3727" stroke="#5E6B75" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-<path id="Vector_3" d="M10.3941 25.5V17.6455H16.6059V25.5" stroke="#5E6B75" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-</g>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+  <path d="M3 11.25 12 4l9 7.25"/>
+  <path d="M5.25 9.5V20.5H18.75V9.5"/>
+  <path d="M9.75 20.5V15.25H14.25V20.5"/>
 </svg>

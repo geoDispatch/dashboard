@@ -173,23 +173,31 @@
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
   background: var(--gd-surface, #ffffff);
+  /* The glyph inside is an inlined SVG stroked with currentColor, so the button
+     owns the icon's ink as well as its plate and the two move together. */
+  color: var(--gd-ink-2, #47525e);
   cursor: pointer;
-  transition: background-color 140ms ease;
+  transition: background-color 140ms ease, color 140ms ease;
 }
 
 .mt-icon-btn:hover {
   background: var(--gd-field, #f6f7f9);
+  color: var(--gd-ink, #17212b);
 }
 
 .mt-icon-btn:active {
   background: var(--mt-seg-active);
+  color: var(--gd-ink, #17212b);
 }
 
-/* Every icon sits in a box with both dimensions set; the img fills it. */
+/* Every icon sits in a box with both dimensions set; the inlined SVG fills it.
+   The icons are drawn on a 24x24 grid and rendered here at 22, which is the box
+   the toolbar has always reserved. */
 .mt-icon-box {
   display: block;
   overflow: hidden;
   pointer-events: none;
+  color: inherit;
 }
 
 .mt-icon-box-22 {
@@ -197,7 +205,7 @@
   height: 22px;
 }
 
-.mt-icon-box img {
+.mt-icon-box svg {
   display: block;
   width: 100%;
   height: 100%;

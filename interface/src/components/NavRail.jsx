@@ -7,42 +7,39 @@
 // item is marked aria-current="page" and gets the Figma selected treatment:
 // an #e5f0f7 tile at 12px radius with the icon restroked to #1f5278.
 //
-// Icon assets are the real Figma exports. Each primary icon ships as two
-// files — idle stroke (#5E6B75) and selected stroke (#1F5278) — because an
-// <img>-referenced SVG cannot inherit its colour from CSS.
+// Icons follow the house system: 24x24, stroke 1.75, stroke="currentColor".
+// There is ONE file per nav item — no separate *-active export — because the
+// selected colour is now a CSS concern. That only works if the SVG lives in
+// the same document as the button, so each icon is imported with Vite's ?raw
+// suffix and injected with innerHTML into a sized wrapper span; an <img> would
+// be an isolated document and would resolve currentColor to its own black.
 
 import { For, Show } from 'solid-js'
 import { num } from '../lib/format'
 
-import mapIcon from '../assets/icons/nav-map.svg'
-import mapIconActive from '../assets/icons/nav-map-active.svg'
-import rescueIcon from '../assets/icons/nav-rescue.svg'
-import rescueIconActive from '../assets/icons/nav-rescue-active.svg'
-import sheltersIcon from '../assets/icons/nav-shelters.svg'
-import sheltersIconActive from '../assets/icons/nav-shelters-active.svg'
-import devicesIcon from '../assets/icons/nav-devices.svg'
-import devicesIconActive from '../assets/icons/nav-devices-active.svg'
-import accountIcon from '../assets/icons/nav-account.svg'
-import settingsIcon from '../assets/icons/nav-settings.svg'
-import signOutIcon from '../assets/icons/nav-sign-out.svg'
+import mapIcon from '../assets/icons/nav-map.svg?raw'
+import rescueIcon from '../assets/icons/nav-rescue.svg?raw'
+import sheltersIcon from '../assets/icons/nav-shelters.svg?raw'
+import devicesIcon from '../assets/icons/nav-devices.svg?raw'
+import accountIcon from '../assets/icons/nav-account.svg?raw'
+import settingsIcon from '../assets/icons/nav-settings.svg?raw'
+import signOutIcon from '../assets/icons/nav-sign-out.svg?raw'
 
 import './NavRail.css'
 
-// `size` is the icon's own artboard size in px. Figma draws these 24px glyphs
-// on a slightly larger canvas so the stroke is not clipped (the `inset-[-x%]`
-// wrappers in the reference code). Rendering each at its natural size inside
-// a 24px slot reproduces that bleed exactly and keeps the glyphs optically equal.
+// Every glyph is drawn on the same 24px grid at the same weight, so there is
+// no per-item size correction any more — the wrapper is a flat 24x24 slot.
 const PRIMARY_NAV = [
-  { key: 'map',      label: 'Map',      hint: 'Live map',        icon: mapIcon,      iconActive: mapIconActive,      size: 27 },
-  { key: 'rescue',   label: 'Rescue',   hint: 'Rescue queue',    icon: rescueIcon,   iconActive: rescueIconActive,   size: 27 },
-  { key: 'shelters', label: 'Shelters', hint: 'Shelters',        icon: sheltersIcon, iconActive: sheltersIconActive, size: 27 },
-  { key: 'devices',  label: 'Devices',  hint: 'Devices by area', icon: devicesIcon,  iconActive: devicesIconActive,  size: 30 },
+  { key: 'map',      label: 'Map',      hint: 'Live map',        icon: mapIcon },
+  { key: 'rescue',   label: 'Rescue',   hint: 'Rescue queue',    icon: rescueIcon },
+  { key: 'shelters', label: 'Shelters', hint: 'Shelters',        icon: sheltersIcon },
+  { key: 'devices',  label: 'Devices',  hint: 'Devices by area', icon: devicesIcon },
 ]
 
 const UTILITY_NAV = [
-  { key: 'account',  label: 'Account',  icon: accountIcon,  size: 28 },
-  { key: 'settings', label: 'Settings', icon: settingsIcon, size: 27.1 },
-  { key: 'signout',  label: 'Sign out', icon: signOutIcon,  size: 27.3 },
+  { key: 'account',  label: 'Account',  icon: accountIcon },
+  { key: 'settings', label: 'Settings', icon: settingsIcon },
+  { key: 'signout',  label: 'Sign out', icon: signOutIcon },
 ]
 
 // A four-digit count would blow past the 48px tile, so the pill caps its own
@@ -52,13 +49,11 @@ function badgeText(count) {
   return count > 999 ? '999+' : String(count)
 }
 
-// props.src / props.size are read inside the JSX, so the <img> re-renders when
-// the active item changes.
+// props.markup is read inside the JSX so the span re-renders if the glyph ever
+// changes. The SVG inherits its stroke from the button's `color`.
 function NavIcon(props) {
   return (
-    <span class="navrail__icon" style={{ '--nav-icon-size': `${props.size}px` }}>
-      <img src={props.src} alt="" />
-    </span>
+    <span class="navrail__icon" aria-hidden="true" innerHTML={props.markup} />
   )
 }
 
@@ -90,10 +85,7 @@ export default function NavRail(props) {
                   }
                   onClick={() => props.onNavigate?.(item.key)}
                 >
-                  <NavIcon
-                    src={isActive(item.key) ? item.iconActive : item.icon}
-                    size={item.size}
-                  />
+                  <NavIcon markup={item.icon} />
                   <Show when={badgeOf(item.key)}>
                     {(count) => (
                       <span class="navrail__badge" aria-hidden="true">
@@ -120,7 +112,7 @@ export default function NavRail(props) {
                   title={item.label}
                   onClick={() => props.onAuthNote?.(item.label)}
                 >
-                  <NavIcon src={item.icon} size={item.size} />
+                  <NavIcon markup={item.icon} />
                 </button>
               </li>
             )}

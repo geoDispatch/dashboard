@@ -12,11 +12,14 @@ import { DetailCard, DetailRow, EmptyState, HideButton } from './DeviceDetails'
 import { ZONE_COLORS, ZONE_LABELS, ZONE_MEANING, zoneBand } from '../constants/zones'
 import { coords, decimal, num, titleCase, DASH } from '../lib/format'
 
-import overviewIcon from '../assets/icons/panel-device-overview.svg'
-import statusIcon from '../assets/icons/panel-status.svg'
-import locationIcon from '../assets/icons/panel-location.svg'
-import aiIcon from '../assets/icons/panel-ai-decision.svg'
-import zoneIcon from '../assets/icons/device-zone.svg'
+// `?raw` + innerHTML, the same technique DeviceDetails uses: an <img> cannot
+// inherit `color`, so the icons are inlined and stroke="currentColor" resolves
+// against this page.
+import overviewIcon from '../assets/icons/panel-device-overview.svg?raw'
+import statusIcon from '../assets/icons/panel-status.svg?raw'
+import locationIcon from '../assets/icons/panel-location.svg?raw'
+import aiIcon from '../assets/icons/panel-ai-decision.svg?raw'
+import zoneIcon from '../assets/icons/device-zone.svg?raw'
 
 import './DeviceDetails.css'
 
@@ -129,17 +132,13 @@ export default function ZoneDetails(props) {
           >
             <div class="dd-identity">
               <div class="dd-identity__row">
-                <span class="dd-identity__icon">
-                  <img src={zoneIcon} alt="" aria-hidden="true" />
-                </span>
+                <span class="dd-identity__icon" aria-hidden="true" innerHTML={zoneIcon} />
                 <p class="dd-identity__phone">
                   {disasterLabel()} · {severityLabel()}
                 </p>
               </div>
               <div class="dd-identity__row">
-                <span class="dd-identity__icon">
-                  <img src={zoneIcon} alt="" aria-hidden="true" />
-                </span>
+                <span class="dd-identity__icon" aria-hidden="true" innerHTML={zoneIcon} />
                 <p class="dd-identity__zone" style={{ color: color() }}>
                   {ZONE_LABELS[zone()]} — {ZONE_MEANING[zone()]}
                 </p>

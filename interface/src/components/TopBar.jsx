@@ -2,10 +2,14 @@ import { createSignal, onMount, onCleanup, Show, For } from 'solid-js'
 import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
 import { maskPhone } from '../lib/format'
 import logoLockup from '../assets/icons/geo-dispatch-logo.svg'
-import pinIcon from '../assets/icons/location-pin.svg'
-import chevronIcon from '../assets/icons/chevron-down-up.svg'
-import searchIcon from '../assets/icons/search.svg'
-import notificationsIcon from '../assets/icons/notifications.svg'
+// Icons are inlined with Vite's ?raw suffix rather than loaded through <img>.
+// An SVG behind <img src> is an isolated document, so its stroke="currentColor"
+// resolves to that document's own black — inlining is what lets `color` cascade
+// in and gives us hover / open / disabled states for free.
+import pinIcon from '../assets/icons/location-pin.svg?raw'
+import chevronIcon from '../assets/icons/chevron-down-up.svg?raw'
+import searchIcon from '../assets/icons/search.svg?raw'
+import notificationsIcon from '../assets/icons/notifications.svg?raw'
 import './TopBar.css'
 
 // Top bar — Figma 6:14 ("All Logo") + 60:2 ("Header controls").
@@ -109,9 +113,7 @@ export default function TopBar(props) {
             aria-expanded={menuOpen()}
             onClick={() => setMenuOpen(!menuOpen())}
           >
-            <span class="gd-location__pin">
-              <img src={pinIcon} alt="" />
-            </span>
+            <span class="gd-location__pin" aria-hidden="true" innerHTML={pinIcon} />
             {/* The pill is a fixed 240px, so the longer region names ellipsise —
                 the title keeps the whole name one hover away. */}
             <span class="gd-location__label" title={locationText()}>
@@ -119,9 +121,7 @@ export default function TopBar(props) {
                 Resolving location…
               </Show>
             </span>
-            <span class="gd-location__chevron">
-              <img src={chevronIcon} alt="" />
-            </span>
+            <span class="gd-location__chevron" aria-hidden="true" innerHTML={chevronIcon} />
           </button>
 
           <Show when={menuOpen()}>
@@ -155,9 +155,7 @@ export default function TopBar(props) {
         {/* Search — filters the device index by masked phone, zone, locality
             or coordinates. The parent owns the filtering; this owns the field. */}
         <div class="gd-search" ref={searchRef} data-node-id="60:4">
-          <span class="gd-search__icon">
-            <img src={searchIcon} alt="" />
-          </span>
+          <span class="gd-search__icon" aria-hidden="true" innerHTML={searchIcon} />
           <input
             type="search"
             class="gd-search__input"
@@ -237,7 +235,7 @@ export default function TopBar(props) {
             }}
             data-node-id="62:2"
           >
-            <img src={notificationsIcon} alt="" />
+            <span class="gd-notifications__icon" aria-hidden="true" innerHTML={notificationsIcon} />
             <Show when={errorCount() > 0}>
               <span class="gd-notifications__badge">{badgeText()}</span>
             </Show>

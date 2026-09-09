@@ -51,45 +51,19 @@
   word-break: break-word;
 }
 
-/* Heading icons live in a fixed 22px box; each source SVG has its own
-   intrinsic size, so it is sized explicitly and centred inside that box. */
+/* Heading icons are inline SVGs on a shared 24x24 grid, so one rule sizes all
+   four — no per-icon nudges. `color` is what the glyph draws with, because the
+   markup is inlined (?raw + innerHTML) rather than loaded through <img>. */
 .dd-card__icon {
-  position: relative;
+  display: flex;
   flex: 0 0 22px;
   width: 22px;
   height: 22px;
+  color: var(--gd-ink, #17212b);
 }
 
-.dd-card__icon img {
-  position: absolute;
+.dd-card__icon svg {
   display: block;
-  max-width: none;
-}
-
-.dd-card__icon--overview img {
-  top: 0;
-  left: 0;
-  width: 22px;
-  height: 22px;
-}
-
-.dd-card__icon--status img {
-  top: -1.5px;
-  left: -1.5px;
-  width: 25px;
-  height: 25px;
-}
-
-.dd-card__icon--location img {
-  top: -1px;
-  left: 1px;
-  width: 20px;
-  height: 24px;
-}
-
-.dd-card__icon--ai img {
-  top: 0;
-  left: 0;
   width: 22px;
   height: 22px;
 }
@@ -121,8 +95,8 @@
   outline-offset: 2px;
 }
 
-/* The minus icon is the only glyph Figma ships. The plus affordance is the
-   same real vector drawn twice, the second copy rotated a quarter turn —
+/* The minus-in-a-box is the only glyph the set ships. The plus affordance is
+   the same real vector drawn twice, the second copy rotated a quarter turn —
    nothing here is hand-drawn. */
 .dd-card__glyph {
   position: relative;
@@ -131,14 +105,19 @@
   height: 16px;
 }
 
-.dd-card__glyph img {
+.dd-card__glyph-icon {
   position: absolute;
-  top: -0.5px;
-  left: -0.5px;
+  top: 0;
+  left: 0;
   display: block;
-  width: 17px;
-  height: 17px;
-  max-width: none;
+  width: 16px;
+  height: 16px;
+}
+
+.dd-card__glyph-icon svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 /* Swapped instantly, never faded: whether a card is collapsed is state the
@@ -175,19 +154,17 @@
 }
 
 .dd-identity__icon {
-  position: relative;
+  display: flex;
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
+  color: var(--gd-ink-2, #47525e);
 }
 
-.dd-identity__icon img {
-  position: absolute;
-  inset: 0;
+.dd-identity__icon svg {
   display: block;
-  width: 100%;
-  height: 100%;
-  max-width: none;
+  width: 20px;
+  height: 20px;
 }
 
 .dd-identity__phone {
@@ -301,6 +278,7 @@
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
   background: var(--gd-surface, #ffffff);
+  color: var(--gd-ink-2, #47525e);
   cursor: pointer;
   transition: background-color 120ms ease;
 }
@@ -323,29 +301,24 @@
   white-space: nowrap;
 }
 
-/* 10x14 chevron rotated a quarter turn inside a 14x10 box, exactly as Figma
-   composes it. */
+/* A left chevron on the 24x24 grid, drawn at 16px. Hiding folds the panel to
+   the left, so the glyph points left as authored — no rotation. */
 .dd-hide__chevron {
-  position: relative;
-  flex: 0 0 14px;
-  width: 14px;
-  height: 10px;
+  display: flex;
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
 }
 
-.dd-hide__chevron img {
-  position: absolute;
-  top: -2px;
-  left: 2px;
+.dd-hide__chevron svg {
   display: block;
-  width: 10px;
-  height: 14px;
-  max-width: none;
-  transform: rotate(90deg);
+  width: 16px;
+  height: 16px;
 }
 
 /* Restoring points the other way. */
-.dd-hide--show .dd-hide__chevron img {
-  transform: rotate(-90deg);
+.dd-hide--show .dd-hide__chevron svg {
+  transform: rotate(180deg);
 }
 
 @media (prefers-reduced-motion: reduce) {
