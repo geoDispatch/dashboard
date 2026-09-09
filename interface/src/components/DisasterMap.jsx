@@ -1,7 +1,7 @@
 import { onMount, onCleanup, createEffect } from 'solid-js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
+import { ZONE_COLORS } from '../constants/zones'
 import { maskPhone } from '../lib/format'
 import { haversine } from '../lib/geo'
 
@@ -44,6 +44,77 @@ export default function DisasterMap(props) {
   // with the zone the device happens to sit in, so a dot could never be picked.
   let deviceClickAt = 0
 
+  // Which band's edge the cursor is on, so it can be highlighted.
+  let hoveredZone = null
+
+  // The rings effect re-runs whenever the selection or the layer toggles
+  // change. Refitting the view on each of those would yank the map out from
+  // under the operator every time they picked a zone — and did, because the
+  // second fit measured a stale container and resolved to maxZoom. The view is
+  // framed once per event instead.
+  let fittedEventKey = null
+
+  // How close to a ring's circumference a click counts as hitting it.
+  const EDGE_TOLERANCE_PX = 12
+
+  // Metres to screen pixels at the current zoom, measured by projecting a point
+  // that many metres east of the centre.
+  function metresToPixels(centerLatLng, metres) {
+    if (!map || !metres) return 0
+    const latRad = (centerLatLng.lat * Math.PI) / 180
+    const lngOffset = metres / (111320 * Math.max(0.01, Math.cos(latRad)))
+    const a = map.latLngToLayerPoint(centerLatLng)
+    const b = map.latLngToLayerPoint(L.latLng(centerLatLng.lat, centerLatLng.lng + lngOffset))
+    return a.distanceTo(b)
+  }
+
+  // The band whose circumference is under this point, or null.
+  function edgeHitZone(containerPoint) {
+    const ev = props.event
+    if (!map || !ev?.epicenter || !impactRings.length) return null
+    if (!layerOn('zones')) return null
+
+    const center = L.latLng(ev.epicenter.latitude, ev.epicenter.longitude)
+    const centerPt = map.latLngToContainerPoint(center)
+    const distPx = centerPt.distanceTo(containerPoint)
+
+    let best = null
+    let bestDelta = Infinity
+
+    for (const ring of impactRings) {
+      const radiusPx = metresToPixels(center, ring.metres)
+      const delta = Math.abs(distPx - radiusPx)
+      if (delta <= EDGE_TOLERANCE_PX && delta < bestDelta) {
+        bestDelta = delta
+        best = ring.zone
+      }
+    }
+    return best
+  }
+
+  // One place decides how a ring looks in each state.
+  function ringStyle(zone, color, selectedZone, hovered) {
+    const isSelected = selectedZone === zone
+    const isHovered = hovered === zone
+
+    return {
+      color,
+      // The edge is the click target, so it stays visible enough to aim at.
+      weight: isSelected ? 3 : isHovered ? 3 : 1.5,
+      opacity: isSelected ? 0.95 : isHovered ? 0.85 : 0.5,
+      dashArray: isSelected || isHovered ? null : '5 7',
+      fillColor: color,
+      fillOpacity: isSelected ? 0.08 : 0.03,
+    }
+  }
+
+  // Applied imperatively so hovering does not rebuild the rings.
+  function restyleRings() {
+    for (const ring of impactRings) {
+      ring.layer.setStyle(ringStyle(ring.zone, ring.color, props.selectedZone, hoveredZone))
+    }
+  }
+
   const layerOn = (key) => {
     if (!props.layers) return LAYER_DEFAULTS[key]
     return !!props.layers[key]
@@ -85,27 +156,41 @@ export default function DisasterMap(props) {
     // half-hidden behind the cards, reading "2C" instead of "20 km".
     L.control.scale({ position: 'bottomright', imperial: false, maxWidth: 120 }).addTo(map)
 
-    // A click on the map resolves to a zone by distance from the epicentre
-    // rather than by hit-testing the ring shapes. Canvas hit-testing is
-    // unreliable here — the device dots are drawn over the rings and swallow
-    // the click — and this is better behaviour anyway: anywhere inside a band
-    // selects that band, not just the 1px ring outline. Device dots stop
-    // propagation, so they still win when there is one under the cursor.
+    // Zone selection is an EDGE hit, not an area hit.
+    //
+    // Treating the whole band as the target made the zones layer one enormous
+    // click surface sitting under every dot: with all three layers on, a click
+    // that missed a dot by a pixel selected the band instead, so devices were
+    // effectively unclickable. The rings are non-interactive now, and a click
+    // only selects a zone when it lands within a few pixels of that band's
+    // circumference. Everything else is the map.
     map.on('click', (e) => {
       if (performance.now() - deviceClickAt < 250) return
-      const ev = props.event
-      if (!ev?.epicenter || !ev.radius_km) return props.onSelect?.(null)
 
-      const distKm = haversine(
-        { latitude: e.latlng.lat, longitude: e.latlng.lng },
-        ev.epicenter,
-      )
+      const zone = edgeHitZone(e.containerPoint)
+      if (zone) return props.onSelectZone?.(zone)
 
-      if (distKm == null || distKm > ev.radius_km) return props.onSelect?.(null)
+      props.onSelect?.(null)
+    })
 
-      const frac = distKm / ev.radius_km
-      const zone = frac <= 0.33 ? 'red' : frac <= 0.66 ? 'orange' : 'green'
-      props.onSelectZone?.(zone)
+    // Hover feedback, so the edge reads as a target rather than decoration.
+    map.on('mousemove', (e) => {
+      const zone = edgeHitZone(e.containerPoint)
+      const container = map.getContainer()
+
+      if (zone !== hoveredZone) {
+        hoveredZone = zone
+        container.style.cursor = zone ? 'pointer' : ''
+        restyleRings()
+      }
+    })
+
+    map.on('mouseout', () => {
+      if (hoveredZone) {
+        hoveredZone = null
+        map.getContainer().style.cursor = ''
+        restyleRings()
+      }
     })
 
     // Hand an imperative handle back so the shell can fly to a region.
@@ -147,8 +232,16 @@ export default function DisasterMap(props) {
   function fitToEvent() {
     const ev = props.event
     if (!map || !ev?.epicenter) return
+    // Leaflet sizes the fit from its cached container size. If that is stale or
+    // the container has not been laid out yet, fitBounds silently resolves to
+    // maxZoom — the map ends up at street level over an empty field instead of
+    // showing the whole impact area. Refresh the size first, and bail if the
+    // container genuinely has no width yet.
+    map.invalidateSize({ animate: false })
+    if (map.getSize().x < 50) return
+
     const c = L.latLng(ev.epicenter.latitude, ev.epicenter.longitude)
-    map.fitBounds(c.toBounds(ev.radius_km * 2000), { padding: [24, 24] })
+    map.fitBounds(c.toBounds(ev.radius_km * 2000), { padding: [24, 24], animate: false })
   }
 
   // ── epicentre + zone rings ────────────────────────────────
@@ -159,10 +252,11 @@ export default function DisasterMap(props) {
     const show = layerOn('zones')
     if (!map) return
 
-    impactRings.forEach(r => r.remove())
+    impactRings.forEach(r => r.layer.remove())
     impactRings = []
     epicenterMarker?.remove()
     epicenterMarker = null
+    hoveredZone = null
 
     if (!show) return
     if (!ev?.epicenter) return
@@ -170,50 +264,27 @@ export default function DisasterMap(props) {
     const center = [ev.epicenter.latitude, ev.epicenter.longitude]
     const radius = ev.radius_km ?? 0
 
-    // Rings drawn outermost first so the red band sits on top.
+    // Outermost first so the red band draws on top of the green disc.
     const bands = [
       { zone: 'green',  frac: 1.00, color: ZONE_COLORS.green },
       { zone: 'orange', frac: 0.66, color: ZONE_COLORS.orange },
       { zone: 'red',    frac: 0.33, color: ZONE_COLORS.red },
     ]
 
-    // Outermost first, so the red band ends up on top and a click inside it
-    // selects red rather than the green disc it also sits within.
     for (const band of bands) {
-      const selected = props.selectedZone === band.zone
-      const ring = L.circle(center, {
-        // Same renderer as the device dots. On two separate canvases the dots'
-        // canvas sits on top and swallows every click, so the rings never
-        // receive one; sharing a renderer lets Leaflet hit-test both and pick
-        // the dot when there is one under the cursor, the ring otherwise.
+      const metres = radius * 1000 * band.frac
+
+      const layer = L.circle(center, {
         renderer,
-        radius: radius * 1000 * band.frac,
-        color: band.color,
-        weight: selected ? 2.5 : 1,
-        opacity: selected ? 0.9 : 0.38,
-        dashArray: selected ? null : '4 6',
-        fillColor: band.color,
-        fillOpacity: selected ? 0.10 : 0.035,
-        interactive: true,
-        // Must bubble: the map-level handler is what resolves the band from
-        // the click's distance to the epicentre. Swallowing it here left the
-        // ring hoverable but dead to clicks.
-        bubblingMouseEvents: true,
-      })
+        radius: metres,
+        // Not interactive: hit-testing happens at map level against the
+        // circumference only, so the band's interior never steals a click
+        // meant for a device dot underneath it.
+        interactive: false,
+        ...ringStyle(band.zone, band.color, props.selectedZone, hoveredZone),
+      }).addTo(map)
 
-      ring.bindTooltip(`${ZONE_LABELS[band.zone]} — click for event details`, {
-        sticky: true,
-        direction: 'top',
-        className: 'device-tip',
-      })
-
-      ring.on('mouseover', () => ring.setStyle({ fillOpacity: 0.12 }))
-      ring.on('mouseout', () =>
-        ring.setStyle({ fillOpacity: props.selectedZone === band.zone ? 0.10 : 0.035 }),
-      )
-
-      ring.addTo(map)
-      impactRings.push(ring)
+      impactRings.push({ zone: band.zone, color: band.color, metres, layer })
     }
 
     epicenterMarker = L.marker(center, {
@@ -226,7 +297,11 @@ export default function DisasterMap(props) {
       }),
     }).addTo(map)
 
-    fitToEvent()
+    const eventKey = `${ev.event_id ?? ''}:${radius}`
+    if (eventKey !== fittedEventKey) {
+      fittedEventKey = eventKey
+      fitToEvent()
+    }
   })
 
   // ── device dots ───────────────────────────────────────────

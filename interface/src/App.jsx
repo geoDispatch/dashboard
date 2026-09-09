@@ -186,10 +186,31 @@ export default function App() {
   })
 
   // Picking a device — from the search list, the rescue queue or a map dot.
-  function pickDevice(phone) {
+  //
+  // Any selection reveals the panel. Clicking a dot while the panel was
+  // collapsed used to change the selection silently behind the Show button,
+  // so the operator picked a device and nothing appeared to happen.
+  // `focus` recentres the map on the device. That is right when the pick came
+  // from the search list or the rescue queue, where the dot may be off-screen,
+  // and wrong when the operator just clicked the dot itself — recentring under
+  // their cursor makes the map lurch for no reason.
+  function pickDevice(phone, { focus = true } = {}) {
     actions.selectDevice(phone)
+    if (phone) revealPanel()
     const map = handle()
-    if (map && phone) map.focusDevice(phone)
+    if (map && phone && focus) map.focusDevice(phone)
+  }
+
+  function pickZone(zone) {
+    actions.selectZone(zone)
+    if (zone) revealPanel()
+  }
+
+  // The details column lives in the 'map' view, so a selection made from
+  // another view has to switch back to it as well as un-hide it.
+  function revealPanel() {
+    setActiveView('map')
+    setPanelHidden(false)
   }
 
   function pickResult(phone) {
@@ -360,8 +381,10 @@ export default function App() {
           operator={state.region}
           layers={layers()}
           shelters={SHELTER_SITES}
-          onSelect={(phone) => (phone ? actions.selectDevice(phone) : actions.clearSelection())}
-          onSelectZone={(zone) => actions.selectZone(zone)}
+          onSelect={(phone) =>
+            phone ? pickDevice(phone, { focus: false }) : actions.clearSelection()
+          }
+          onSelectZone={pickZone}
           onReady={(api) => setHandle(() => api)}
         />
 
