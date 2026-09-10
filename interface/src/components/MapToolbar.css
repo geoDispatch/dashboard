@@ -65,7 +65,7 @@
 .mt-stream[data-source='demo'] {
   --mt-dot: var(--gd-orange, #ffa51f);
   --mt-label: var(--mt-amber-ink);
-  background: #fff7e8;
+  background: var(--gd-demo-fill);
   box-shadow: inset 0 0 0 1px rgba(255, 165, 31, 0.55);
 }
 
@@ -158,7 +158,7 @@
 }
 
 .mt-seg[aria-pressed='true']:hover {
-  background: #e1e8ee;
+  background: var(--gd-field-strong-hover);
 }
 
 /* ---- Icon buttons ------------------------------------------------------- */

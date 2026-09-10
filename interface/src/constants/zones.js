@@ -8,6 +8,17 @@ export const ZONE_COLORS = {
   green:  '#22D07A',
 }
 
+// The colour a zone WORD is drawn in. Dots, rings and bars use ZONE_COLORS
+// directly; words go through these tokens so a theme can lift them. In light
+// mode they are the zone colours exactly. In dark mode the surface is #001DF3,
+// where pure zone red is 2.3:1 — so words get pale tints that pass, while the
+// dot beside them keeps the true colour.
+export const ZONE_TEXT = {
+  red:    'var(--gd-zone-red-text)',
+  orange: 'var(--gd-zone-orange-text)',
+  green:  'var(--gd-zone-green-text)',
+}
+
 export const ZONE_LABELS = {
   red:    'Red zone',
   orange: 'Orange zone',

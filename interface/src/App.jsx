@@ -39,6 +39,7 @@ import { createConsoleStore } from './lib/store'
 import { createSelectors } from './lib/selectors'
 import { checkHealth, createStream } from './lib/socket'
 import { LANGUAGES, SettingsContext, createSettingsStore, makeDisplay } from './lib/settings'
+import { applyTheme, basemapForTheme, isDarkTheme, resolveTheme, systemDarkQuery } from './lib/theme'
 import { playAlert } from './lib/audio'
 import { SHELTERS } from './lib/mockStream'
 import { AL_HAOUZ_LOCALITIES, nearestLocality } from './lib/geo'
@@ -315,6 +316,44 @@ export default function App() {
     document.documentElement.lang = language ? language.key : 'en'
   })
 
+  // ── theme ────────────────────────────────────────────────────────────────
+  //
+  // The stored preference may be 'system', so what is painted is resolved
+  // against the OS and re-resolved when the OS flips (sunset, a laptop joining
+  // a dimmed room). tokens.css does the rest from <html data-theme>.
+  const systemDark = systemDarkQuery()
+  const [osDark, setOsDark] = createSignal(systemDark.matches)
+  onMount(() => {
+    const onChange = (e) => setOsDark(e.matches)
+    systemDark.addEventListener('change', onChange)
+    onCleanup(() => systemDark.removeEventListener('change', onChange))
+  })
+
+  const theme = () => resolveTheme(settings.theme, osDark(), settings.nightTheme)
+  createEffect(() => applyTheme(theme()))
+
+  /**
+   * Change the theme because the operator asked.
+   *
+   * Themes are changed in Settings → Display and nowhere else. Picking a dark
+   * theme there also makes it the night theme, so switching to Sync with
+   * system later comes back to the dark the operator last chose.
+   *
+   * The grey basemap follows (light canvas ↔ dark canvas) — but only here, on
+   * an explicit change. Doing it in the effect above would overwrite a
+   * basemap the operator chose on purpose every time the page loaded.
+   */
+  function setTheme(pref) {
+    settingsStore.set('theme', pref)
+    if (isDarkTheme(pref)) settingsStore.set('nightTheme', pref)
+    const follow = basemapForTheme(settings.basemap, theme())
+    if (follow) settingsStore.set('basemap', follow)
+  }
+
+  // The night theme on its own — the 'system' mode's dark half. Both dark
+  // themes share the dark canvas, so no basemap ever needs to follow.
+  const setNightTheme = (key) => settingsStore.set('nightTheme', key)
+
   // ── audio alerts ─────────────────────────────────────────────────────────
   //
   // Both of these watch the store rather than the socket, so a flag that
@@ -559,6 +598,7 @@ export default function App() {
             shelters={SHELTER_SITES}
             basemap={settings.basemap}
             units={settings.units}
+            theme={theme()}
             onSelect={(phone) =>
               phone ? pickDevice(phone, { focus: false }) : actions.clearSelection()
             }
@@ -735,6 +775,10 @@ export default function App() {
           netLabel={net.label()}
           netQuality={net.quality()}
           onClose={() => setSettingsTab(null)}
+          theme={theme()}
+          systemDark={osDark()}
+          onSetTheme={setTheme}
+          onSetNightTheme={setNightTheme}
           onApplyWsUrl={applyWsUrl}
           onUseDemo={useDemoStream}
           onUseSupervisor={useSupervisorStream}

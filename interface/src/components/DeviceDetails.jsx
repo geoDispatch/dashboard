@@ -26,7 +26,7 @@ import {
   percent,
   reachabilityLabel,
 } from '../lib/format'
-import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
+import { ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
 import { useDisplay } from '../lib/settings'
 
 // Icons are inlined with Vite's `?raw` suffix and written into a sized <span>
@@ -195,10 +195,12 @@ export default function DeviceDetails(props) {
     if (!z) return DASH
     return ZONE_LABELS[z]
   }
+  // The WORD's colour, theme-aware — pure zone red is unreadable on the dark
+  // theme's #001DF3 card. See ZONE_TEXT in constants/zones.js.
   const zoneColor = () => {
     const z = zoneKey()
     if (!z) return 'var(--gd-ink-3, #525e6b)'
-    return ZONE_COLORS[z]
+    return ZONE_TEXT[z]
   }
 
   const reachability = () => reachabilityLabel(device())

@@ -1,14 +1,25 @@
 /* ============================================================================
    GeoDispatch design tokens — Figma "Frame 18" (KeXVGPYSxafPGIkzLANt75, 6:95).
-   Light theme, single mode: this console is a wall-mounted operations screen,
-   so there is no dark variant to switch to.
+   Three themes, one layout. Light is the default. Dark and Dark blue are the
+   same console — same components, same sizes, same positions — with a dark
+   working surface (graphite or navy) and the top bar and left rail turned
+   into one #001DF3 frame around the map. Switching theme changes colour and
+   nothing else; every size token below is shared by all three.
+
+   Every theme block is keyed on a bare [data-theme] attribute, not on :root
+   alone, so any element can carry a theme for its own subtree — that is how
+   the theme previews in Settings draw each theme with its real tokens while
+   the page around them is in another one.
 
    Every colour, radius and size the interface uses lives here. If a component
    needs a hex, the hex belongs in this file first and the component references
    the token — never the other way round.
    ========================================================================= */
 
-:root {
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
   /* ── Ink (text) ──────────────────────────────────────────────────────────
      Three ink levels, straight from the frame. There is no fourth text
      colour in the design; anything quieter than --gd-ink-3 is --gd-ink-4,
@@ -23,6 +34,12 @@
   --gd-field:          #f6f7f9;   /* search field + location pill fill */
   --gd-field-hover:    #eef0f3;   /* pressed/hover step down from --gd-field */
   --gd-map-bg:         #e6e8ea;   /* ground under the basemap while tiles load */
+  --gd-map-ground:     #ececec;   /* what the grey canvas reads as, once loaded —
+                                     for the map drawn in miniature (Settings) */
+
+  /* A filter for the grey canvas's tiles. Only Dark blue sets one (it tints the
+     dark canvas navy); everywhere else the canvas is drawn as Esri serves it. */
+  --gd-ground-tint:    none;
 
   /* ── Semantic accents ──────────────────────────────────────────────────── */
   --gd-green:          #246e47;   /* "Green zone" text — reads on white, unlike
@@ -43,6 +60,74 @@
   --gd-red-soft:       rgba(255, 45, 61, 0.10);
   --gd-orange-soft:    rgba(255, 165, 31, 0.12);
   --gd-zone-green-soft: rgba(34, 208, 122, 0.12);
+
+  /* ── The frame — top bar and left rail ───────────────────────────────────
+     In light mode the frame IS the surface: white, like every card. Dark mode
+     turns it into the #001DF3 band, so everything that sits on the bar reads
+     these instead of the card tokens. */
+  --gd-frame:            #ffffff;
+  --gd-frame-ink:        #17212b;
+  --gd-frame-ink-2:      #47525e;
+  --gd-frame-ink-3:      #5e6b75;   /* idle rail icon */
+  --gd-frame-field:      #f6f7f9;   /* location pill, search field */
+  --gd-frame-field-hover: #eef0f3;
+  --gd-frame-line:       #e7eaee;   /* dropdown borders */
+  --gd-frame-select:     #e5f0f7;   /* the active rail tile */
+  --gd-frame-select-ink: #1f5278;
+  --gd-frame-primary:    #17212b;   /* Launch incident */
+  --gd-frame-primary-hover: #22303d;
+  --gd-frame-primary-ink: #ffffff;
+  --gd-frame-badge:      #ff2d3d;   /* counts on the bell and the rail */
+  --gd-frame-badge-ink:  #ffffff;
+
+  /* Selection inside cards and dialogs (settings rail, segmented controls). */
+  --gd-select:           #e5f0f7;
+  --gd-select-ink:       #1f5278;
+
+  /* The light halo that lifts the epicentre off everything around it. White in
+     both themes — it used to borrow --gd-surface, which in dark mode is the
+     frame blue, and ringed the red epicentre in blue. */
+  --gd-marker-halo:        #ffffff;
+
+  /* Zone words (see ZONE_TEXT in constants/zones.js). Light mode draws them in
+     the zone colours themselves, exactly as before. */
+  --gd-zone-red-text:      #ff2d3d;
+  --gd-zone-orange-text:   #ffa51f;
+  --gd-zone-green-text:    #22d07a;
+
+  /* Red as TEXT. Identical to --gd-red in light mode; dark mode swaps it for a
+     pale tint because pure red on #001DF3 fails contrast. Fills keep --gd-red. */
+  --gd-red-text:           #ff2d3d;
+
+  /* Darkened inks for warning and failure WORDS on a light surface — the map
+     toolbar's demo and lost states. Referenced for a long time without being
+     defined, so they fell back to these same dark values in every theme and
+     turned unreadable on graphite. */
+  --gd-amber-ink:          #8a5a00;
+  --gd-red-ink:            #a51120;
+
+  /* The pressed step of a segmented control — the map's Zones / Devices /
+     Shelters toggles. It used to be referenced without ever being defined, so
+     it silently fell back to a light grey in every theme. */
+  --gd-field-strong:       #ebf0f4;
+  --gd-field-strong-hover: #e1e8ee;
+
+  /* The backdrop cards sit on inside a full-page view or a dialog — the
+     incident page, the settings panel, the telemetry drawer. In light mode it
+     is the field grey it always was. It gets its own name because in dark mode
+     it must be DARKER than the cards on it, while an input field must be
+     lighter — one token could not do both. */
+  --gd-page:             #f6f7f9;
+
+  /* What dims the console behind a dialog or drawer. */
+  --gd-scrim:            rgba(23, 33, 43, 0.34);
+  --gd-scrim-light:      rgba(23, 33, 43, 0.18);
+
+  /* Translucent chips that sit directly on the basemap: attribution, scale. */
+  --gd-map-chip:         rgba(255, 255, 255, 0.82);
+
+  /* The demo-stream pill's warm fill. */
+  --gd-demo-fill:        #fff7e8;
 
   /* ── Hairlines, rings, shadows ─────────────────────────────────────────── */
   --gd-hairline:       rgba(23, 33, 43, 0.08);   /* --gd-ink at 8% */
@@ -102,4 +187,174 @@
   --gd-z-pop:      1400;   /* dropdowns, search results */
   --gd-z-modal:    1500;   /* the settings dialog and its scrim */
   --gd-z-toast:    1600;   /* error toasts */
+}
+
+/* ============================================================================
+   Dark themes — Dark, and Dark blue on top of it.
+
+   Applied by <html data-theme="dark|dark-blue"> (see lib/theme.js). Only
+   colours are redefined — no size, radius, type or spacing token changes, so
+   the dark consoles are pixel-for-pixel the light one. This block is Dark;
+   Dark blue shares all of it and swaps only the working surface (next block).
+
+   ── The frame ─────────────────────────────────────────────────────────────
+   #001DF3 on the top bar and the left rail, and on the shell behind them, so
+   the map's rounded inner corner is cut out of one continuous L of blue. Text
+   on it is white (8.5:1). Anything that was a grey field on the light bar is
+   white at 12% on the blue one, so it stays a field without becoming a hole.
+   In Dark, the frame is the only blue surface; Dark blue follows it inward.
+
+   ── The working surface ───────────────────────────────────────────────────
+   Regular dark: neutral graphite with a slight cool cast. Cards, panels,
+   dialogs and the drawer sit at #161A23; what is BEHIND them — the incident
+   page, the settings sidebar — is darker still, so a card reads as a card.
+   The map is Esri's dark grey canvas, untinted.
+
+   ── Status colours ─────────────────────────────────────────────────────────
+   Dots, rings, bars and badges keep the exact zone colours. Status WORDS use
+   slightly lifted versions (--gd-red-text, ZONE_TEXT) so they clear WCAG AA
+   on graphite, where the pure dot hues sit just on the line.
+   ========================================================================= */
+
+[data-theme='dark'],
+[data-theme='dark-blue'] {
+  color-scheme: dark;
+
+  /* Ink */
+  --gd-ink:            #f3f5f9;
+  --gd-ink-2:          #c4cad5;
+  --gd-ink-3:          #9aa3b2;
+  --gd-ink-4:          #6f7889;
+
+  /* Surfaces — graphite */
+  --gd-page:           #0b0d12;   /* behind cards: darker than the cards on it */
+  --gd-surface:        #161a23;   /* cards, panels, dialogs, the drawer */
+  --gd-field:          #1f2430;   /* inputs and quiet buttons inside a card */
+  --gd-field-hover:    #282e3c;
+  --gd-map-bg:         #0c0f15;
+  --gd-map-ground:     #414141;   /* Esri's dark grey canvas */
+
+  /* Text colours that were darkened to read on white are lifted to read on
+     graphite. */
+  --gd-green:          #3fd98f;
+  --gd-orange-ink:     #ffb547;
+  --gd-red-text:       #ff6570;
+
+  --gd-zone-red-text:    #ff6570;
+  --gd-zone-orange-text: #ffb547;
+  --gd-zone-green-text:  #3fd98f;
+
+  --gd-red-soft:       rgba(255, 45, 61, 0.18);
+  --gd-orange-soft:    rgba(255, 165, 31, 0.16);
+  --gd-zone-green-soft: rgba(34, 208, 122, 0.16);
+
+  /* Frame — the one blue surface */
+  --gd-frame:            #001df3;
+  --gd-frame-ink:        #ffffff;
+  --gd-frame-ink-2:      rgba(255, 255, 255, 0.84);
+  --gd-frame-ink-3:      rgba(255, 255, 255, 0.66);
+  --gd-frame-field:      rgba(255, 255, 255, 0.12);
+  --gd-frame-field-hover: rgba(255, 255, 255, 0.20);
+  --gd-frame-line:       rgba(255, 255, 255, 0.22);
+  /* The active rail tile inverts: white tile, blue glyph. On a saturated band a
+     tint reads as "hover"; only a solid tile reads as "you are here". */
+  --gd-frame-select:     #ffffff;
+  --gd-frame-select-ink: #001df3;
+  --gd-frame-primary:    #ffffff;
+  --gd-frame-primary-hover: #e6eaff;
+  --gd-frame-primary-ink: #001df3;
+  /* Red on #001DF3 vibrates and fails contrast, so counts become white pills
+     with red figures. The red still says "attention"; the pill says "count". */
+  --gd-frame-badge:      #ffffff;
+  --gd-frame-badge-ink:  #e0142a;
+
+  /* Selection inside cards picks up the frame's blue as a tint, so "selected"
+     means the same thing on the rail and in a dialog. */
+  --gd-select:           rgba(64, 102, 255, 0.22);
+  --gd-select-ink:       #b8c6ff;
+
+  --gd-amber-ink:          #ffb547;
+  --gd-red-ink:            #ff7582;
+
+  --gd-field-strong:       #2e3546;
+  --gd-field-strong-hover: #363e51;
+
+  --gd-map-chip:         rgba(22, 26, 35, 0.84);
+  --gd-demo-fill:        #2a2418;
+
+  --gd-scrim:            rgba(4, 6, 10, 0.58);
+  --gd-scrim-light:      rgba(4, 6, 10, 0.32);
+
+  /* Lines and shadows */
+  --gd-hairline:       rgba(255, 255, 255, 0.08);
+  --gd-hairline-strong: rgba(255, 255, 255, 0.15);
+  --gd-focus-ring:     rgba(140, 165, 255, 0.8);
+
+  --gd-shadow-card:    0 1px 2px rgba(0, 0, 0, 0.35),
+                       0 8px 24px rgba(0, 0, 0, 0.32);
+  --gd-shadow-pop:     0 2px 6px rgba(0, 0, 0, 0.45),
+                       0 18px 44px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================================================
+   Dark blue.
+
+   Dark, with the working surface in the frame's own hue instead of graphite.
+   The frame, the status colours, the badges — everything that is not a
+   surface, a line or a quiet ink — is inherited from the block above.
+
+   ── Surfaces ──────────────────────────────────────────────────────────────
+   One hue (the frame's, ~231°), stepped in lightness so the layers stay
+   legible: the page behind cards at 6%, cards and dialogs at 17%, inputs a
+   step above. The frame is 48%, so it stays about twice as bright as anything
+   inside it and still reads as the frame rather than as one more navy panel.
+
+   ── The map ──────────────────────────────────────────────────────────────
+   Esri serves no navy basemap, so the dark grey canvas is tinted with a
+   filter (--gd-ground-tint): land #404040 becomes #14285C, the sea #202024
+   becomes #081030. Only the canvas's tiles — the device dots, zone rings and
+   markers live in other panes and keep their exact colours, and satellite
+   imagery and streets are never tinted: they show what is really there.
+
+   ── Ink ───────────────────────────────────────────────────────────────────
+   Grey on navy looks dirty, so the quiet inks are the hue desaturated
+   (lavender). On a card: ink-2 11:1, ink-3 7.2:1, ink-4 4.7:1.
+   ========================================================================= */
+
+[data-theme='dark-blue'] {
+  --gd-ink:            #f4f6ff;
+  --gd-ink-2:          #c9d0f2;
+  --gd-ink-3:          #9da7d7;
+  --gd-ink-4:          #7a85b8;
+
+  --gd-page:           #03071c;   /* behind cards */
+  --gd-surface:        #0d1848;   /* cards, panels, dialogs, the drawer */
+  --gd-field:          #17235f;   /* inputs and quiet buttons inside a card */
+  --gd-field-hover:    #1e2b70;
+  --gd-map-bg:         #081030;   /* the tinted sea, so loading tiles don't flash */
+  --gd-map-ground:     #14285c;
+  --gd-ground-tint:    sepia(1) saturate(6) hue-rotate(193deg) brightness(0.56) contrast(1.05);
+
+  --gd-select:           rgba(125, 150, 255, 0.24);
+  --gd-select-ink:       #d3dbff;
+
+  --gd-field-strong:       #25327a;
+  --gd-field-strong-hover: #2c3a88;
+
+  --gd-map-chip:         rgba(13, 24, 72, 0.86);
+  --gd-demo-fill:        #393141;   /* amber at 18% over the card navy, opaque */
+
+  --gd-scrim:            rgba(2, 5, 30, 0.60);
+  --gd-scrim-light:      rgba(2, 5, 30, 0.36);
+
+  /* Lines and shadows carry the hue too: a rule on a navy card is a paler
+     blue, not a grey scratch; a shadow is deep navy, not a smudge of black. */
+  --gd-hairline:       rgba(170, 185, 255, 0.13);
+  --gd-hairline-strong: rgba(170, 185, 255, 0.22);
+  --gd-focus-ring:     rgba(175, 192, 255, 0.85);
+
+  --gd-shadow-card:    0 1px 2px rgba(0, 3, 30, 0.45),
+                       0 8px 24px rgba(0, 3, 30, 0.40);
+  --gd-shadow-pop:     0 2px 6px rgba(0, 3, 30, 0.55),
+                       0 18px 44px rgba(0, 3, 30, 0.60);
 }

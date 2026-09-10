@@ -8,11 +8,13 @@
  * padding produces both anchors without any magic offsets. */
 
 .navrail {
-  /* Local tokens. The icons are stroked with currentColor, so these are the
-     single source of truth for the glyph colour as well as the tile. */
-  --nav-idle-ink: #5e6b75;
-  --nav-active-bg: #e5f0f7;
-  --nav-active-ink: #1f5278;
+  /* Local tokens, fed from the frame tokens so the rail follows the theme:
+     white with grey glyphs in light mode, #001DF3 with white glyphs in dark.
+     The icons are stroked with currentColor, so these are the single source of
+     truth for the glyph colour as well as the tile. */
+  --nav-idle-ink: var(--gd-frame-ink-3);
+  --nav-active-bg: var(--gd-frame-select);
+  --nav-active-ink: var(--gd-frame-select-ink);
 
   box-sizing: border-box;
   flex: 0 0 var(--gd-rail-w, 80px);
@@ -25,7 +27,7 @@
   justify-content: space-between;
   padding: 24px 16px;
 
-  background: var(--gd-surface, #ffffff);
+  background: var(--gd-frame);
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
@@ -77,15 +79,18 @@
 }
 
 .navrail__btn:hover {
-  background: var(--gd-field, #f6f7f9);
+  background: var(--gd-frame-field);
+  color: var(--gd-frame-ink);
 }
 
 .navrail__btn:active {
-  background: #eceef1;
+  background: var(--gd-frame-field-hover);
 }
 
+/* Frame ink, not the active tile's ink: in dark mode that ink IS the rail's
+   blue, and a focus ring the colour of the thing it sits on is no ring. */
 .navrail__btn:focus-visible {
-  outline: 2px solid var(--nav-active-ink);
+  outline: 2px solid var(--gd-frame-ink);
   outline-offset: 2px;
 }
 
@@ -132,11 +137,11 @@
   min-width: 16px;
   height: 16px;
   padding: 0 4px;
-  border: 2px solid var(--gd-surface, #ffffff);
+  border: 2px solid var(--gd-frame);
   border-radius: 999px;
 
-  background: var(--gd-red, #ff2d3d);
-  color: #ffffff;
+  background: var(--gd-frame-badge);
+  color: var(--gd-frame-badge-ink);
   font-size: 11px;
   font-weight: 700;
   line-height: 16px;

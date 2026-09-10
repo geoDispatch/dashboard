@@ -17,7 +17,7 @@
 import { For, Show } from 'solid-js'
 
 import { HideButton } from './DeviceDetails'
-import { ERROR_SEVERITY, ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
+import { ERROR_SEVERITY, ZONE_COLORS, ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
 import { DASH, ago, maskPhone, num, percent, reachabilityLabel } from '../lib/format'
 import { useDisplay } from '../lib/settings'
 
@@ -82,7 +82,7 @@ function ZoneWord(props) {
   }
 
   return (
-    <span class="ops-zone" style={{ color: tone() }}>
+    <span class="ops-zone" style={{ color: ZONE_TEXT[props.zone] || 'var(--gd-ink-3)' }}>
       <span class="ops-zone__dot" style={{ background: tone() }} aria-hidden="true" />
       {word()}
     </span>

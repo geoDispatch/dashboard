@@ -18,7 +18,7 @@
   position: fixed;
   inset: 0;
   z-index: var(--gd-z-modal, 1500);
-  background: rgba(23, 33, 43, 0.18);
+  background: var(--gd-scrim-light);
   animation: ntd-fade var(--gd-dur) var(--gd-ease);
 }
 
@@ -122,7 +122,7 @@
   padding: var(--gd-card-pad);
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--gd-field);
+  background: var(--gd-page);
 }
 
 .ntd-card {
@@ -226,7 +226,7 @@
 }
 
 .ntd-split__value.is-red {
-  color: var(--gd-red);
+  color: var(--gd-red-text);
 }
 
 .ntd-split__label {
@@ -336,7 +336,7 @@
 }
 
 .ntd-code.is-fatal .ntd-code__count {
-  color: var(--gd-red);
+  color: var(--gd-red-text);
 }
 
 /* ── Recent list ──────────────────────────────────────────────────────── */
@@ -377,7 +377,7 @@
 }
 
 .ntd-item.is-fatal .ntd-item__code {
-  color: var(--gd-red);
+  color: var(--gd-red-text);
 }
 
 .ntd-item__time {

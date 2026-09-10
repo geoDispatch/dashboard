@@ -9,7 +9,7 @@
 
 import { createSignal, Show } from 'solid-js'
 import { DetailCard, DetailRow, EmptyState, HideButton } from './DeviceDetails'
-import { ZONE_COLORS, ZONE_LABELS, ZONE_MEANING } from '../constants/zones'
+import { ZONE_LABELS, ZONE_MEANING, ZONE_TEXT } from '../constants/zones'
 import { useDisplay } from '../lib/settings'
 import { decimal, num, titleCase, DASH } from '../lib/format'
 
@@ -52,7 +52,8 @@ export default function ZoneDetails(props) {
   const zone = () => props.zone || null
   const event = () => props.event || null
   const counts = () => props.counts || null
-  const color = () => ZONE_COLORS[zone()] || 'var(--gd-ink)'
+  // The word's colour — theme-aware. See ZONE_TEXT in constants/zones.js.
+  const color = () => ZONE_TEXT[zone()] || 'var(--gd-ink)'
 
   // ── overview ─────────────────────────────────────────────────────────────
   const disasterLabel = () => {

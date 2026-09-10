@@ -232,7 +232,7 @@ button.ops-row:disabled:hover {
 
 /* "At capacity" / "Fatal" — the one state that must not read as routine. */
 .ops-row__word.is-full {
-  color: var(--gd-red, #ff2d3d);
+  color: var(--gd-red-text);
 }
 
 /* ── Zone word ──────────────────────────────────────────────────────────

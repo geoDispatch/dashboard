@@ -24,7 +24,7 @@
   display: grid;
   place-items: center;
   padding: 32px;
-  background: rgba(23, 33, 43, 0.34);
+  background: var(--gd-scrim);
   animation: set-fade var(--gd-dur) var(--gd-ease);
 }
 
@@ -60,7 +60,7 @@
   flex-direction: column;
   gap: var(--gd-gap);
   padding: 20px 16px;
-  background: var(--gd-field);
+  background: var(--gd-page);
   border-right: 1px solid var(--gd-hairline);
 }
 
@@ -106,8 +106,8 @@
 /* The same selected treatment the nav rail uses, so "which section am I in"
    reads the same way in both places. */
 .set-rail__btn.is-active {
-  background: #e5f0f7;
-  color: #1f5278;
+  background: var(--gd-select);
+  color: var(--gd-select-ink);
 }
 
 .set-rail__foot {
@@ -183,7 +183,7 @@
   padding: var(--gd-card-pad);
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--gd-field);
+  background: var(--gd-page);
 }
 
 /* ── Card ─────────────────────────────────────────────────────────────── */
@@ -344,7 +344,7 @@
 
 .set-btn--danger {
   background: var(--gd-red-soft);
-  color: var(--gd-red);
+  color: var(--gd-red-text);
 }
 
 .set-btn--danger:hover:not(:disabled) {
@@ -522,6 +522,284 @@
   flex: 0 0 auto;
 }
 
+/* ── Theme picker ─────────────────────────────────────────────────────────
+   GitHub's appearance picker: a row of cards, each a live miniature of the
+   console in that theme, with a radio and the name underneath. In Sync mode
+   the row splits into a Day column (Light, the only day theme) and a Night
+   pair, each under its own label. */
+
+.set-themes {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.set-themes.is-sync {
+  grid-template-rows: auto auto;
+  row-gap: 8px;
+}
+
+.set-themes.is-sync [data-slot='day-label']   { grid-area: 1 / 1; }
+.set-themes.is-sync [data-slot='day']         { grid-area: 2 / 1; }
+.set-themes.is-sync [data-slot='night-label'] { grid-area: 1 / 2 / 2 / 4; }
+.set-themes.is-sync [data-slot='night-a']     { grid-area: 2 / 2; }
+.set-themes.is-sync [data-slot='night-b']     { grid-area: 2 / 3; }
+
+.set-themes__group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-xs);
+  color: var(--gd-ink-3);
+}
+
+.set-themes__group .set-icon,
+.set-themes__group .set-icon svg {
+  width: 14px;
+  height: 14px;
+  flex-basis: 14px;
+}
+
+.set-theme {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 12px;
+  background: var(--gd-surface);
+  text-align: left;
+  transition: background-color var(--gd-dur-fast) var(--gd-ease);
+}
+
+/* The border is drawn on top, not on the card itself — the preview fills the
+   card to its edges and would otherwise paint over an inset ring. */
+.set-theme::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px var(--gd-hairline-strong);
+  pointer-events: none;
+  transition: box-shadow var(--gd-dur-fast) var(--gd-ease);
+}
+
+button.set-theme:hover {
+  background: var(--gd-field);
+}
+
+button.set-theme:hover::after {
+  box-shadow: inset 0 0 0 1px var(--gd-ink-4);
+}
+
+.set-theme.is-selected::after {
+  box-shadow: inset 0 0 0 2px var(--gd-ink);
+}
+
+.set-theme__foot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--gd-hairline);
+}
+
+.set-theme__radio {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--gd-ink-4);
+}
+
+.set-theme.is-selected .set-theme__radio {
+  background: radial-gradient(circle, var(--gd-ink) 0 3.5px, transparent 4px);
+  box-shadow: inset 0 0 0 1.5px var(--gd-ink);
+}
+
+.set-theme__name {
+  overflow: hidden;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-bold);
+  line-height: var(--gd-lh-sm);
+  color: var(--gd-ink);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.set-theme__badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: var(--gd-radius-pill);
+  background: var(--gd-select);
+  font-size: 11px;
+  font-weight: var(--gd-fw-medium);
+  line-height: 16px;
+  color: var(--gd-select-ink);
+}
+
+/* ── The miniature console ────────────────────────────────────────────────
+   Every colour below is a theme token, read inside the preview's own
+   [data-theme] — so this block has no per-theme rules at all. Proportions
+   follow the real shell: a top bar, a narrow rail, the map with its rounded
+   inner corner, cards floating on the left, zone rings to the right. */
+
+.tp {
+  display: grid;
+  grid-template-columns: 11% 1fr;
+  grid-template-rows: 17% 1fr;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  background: var(--gd-frame);
+}
+
+.tp-bar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 4%;
+  padding: 0 5% 0 3%;
+  border-bottom: 1px solid var(--gd-frame-line);
+}
+
+.tp-logo {
+  flex: 0 0 13%;
+  height: 34%;
+  border-radius: 2px;
+  background:
+    radial-gradient(circle at 18% 50%, var(--gd-frame-ink) 0 28%, transparent 30%),
+    linear-gradient(var(--gd-frame-ink), var(--gd-frame-ink)) 100% 50% / 58% 60% no-repeat;
+}
+
+.tp-pill,
+.tp-search {
+  height: 42%;
+  border-radius: 3px;
+  background: var(--gd-frame-field);
+}
+
+.tp-pill   { flex: 0 0 15%; }
+.tp-search { flex: 1 1 auto; }
+
+.tp-cta {
+  flex: 0 0 13%;
+  height: 42%;
+  border-radius: 3px;
+  background: var(--gd-frame-primary);
+}
+
+.tp-rail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7%;
+  padding-top: 18%;
+  border-right: 1px solid var(--gd-frame-line);
+}
+
+.tp-tile {
+  width: 42%;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  background: var(--gd-frame-ink-3);
+  opacity: 0.45;
+}
+
+.tp-tile.is-on {
+  background: var(--gd-frame-select);
+  opacity: 1;
+}
+
+.tp-map {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5%;
+  padding: 5%;
+  overflow: hidden;
+  border-top-left-radius: 7px;
+  background: var(--gd-map-ground);
+}
+
+.tp-ring {
+  position: absolute;
+  top: 50%;
+  left: 66%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.tp-ring.is-green {
+  width: 76%;
+  aspect-ratio: 1;
+  border: 1px dashed var(--gd-zone-green);
+  background: var(--gd-zone-green-soft);
+}
+
+.tp-ring.is-orange {
+  width: 48%;
+  aspect-ratio: 1;
+  border: 1px dashed var(--gd-orange);
+  background: var(--gd-orange-soft);
+}
+
+.tp-ring.is-red {
+  width: 24%;
+  aspect-ratio: 1;
+  border: 1px dashed var(--gd-red);
+  background: var(--gd-red-soft);
+}
+
+/* The epicentre, haloed exactly as on the live map. */
+.tp-ring.is-red::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--gd-red);
+  box-shadow: 0 0 0 1.5px var(--gd-marker-halo);
+  transform: translate(-50%, -50%);
+}
+
+.tp-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 36%;
+  padding: 7px 6px;
+  border-radius: 4px;
+  background: var(--gd-surface);
+  box-shadow: var(--gd-shadow-card);
+}
+
+.tp-line {
+  display: block;
+  width: 80%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--gd-ink-4);
+  opacity: 0.7;
+}
+
+.tp-line.is-title {
+  width: 56%;
+  background: var(--gd-ink);
+  opacity: 1;
+}
+
+.tp-line.is-short {
+  width: 48%;
+}
+
 /* ── Basemap picker ───────────────────────────────────────────────────── */
 
 .set-basemaps {
@@ -569,6 +847,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+/* The dark canvas's preview carries the same tint as the live map (none,
+   except in Dark blue), or it would promise a ground the operator never gets. */
+.set-basemap__preview[data-basemap='dark'] img {
+  filter: var(--gd-ground-tint);
 }
 
 .set-basemap__tick {
@@ -797,6 +1081,16 @@
   .set-basemaps,
   .set-fields {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* One column: the Sync layout falls back to DOM order, which is already
+     Day label, Light, Night label, Dark, Dark blue. */
+  .set-themes {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .set-themes.is-sync [data-slot] {
+    grid-area: auto;
   }
 
   .set-fields .set-field {

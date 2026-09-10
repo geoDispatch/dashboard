@@ -26,7 +26,7 @@
   display: grid;
   place-items: center;
   padding: 32px;
-  background: rgba(23, 33, 43, 0.34);
+  background: var(--gd-scrim);
   animation: ilm-fade var(--gd-dur) var(--gd-ease);
 }
 
@@ -277,7 +277,7 @@
 }
 
 .ilm-field__note.is-error {
-  color: var(--gd-red);
+  color: var(--gd-red-text);
 }
 
 /* ── Controls ─────────────────────────────────────────────────────────── */
@@ -401,7 +401,7 @@
 
 .ilm-warn.is-error {
   background: var(--gd-red-soft);
-  color: var(--gd-red);
+  color: var(--gd-red-text);
 }
 
 /* ── Foot ─────────────────────────────────────────────────────────────── */

@@ -49,8 +49,9 @@ body {
   color: var(--gd-ink);
   background: var(--gd-surface);
 
-  /* Light only — a dark form control on a white console would be a bug. */
-  color-scheme: light;
+  /* No color-scheme here: it is set on :root in tokens.css and flipped by
+     [data-theme='dark'], and a declaration on body would pin the whole app to
+     light whatever the theme said. */
 
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;

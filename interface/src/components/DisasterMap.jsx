@@ -5,6 +5,7 @@ import { ZONE_COLORS } from '../constants/zones'
 import { basemapFor } from '../constants/basemaps'
 import { maskPhone } from '../lib/format'
 import { haversine } from '../lib/geo'
+import { isDarkTheme } from '../lib/theme'
 
 // The impact map. Leaflet, canvas-rendered — a 50 km radius over a populated
 // region is thousands of dots and SVG markers stop being viable well before that.
@@ -105,11 +106,17 @@ export default function DisasterMap(props) {
   // dots the contrast they need on top.
   const ZONE_FILL = { red: 0.15, orange: 0.10, green: 0.06 }
 
+  // On the dark basemap the same tints composite into a muddy brown: 6% green
+  // plus 10% orange over graphite is not a hazard gradient, it is a stain. The
+  // rings carry the bands on dark ground, so the fill steps back to hint at
+  // them rather than paint them.
+  const fillScale = () => (isDarkTheme(props.theme) ? 0.55 : 1)
+
   // One place decides how a ring looks in each state.
   function ringStyle(zone, color, selectedZone, hovered) {
     const isSelected = selectedZone === zone
     const isHovered = hovered === zone
-    const fill = ZONE_FILL[zone] ?? 0.06
+    const fill = (ZONE_FILL[zone] ?? 0.06) * fillScale()
 
     return {
       color,
@@ -168,6 +175,11 @@ export default function DisasterMap(props) {
 
     tileLayers = next
     for (const layer of previous) map.removeLayer(layer)
+
+    // Name the ground on the container so CSS can treat it: Dark blue tints the
+    // grey canvas navy, and must know not to tint satellite imagery or streets.
+    map.getContainer().dataset.basemap = basemap.key
+
 
     // Each basemap stops at a different zoom: the grey canvases run out at 16,
     // imagery and streets go to 19. Raising the cap without telling the map
@@ -337,6 +349,7 @@ export default function DisasterMap(props) {
   createEffect(() => {
     const ev = props.event
     const show = layerOn('zones')
+    props.theme            // re-draw the bands when the theme changes their fill
     if (!map) return
 
     impactRings.forEach(r => r.layer.remove())

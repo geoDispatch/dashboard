@@ -13,7 +13,7 @@
   width: 100%;
   height: var(--gd-topbar-h, 96px);
   padding: 0 24px 0 28px;
-  background: var(--gd-surface, #ffffff);
+  background: var(--gd-frame);
   font-family: 'DM Sans', system-ui, sans-serif;
 }
 
@@ -26,11 +26,19 @@
   height: 48px;
 }
 
-/* One exported asset: mark and wordmark together, text already outlined.
-   178x53 in Figma, rendered at the 172px width the header reserves. */
+/* One asset, drawn in currentColor: mark and wordmark together, text
+   outlined. The mark's ring edges sit at the product's own zone thresholds —
+   33%, 66% and 100% of the radius — and every ring is the wordmark's stem
+   weight. Source and build script: design/logo/. */
 .gd-logo__lockup {
   display: block;
   width: 172px;
+  color: var(--gd-frame-ink, var(--gd-ink, #17212b));
+}
+
+.gd-logo__lockup svg {
+  display: block;
+  width: 100%;
   height: auto;
 }
 
@@ -65,8 +73,8 @@
   padding: 0 16px;
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
-  background: var(--gd-field, #f6f7f9);
-  color: var(--gd-ink-2, #47525e);
+  background: var(--gd-frame-field);
+  color: var(--gd-frame-ink-2);
   font: inherit;
   font-size: 16px;
   font-weight: 500;
@@ -79,11 +87,11 @@
 
 .gd-location__trigger:hover,
 .gd-location__trigger.is-open {
-  background: #eef0f3;
+  background: var(--gd-frame-field-hover);
 }
 
 .gd-location__trigger:focus-visible {
-  outline: 2px solid var(--gd-ink, #17212b);
+  outline: 2px solid var(--gd-frame-ink);
   outline-offset: 2px;
 }
 
@@ -144,7 +152,7 @@
   max-height: 360px;
   padding: 6px;
   overflow-y: auto;
-  border: 1px solid #e7eaee;
+  border: 1px solid var(--gd-hairline-strong);
   border-radius: 12px;
   background: var(--gd-surface, #ffffff);
   box-shadow: 0 12px 32px rgba(23, 33, 43, 0.14);
@@ -185,7 +193,7 @@
 .gd-menu__divider {
   height: 1px;
   margin: 6px 4px;
-  background: #e7eaee;
+  background: var(--gd-hairline-strong);
 }
 
 /* ── Search (60:4) ───────────────────────────────────────────── */
@@ -201,11 +209,11 @@
   height: var(--gd-control-h, 44px);
   padding: 0 16px;
   border-radius: var(--gd-radius-control, 10px);
-  background: var(--gd-field, #f6f7f9);
+  background: var(--gd-frame-field);
 }
 
 .gd-search:focus-within {
-  outline: 2px solid var(--gd-ink, #17212b);
+  outline: 2px solid var(--gd-frame-ink);
   outline-offset: 2px;
 }
 
@@ -213,7 +221,7 @@
   flex: 0 0 20px;
   width: 20px;
   height: 20px;
-  color: var(--gd-ink-2, #47525e);
+  color: var(--gd-frame-ink-2);
 }
 
 .gd-search__icon svg {
@@ -225,7 +233,7 @@
 /* The magnifier belongs to the field: once the operator is typing in it, the
    glyph darkens with the text rather than staying a placeholder grey. */
 .gd-search:focus-within .gd-search__icon {
-  color: var(--gd-ink, #17212b);
+  color: var(--gd-frame-ink);
 }
 
 .gd-search__input {
@@ -235,7 +243,7 @@
   padding: 0;
   border: 0;
   background: transparent;
-  color: var(--gd-ink, #17212b);
+  color: var(--gd-frame-ink);
   font-family: inherit;
   font-size: 16px;
   font-weight: 400;
@@ -245,7 +253,7 @@
 }
 
 .gd-search__input::placeholder {
-  color: var(--gd-ink-2, #47525e);
+  color: var(--gd-frame-ink-3);
   opacity: 1;
 }
 
@@ -267,7 +275,7 @@
   max-height: 380px;
   padding: 6px;
   overflow-y: auto;
-  border: 1px solid #e7eaee;
+  border: 1px solid var(--gd-hairline-strong);
   border-radius: 12px;
   background: var(--gd-surface, #ffffff);
   box-shadow: 0 12px 32px rgba(23, 33, 43, 0.14);
@@ -364,8 +372,8 @@
   padding: 0;
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
-  background: var(--gd-field, #f6f7f9);
-  color: var(--gd-ink-2, #47525e);
+  background: var(--gd-frame-field);
+  color: var(--gd-frame-ink-2);
   cursor: pointer;
 }
 
@@ -387,15 +395,17 @@
 /* Hover and open now move the glyph as well as the plate, because the inlined
    SVG inherits `color` — that is the point of the currentColor conversion. */
 .gd-notifications:hover {
-  background: #eef0f3;
-  color: var(--gd-ink, #17212b);
+  background: var(--gd-frame-field-hover);
+  color: var(--gd-frame-ink);
 }
 
 .gd-notifications:focus-visible {
-  outline: 2px solid var(--gd-ink, #17212b);
+  outline: 2px solid var(--gd-frame-ink);
   outline-offset: 2px;
 }
 
+/* Counts on the bar. White pill with a red figure in dark mode — red on the
+   #001DF3 band vibrates and fails contrast. */
 .gd-notifications__badge {
   position: absolute;
   top: 4px;
@@ -408,10 +418,10 @@
   min-width: 18px;
   height: 18px;
   padding: 0 5px;
-  border: 2px solid var(--gd-surface, #ffffff);
+  border: 2px solid var(--gd-frame);
   border-radius: 9px;
-  background: var(--gd-red, #ff2d3d);
-  color: #ffffff;
+  background: var(--gd-frame-badge);
+  color: var(--gd-frame-badge-ink);
   font-size: 11px;
   font-weight: 700;
   line-height: 14px;
@@ -437,8 +447,8 @@
   padding: 0 14px;
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
-  background: var(--gd-field, #f6f7f9);
-  color: var(--gd-ink-2, #47525e);
+  background: var(--gd-frame-field);
+  color: var(--gd-frame-ink-2);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -446,12 +456,12 @@
 }
 
 .gd-account:hover {
-  background: var(--gd-field-hover, #eef0f3);
-  color: var(--gd-ink, #17212b);
+  background: var(--gd-frame-field-hover);
+  color: var(--gd-frame-ink);
 }
 
 .gd-account:focus-visible {
-  outline: 2px solid var(--gd-ink, #17212b);
+  outline: 2px solid var(--gd-frame-ink);
   outline-offset: 2px;
 }
 
@@ -485,7 +495,7 @@
   font-size: 14px;
   font-weight: 500;
   line-height: 18px;
-  color: var(--gd-ink, #17212b);
+  color: var(--gd-frame-ink);
 }
 
 .gd-account__badge {
@@ -496,7 +506,7 @@
   line-height: 14px;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
-  color: var(--gd-ink-4, #8a93a0);
+  color: var(--gd-frame-ink-3);
 }
 
 /* ── Launch incident ─────────────────────────────────────────
@@ -515,8 +525,8 @@
   padding: 0 18px;
   border: 0;
   border-radius: var(--gd-radius-control, 10px);
-  background: var(--gd-ink, #17212b);
-  color: #ffffff;
+  background: var(--gd-frame-primary);
+  color: var(--gd-frame-primary-ink);
   font: inherit;
   font-size: 15px;
   font-weight: 500;
@@ -527,11 +537,11 @@
 }
 
 .gd-launch:hover {
-  background: #22303d;
+  background: var(--gd-frame-primary-hover);
 }
 
 .gd-launch:focus-visible {
-  outline: 2px solid var(--gd-ink, #17212b);
+  outline: 2px solid var(--gd-frame-ink);
   outline-offset: 2px;
 }
 
@@ -549,8 +559,8 @@
    hanging under this button". */
 
 .gd-notifications.is-open {
-  background: var(--gd-field, #f6f7f9);
-  color: var(--gd-ink, #17212b);
+  background: var(--gd-frame-field-hover);
+  color: var(--gd-frame-ink);
 }
 
 /* ── Narrower consoles ───────────────────────────────────────── */

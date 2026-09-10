@@ -26,12 +26,14 @@ import languageIcon from '../assets/icons/settings-language.svg?raw'
 import closeIcon from '../assets/icons/settings-close.svg?raw'
 import checkIcon from '../assets/icons/settings-check.svg?raw'
 import lockIcon from '../assets/icons/settings-lock.svg?raw'
+import dayIcon from '../assets/icons/theme-light.svg?raw'
+import nightIcon from '../assets/icons/theme-dark.svg?raw'
 
 import './SettingsModal.css'
 
 const TABS = [
   { key: 'station', label: 'Station',    icon: accountIcon,  title: 'Station profile' },
-  { key: 'basemap', label: 'Basemap',    icon: mapIcon,      title: 'Basemap' },
+  { key: 'basemap', label: 'Display',    icon: mapIcon,      title: 'Display' },
   { key: 'sound',   label: 'Alerts',     icon: bellIcon,     title: 'Sound and alerts' },
   { key: 'stream',  label: 'Stream',     icon: streamIcon,   title: 'Stream and network' },
   { key: 'locale',  label: 'Region',     icon: languageIcon, title: 'Region and privacy' },
@@ -44,6 +46,15 @@ const PROFILE_FIELDS = [
   { key: 'sector', label: 'Jurisdiction', placeholder: 'Region and sector covered' },
   { key: 'badge',  label: 'Station badge', placeholder: '#MA-DISPATCH-00' },
 ]
+
+// The three themes, in the order they are offered. The names are the whole
+// label — what each one does is shown by its preview, not described.
+const THEME_CHOICES = [
+  { key: 'light',     name: 'Light' },
+  { key: 'dark',      name: 'Dark' },
+  { key: 'dark-blue', name: 'Dark blue' },
+]
+const NIGHT_CHOICES = THEME_CHOICES.filter((choice) => choice.key !== 'light')
 
 // A sample point for the coordinate-format preview when no event has arrived.
 const SAMPLE_POINT = { latitude: 31.0625, longitude: -8.4144 }
@@ -98,6 +109,75 @@ function Segmented(props) {
   )
 }
 
+// The console in miniature: frame, rail, map ground, two cards and the zone
+// rings. It carries its own data-theme, so it is drawn with THAT theme's real
+// tokens whatever the page around it is in — a preview that cannot drift from
+// the theme it shows. Decorative; the card's name is the accessible label.
+function ThemePreview(props) {
+  return (
+    <span class="tp" data-theme={props.theme} aria-hidden="true">
+      <span class="tp-bar">
+        <span class="tp-logo" />
+        <span class="tp-pill" />
+        <span class="tp-search" />
+        <span class="tp-cta" />
+      </span>
+      <span class="tp-rail">
+        <span class="tp-tile is-on" />
+        <span class="tp-tile" />
+        <span class="tp-tile" />
+      </span>
+      <span class="tp-map">
+        <span class="tp-ring is-green" />
+        <span class="tp-ring is-orange" />
+        <span class="tp-ring is-red" />
+        <span class="tp-card">
+          <span class="tp-line is-title" />
+          <span class="tp-line" />
+          <span class="tp-line is-short" />
+        </span>
+        <span class="tp-card">
+          <span class="tp-line is-title" />
+          <span class="tp-line" />
+        </span>
+      </span>
+    </span>
+  )
+}
+
+// Preview on top, radio and name underneath — GitHub's appearance picker.
+// "Active" marks the theme on screen right now, which in Sync mode is not
+// necessarily the one selected in that row.
+function ThemeFace(props) {
+  return (
+    <>
+      <ThemePreview theme={props.choice.key} />
+      <span class="set-theme__foot">
+        <span class="set-theme__radio" aria-hidden="true" />
+        <span class="set-theme__name">{props.choice.name}</span>
+        <Show when={props.active}>
+          <span class="set-theme__badge">Active</span>
+        </Show>
+      </span>
+    </>
+  )
+}
+
+function ThemeCard(props) {
+  return (
+    <button
+      type="button"
+      class="set-theme"
+      classList={{ 'is-selected': !!props.selected }}
+      data-slot={props.slot}
+      aria-pressed={!!props.selected}
+      onClick={() => props.onPick && props.onPick()}
+    >
+      <ThemeFace choice={props.choice} active={props.active} />
+    </button>
+  )
+}
+
 // label + explanation on the left, control on the right.
 function Row(props) {
   return (
@@ -135,6 +215,7 @@ function Card(props) {
 export default function SettingsModal(props) {
   const store = useSettings()
   const settings = () => store.settings
+  const syncTheme = () => settings().theme === 'system'
 
   const [tab, setTab] = createSignal(props.tab || 'station')
   const [draftUrl, setDraftUrl] = createSignal(store.settings.wsUrl)
@@ -339,8 +420,80 @@ export default function SettingsModal(props) {
               </Card>
             </Show>
 
-            {/* ── Basemap ────────────────────────────────────────────────── */}
+            {/* ── Display ────────────────────────────────────────────────── */}
             <Show when={tab() === 'basemap'}>
+              <Card
+                title="Appearance"
+                note="Dark and Dark blue keep the same layout and turn the top bar and the left rail into one #001DF3 frame around the map. Moving between Light and a dark theme also switches the grey basemap to match; satellite and street maps are left as they are. Dark blue tints the dark grey map navy — the device dots and zone rings keep their exact colours."
+              >
+                <Row
+                  label="Theme mode"
+                  hint={
+                    syncTheme()
+                      ? 'Light while this computer is in light mode, your night theme while it is in dark mode — and it switches with it.'
+                      : 'One theme, kept until you change it here.'
+                  }
+                >
+                  <Segmented
+                    label="Theme mode"
+                    value={syncTheme() ? 'system' : 'single'}
+                    options={[
+                      { key: 'single', label: 'Single theme' },
+                      { key: 'system', label: 'Sync with system' },
+                    ]}
+                    onChange={(key) =>
+                      props.onSetTheme &&
+                      // Leaving Sync keeps whatever is on screen, so the
+                      // switch itself never changes a colour.
+                      props.onSetTheme(key === 'system' ? 'system' : props.theme || 'light')
+                    }
+                  />
+                </Row>
+
+                <Show
+                  when={syncTheme()}
+                  fallback={
+                    <div class="set-themes" role="group" aria-label="Theme">
+                      <For each={THEME_CHOICES}>
+                        {(choice) => (
+                          <ThemeCard
+                            choice={choice}
+                            selected={settings().theme === choice.key}
+                            onPick={() => props.onSetTheme && props.onSetTheme(choice.key)}
+                          />
+                        )}
+                      </For>
+                    </div>
+                  }
+                >
+                  <div class="set-themes is-sync">
+                    <span class="set-themes__group" data-slot="day-label">
+                      <Icon markup={dayIcon} /> Day theme
+                    </span>
+                    {/* Light is the only day theme, so it is shown selected
+                        and cannot be un-picked — a card, not a button. */}
+                    <div class="set-theme is-selected is-static" data-slot="day">
+                      <ThemeFace choice={THEME_CHOICES[0]} active={!props.systemDark} />
+                    </div>
+
+                    <span class="set-themes__group" data-slot="night-label">
+                      <Icon markup={nightIcon} /> Night theme
+                    </span>
+                    <For each={NIGHT_CHOICES}>
+                      {(choice, i) => (
+                        <ThemeCard
+                          choice={choice}
+                          slot={i() === 0 ? 'night-a' : 'night-b'}
+                          selected={settings().nightTheme === choice.key}
+                          active={!!props.systemDark && settings().nightTheme === choice.key}
+                          onPick={() => props.onSetNightTheme && props.onSetNightTheme(choice.key)}
+                        />
+                      )}
+                    </For>
+                  </div>
+                </Show>
+              </Card>
+
               <Card
                 title="Map ground"
                 meta="Applies to the live map immediately"
@@ -358,6 +511,7 @@ export default function SettingsModal(props) {
                       >
                         <span
                           class="set-basemap__preview"
+                          data-basemap={basemap.key}
                           style={{ background: basemap.ground }}
                         >
                           <img

@@ -1,6 +1,9 @@
 import { createSignal, onMount, onCleanup, Show, For } from 'solid-js'
-import { ZONE_COLORS, ZONE_LABELS } from '../constants/zones'
-import logoLockup from '../assets/icons/geo-dispatch-logo.svg'
+import { ZONE_COLORS, ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
+// Inlined (?raw) rather than loaded through <img>: the lockup is drawn in
+// currentColor with real knockouts, so it takes the header's ink — black on the
+// light bar, white on the #001DF3 dark-mode bar — from one file.
+import logoLockup from '../assets/icons/geo-dispatch-logo.svg?raw'
 // Icons are inlined with Vite's ?raw suffix rather than loaded through <img>.
 // An SVG behind <img src> is an isolated document, so its stroke="currentColor"
 // resolves to that document's own black — inlining is what lets `color` cascade
@@ -106,7 +109,7 @@ export default function TopBar(props) {
           letterforms and spacing. Figma's SVG export carries the glyphs as
           outlines, so it matches the design exactly and depends on no font. */}
       <div class="gd-logo" data-node-id="6:14">
-        <img class="gd-logo__lockup" src={logoLockup} alt="GeoDispatch" />
+        <span class="gd-logo__lockup" role="img" aria-label="GeoDispatch" innerHTML={logoLockup} />
       </div>
 
       <div class="gd-controls" data-node-id="60:2">
@@ -208,7 +211,7 @@ export default function TopBar(props) {
                       <Show when={ZONE_LABELS[item.zone]}>
                         <span
                           class="gd-results__zone"
-                          style={{ color: ZONE_COLORS[item.zone] }}
+                          style={{ color: ZONE_TEXT[item.zone] }}
                         >
                           <span
                             class="gd-results__dot"

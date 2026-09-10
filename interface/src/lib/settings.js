@@ -21,6 +21,7 @@ import { createStore, produce } from 'solid-js/store'
 import { WS_URL } from '../constants/zones'
 import { BASEMAP_KEYS, DEFAULT_BASEMAP } from '../constants/basemaps'
 import { coords, distance, dms, maskPhone } from './format'
+import { NIGHT_THEMES, THEME_PREFS } from './theme'
 
 const STORAGE_KEY = 'geodispatch.settings.v1'
 
@@ -33,7 +34,9 @@ export const LANGUAGES = [
 ]
 
 export const DEFAULT_SETTINGS = {
-  // map
+  // display
+  theme: 'light',           // light | dark | dark-blue | system
+  nightTheme: 'dark',       // dark | dark-blue — what 'system' paints at night
   basemap: DEFAULT_BASEMAP,
 
   // sound
@@ -86,6 +89,8 @@ const text = (value, fallback, max = 120) =>
   typeof value === 'string' ? value.slice(0, max) : fallback
 
 const VALIDATORS = {
+  theme:       oneOf(THEME_PREFS),
+  nightTheme:  oneOf(NIGHT_THEMES),
   basemap:     oneOf(BASEMAP_KEYS),
   rescueChime: bool,
   fatalAlarm:  bool,

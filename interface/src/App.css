@@ -42,7 +42,11 @@
   height: 100%;
   width: 100%;
   overflow: hidden;
-  background: var(--gd-surface);
+  /* The frame colour, not the card colour. The map is rounded at its inner
+     corner, and what shows through that corner is this — white in light mode,
+     where it is invisible, and #001DF3 in dark mode, where it joins the top bar
+     and the rail into one continuous L around the map. */
+  background: var(--gd-frame);
   color: var(--gd-ink);
 }
 
@@ -252,7 +256,7 @@
 .app-map .leaflet-control-attribution {
   padding: 2px 8px;
   border-radius: var(--gd-radius-pill);
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--gd-map-chip);
   color: var(--gd-ink-4);
   font-size: 11px;
   line-height: 16px;
@@ -263,7 +267,7 @@
   border-top: 0;
   padding: 1px 6px;
   border-radius: 0 0 4px 4px;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--gd-map-chip);
   color: var(--gd-ink-3);
   font-size: 11px;
   line-height: 16px;
@@ -319,7 +323,7 @@
   border-radius: 50%;
   background: var(--gd-red);
   box-shadow:
-    0 0 0 3px var(--gd-surface),
+    0 0 0 3px var(--gd-marker-halo),
     0 1px 4px rgba(23, 33, 43, 0.35);
 }
 
@@ -445,7 +449,7 @@
 .map-overlay--stack .dd__stack::-webkit-scrollbar-thumb,
 .map-overlay--stack .ops__stack::-webkit-scrollbar-thumb {
   border-radius: 3px;
-  background: rgba(23, 33, 43, 0.18);
+  background: var(--gd-hairline-strong);
 }
 
 .map-overlay--stack .dd__stack::-webkit-scrollbar-track,
@@ -824,4 +828,17 @@
 .map-overlay .map-toolbar,
 .app-note {
   pointer-events: auto;
+}
+
+/* ── The map ground's tint ─────────────────────────────────────────────────
+   Dark blue turns Esri's dark grey canvas navy with a filter; every other
+   theme sets --gd-ground-tint to none. On the tile and label panes only — the
+   device dots, zone rings and markers live in other panes, so a red dot stays
+   exactly the red of the red zone: the tint moves the ground, never the data.
+   And only on the grey canvas: satellite imagery and the street map exist to
+   show what is really on the ground, and a tint would falsify exactly that. */
+
+.leaflet-container[data-basemap='dark'] .leaflet-tile-pane,
+.leaflet-container[data-basemap='dark'] .leaflet-shadow-pane {
+  filter: var(--gd-ground-tint);
 }
