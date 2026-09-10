@@ -80,8 +80,14 @@ A **read-only, real-time government operations console**. It consumes one WebSoc
 - **AI decision visibility** — what the AI chose per device and why (see the gap in §6)
 - **errors** — warnings and fatal alerts from any stage of the pipeline
 
-The dashboard **sends nothing**. It does not control the pipeline, does not trigger dispatch, does not
-authenticate. It observes.
+The dashboard sends **exactly one thing**: `POST /sensor`, from the incident launcher. That is the
+same request a seismic sensor makes — it asks the supervisor to consider an event, and the supervisor
+decides everything that follows. Beyond that the console observes: it does not control the pipeline,
+does not trigger dispatch, does not flag a rescue, and does not authenticate. The WebSocket remains
+strictly server-to-client; nothing is ever sent back over it.
+
+(Before the launcher existed this section read "the dashboard sends nothing". It was true then and is
+not now, and a stale invariant in a spec is worse than none.)
 
 ### Important correction on "fetching JSON files"
 

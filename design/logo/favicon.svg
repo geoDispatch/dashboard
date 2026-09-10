@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>GeoDispatch</title>
+  <rect width="64" height="64" rx="14" fill="#001DF3"/>
+  <path fill="#ffffff" fill-rule="evenodd" d="M12 32A20 20 0 1 0 52 32A20 20 0 1 0 12 32ZM16.3 32A15.7 15.7 0 1 0 47.7 32A15.7 15.7 0 1 0 16.3 32ZM18.8 32A13.2 13.2 0 1 0 45.2 32A13.2 13.2 0 1 0 18.8 32ZM23.1 32A8.9 8.9 0 1 0 40.9 32A8.9 8.9 0 1 0 23.1 32ZM25.4 32A6.6 6.6 0 1 0 38.6 32A6.6 6.6 0 1 0 25.4 32Z"/>
+</svg>
