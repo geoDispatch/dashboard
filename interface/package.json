@@ -11,7 +11,9 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "leaflet": "^1.9.4",
+    "maplibre-gl": "^6.9.0",
     "solid-js": "^1.9.14"
   },
   "devDependencies": {

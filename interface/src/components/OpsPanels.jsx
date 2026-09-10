@@ -23,8 +23,6 @@ import { useDisplay } from '../lib/settings'
 
 import './OpsPanels.css'
 
-const GAP_NOTE = 'not sent by supervisor'
-
 function isNumber(n) {
   return typeof n === 'number' && Number.isFinite(n)
 }
@@ -129,13 +127,7 @@ export function RescuePanel(props) {
       <Card title="Rescue queue" meta={`${num(queue().length)} flagged`}>
         <Show
           when={queue().length > 0}
-          fallback={
-            <p class="ops-empty">
-              No device is flagged for rescue. Devices the AI flags are added here by the
-              supervisor — usually unreachable ones near the epicentre, but the flag is the
-              AI's decision and is not confined to the red zone.
-            </p>
-          }
+          fallback={<p class="ops-empty">No devices are flagged for rescue.</p>}
         >
           <ul class="ops-list">
             <For each={shown()}>
@@ -166,14 +158,11 @@ export function RescuePanel(props) {
 
           <Show when={queue().length > shown().length}>
             <p class="ops-note">
-              Showing the first {num(shown().length)} of {num(queue().length)}. The order is
-              the supervisor's priority where it sent one, then distance from the epicenter.
+              Showing the first {num(shown().length)} of {num(queue().length)}.
             </p>
           </Show>
           <Show when={queue().length > 0 && !isNumber(shown()[0].rescue_priority)}>
-            <p class="ops-note">
-              Priority is {DASH} — {GAP_NOTE}. The queue is ordered by distance instead.
-            </p>
+            <p class="ops-note">Priority not provided. Sorted by distance.</p>
           </Show>
         </Show>
       </Card>
@@ -194,11 +183,7 @@ export function DevicesPanel(props) {
       <Card title="Devices" meta={`${num(counts().total)} located`}>
         <Show
           when={counts().total > 0}
-          fallback={
-            <p class="ops-empty">
-              No devices have arrived yet. Dots appear here as the supervisor locates them.
-            </p>
-          }
+          fallback={<p class="ops-empty">No devices located yet.</p>}
         >
           <div class="ops-stats">
             <StatRow label="Located" value={num(counts().total)} />
@@ -216,7 +201,7 @@ export function DevicesPanel(props) {
       <Card title="By area" meta={`${num(areas().length)} areas`}>
         <Show
           when={areas().length > 0}
-          fallback={<p class="ops-empty">Areas are grouped once devices start arriving.</p>}
+          fallback={<p class="ops-empty">No areas yet.</p>}
         >
           <ul class="ops-list">
             <For each={areas()}>
@@ -238,10 +223,7 @@ export function DevicesPanel(props) {
               )}
             </For>
           </ul>
-          <p class="ops-note">
-            Place names are the nearest known locality centroid. Reverse geocoding is a
-            backend gap — the supervisor sends coordinates only.
-          </p>
+          <p class="ops-note">Area names use the nearest known locality.</p>
         </Show>
       </Card>
     </>
@@ -318,10 +300,7 @@ export function SheltersPanel(props) {
             </For>
           </ul>
           <p class="ops-note">
-            DEMONSTRATION DATA. Shelter names, capacities and occupancy all come from the
-            bundled Al Haouz scenario — the supervisor publishes no shelters at all, so not
-            one figure here reflects a real building. A shelter is only plotted on the map
-            when its name matches a known locality; the others carry no coordinates.
+            Demo data only. Shelter details are not provided by the supervisor.
           </p>
         </Show>
       </Card>
@@ -348,12 +327,7 @@ export function ErrorsPanel(props) {
       <Card title="Errors" meta={`${num(total())} received`}>
         <Show
           when={groups().length > 0}
-          fallback={
-            <p class="ops-empty">
-              No errors have arrived. Failed lookups and undelivered SMS are grouped here by
-              code.
-            </p>
-          }
+          fallback={<p class="ops-empty">No errors reported.</p>}
         >
           <ul class="ops-list">
             <For each={groups()}>
@@ -382,10 +356,7 @@ export function ErrorsPanel(props) {
               Clear the list
             </button>
           </div>
-          <p class="ops-note">
-            Clearing empties this console's own list. It does not retry anything on the
-            supervisor.
-          </p>
+          <p class="ops-note">Clears this list only.</p>
         </Show>
       </Card>
     </>

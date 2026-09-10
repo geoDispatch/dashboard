@@ -45,7 +45,6 @@
   background: var(--gd-surface);
   box-shadow: var(--gd-shadow-pop);
   font-family: var(--gd-font);
-  font-variation-settings: 'opsz' 14;
   color: var(--gd-ink);
   animation: ilm-rise var(--gd-dur) var(--gd-ease);
 }
@@ -233,14 +232,10 @@
   font-size: var(--gd-fs-xs);
   font-weight: var(--gd-fw-medium);
   line-height: var(--gd-lh-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--gd-ink-4);
 }
 
 .ilm-label__unit {
-  text-transform: none;
-  letter-spacing: 0;
   font-weight: var(--gd-fw-regular);
 }
 

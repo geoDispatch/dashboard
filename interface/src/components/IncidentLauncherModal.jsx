@@ -19,7 +19,6 @@ import { createStore } from 'solid-js/store'
 
 import { triggerEvent } from '../lib/socket'
 import { buildLaunchPayload, depthFor, makeEventId } from '../lib/launch'
-import { SOURCE_DETAIL } from '../lib/streamState'
 import { useDisplay } from '../lib/settings'
 import { decimal } from '../lib/format'
 
@@ -247,8 +246,8 @@ export default function IncidentLauncherModal(props) {
         message: err instanceof TypeError
           ? `Nothing answered at ${target}.`
           : gateway
-            ? `Nothing answered at ${target} — the request got as far as the dev proxy and no further.`
-            : `The supervisor answered, and refused it — ${raw}.`,
+            ? `No response from ${target}. The development proxy could not reach the supervisor.`
+            : `Supervisor rejected the request: ${raw}.`,
       })
     }
   }
@@ -276,9 +275,7 @@ export default function IncidentLauncherModal(props) {
         <header class="ilm-head">
           <div class="ilm-head__text">
             <h2 class="ilm-head__title">Launch incident</h2>
-            <p class="ilm-head__sub">
-              Sends a sensor reading to the supervisor. It decides what happens next.
-            </p>
+            <p class="ilm-head__sub">Send a sensor reading to the supervisor.</p>
           </div>
           <button
             type="button"
@@ -364,7 +361,7 @@ export default function IncidentLauncherModal(props) {
                 <span class="ilm-label">
                   Aftershock risk
                   <Show when={custom.disaster_type !== 'earthquake'}>
-                    <span class="ilm-label__unit"> — carried on every disaster type</span>
+                    <span class="ilm-label__unit"> (required for all disaster types)</span>
                   </Show>
                 </span>
                 <Segmented
@@ -385,9 +382,7 @@ export default function IncidentLauncherModal(props) {
               </div>
 
               <p class="ilm-note">
-                Depth is not on this form. It is set from the disaster type — 10.5 km for an
-                earthquake, 0 for a flood or a heatwave, which have no hypocentre — and never
-                reaches this console again either way.
+                Depth is set automatically: 10.5 km for earthquakes, 0 for floods and heatwaves.
               </p>
             </div>
           </Show>
@@ -423,7 +418,7 @@ export default function IncidentLauncherModal(props) {
                 <dd>
                   {scenario().disaster_type === 'earthquake'
                     ? `${depthFor(scenario().disaster_type)} km`
-                    : `0 — ${scenario().disaster_type}s have no hypocentre`}
+                    : '0 (not applicable)'}
                 </dd>
               </div>
               <div class="ilm-summary__row">
@@ -440,10 +435,8 @@ export default function IncidentLauncherModal(props) {
           {/* ── Honesty about where this lands ───────────────────────────── */}
           <Show when={props.source === 'demo'}>
             <p class="ilm-warn">
-              The frames on screen are coming from the bundled demo, not from a supervisor.
-              {' '}{SOURCE_DETAIL.demo} A launch still goes out to the endpoint below, but
-              nothing from it will appear here until the console is switched to the
-              supervisor.
+              The map is showing the bundled demo. This launch is sent to the endpoint below,
+              but its frames appear only after switching to Connected supervisor.
             </p>
           </Show>
 
@@ -462,9 +455,7 @@ export default function IncidentLauncherModal(props) {
                 supervisor is about to be handed an incident. */}
             <span class="ilm-foot__url">{props.sensorTarget || props.sensorUrl}</span>
             <Show when={props.viaDevProxy}>
-              <span class="ilm-foot__hint">
-                via the dev proxy — development only, not how this works in production
-              </span>
+              <span class="ilm-foot__hint">Development proxy</span>
             </Show>
           </p>
           <div class="ilm-foot__actions">

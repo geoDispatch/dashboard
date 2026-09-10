@@ -6,8 +6,7 @@
   display: flex;
   align-items: flex-start;
   gap: 24px;
-  font-family: 'DM Sans', system-ui, sans-serif;
-  font-variation-settings: 'opsz' 14;
+  font-family: var(--gd-font);
 }
 
 .dd__stack {
@@ -293,7 +292,7 @@
 }
 
 .dd-hide__label {
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: inherit;
   font-size: 14px;
   font-weight: 500;
   line-height: 24px;

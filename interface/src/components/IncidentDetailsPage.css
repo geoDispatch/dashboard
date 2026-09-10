@@ -37,7 +37,6 @@
   background: var(--gd-page);
   color: var(--gd-ink);
   font-family: var(--gd-font);
-  font-variation-settings: 'opsz' 14;
 }
 
 /* ── Header ───────────────────────────────────────────────────────────────
@@ -136,8 +135,6 @@
   font-size: var(--gd-fs-xs);
   font-weight: var(--gd-fw-medium);
   line-height: var(--gd-lh-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--gd-ink-4);
 }
 
@@ -416,9 +413,6 @@
   flex-direction: column;
   gap: 12px;
   padding: 20px var(--gd-card-pad) var(--gd-card-pad);
-  border-top: 3px solid var(--zone);
-  border-top-left-radius: var(--gd-radius-card);
-  border-top-right-radius: var(--gd-radius-card);
 }
 
 .idp-zone__head {
@@ -657,8 +651,6 @@
   font-size: var(--gd-fs-xs);
   font-weight: var(--gd-fw-medium);
   line-height: var(--gd-lh-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--gd-ink-4);
   white-space: nowrap;
 }

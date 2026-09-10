@@ -14,7 +14,7 @@
   height: var(--gd-topbar-h, 96px);
   padding: 0 24px 0 28px;
   background: var(--gd-frame);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--gd-font);
 }
 
 /* ── Logo (6:14) ─────────────────────────────────────────────── */
@@ -120,10 +120,8 @@
   white-space: nowrap;
 }
 
-/* The resolving state is stated, not spun — it dims and italicises the label
-   so the operator can see the pill is working without a distracting animation. */
+/* The resolving state is stated and dimmed without changing type style. */
 .gd-location__trigger.is-busy .gd-location__label {
-  font-style: italic;
   opacity: 0.7;
 }
 

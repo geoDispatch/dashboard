@@ -43,7 +43,6 @@
   background: var(--gd-surface);
   box-shadow: var(--gd-shadow-pop);
   font-family: var(--gd-font);
-  font-variation-settings: 'opsz' 14;
   color: var(--gd-ink);
   animation: set-rise var(--gd-dur) var(--gd-ease);
 }
@@ -479,8 +478,6 @@
   font-size: var(--gd-fs-xs);
   font-weight: var(--gd-fw-medium);
   line-height: var(--gd-lh-xs);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
   color: var(--gd-ink-4);
 }
 
@@ -849,9 +846,11 @@ button.set-theme:hover::after {
   object-fit: cover;
 }
 
-/* The dark canvas's preview carries the same tint as the live map (none,
-   except in Dark blue), or it would promise a ground the operator never gets. */
-.set-basemap__preview[data-basemap='dark'] img {
+/* A RASTER preview of the dark canvas (the fallback, when the vector engine
+   cannot run) carries the same filter tint as the raster live map — none,
+   except in Dark blue — or it would promise a ground the operator never gets.
+   Vector previews are recoloured in their style and need nothing here. */
+.set-basemap__preview[data-basemap='dark'][data-renderer='raster'] img {
   filter: var(--gd-ground-tint);
 }
 

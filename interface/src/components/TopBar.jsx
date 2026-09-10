@@ -167,7 +167,7 @@ export default function TopBar(props) {
           <input
             type="search"
             class="gd-search__input"
-            placeholder="Search zone, status, coordinates..."
+            placeholder="Search devices, zones, or coordinates"
             autocomplete="off"
             spellcheck={false}
             role="combobox"
@@ -263,7 +263,7 @@ export default function TopBar(props) {
         <button
           type="button"
           class="gd-account"
-          aria-label={`Account — ${operatorName()}. Open the station profile.`}
+          aria-label={`Account: ${operatorName()}. Open station profile.`}
           title="Station profile and console settings"
           onClick={() => props.onOpenAccount?.()}
         >

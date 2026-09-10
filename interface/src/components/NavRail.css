@@ -28,7 +28,7 @@
   padding: 24px 16px;
 
   background: var(--gd-frame);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--gd-font);
 }
 
 .navrail__nav {

@@ -276,6 +276,13 @@
   color: var(--gd-ink-4);
 }
 
+/* The Solid location menu owns the bottom-right corner. Lift Leaflet's zoom
+   and scale stack above it while keeping the same 24px right alignment. */
+.app-map .leaflet-bottom.leaflet-right {
+  right: calc(var(--gd-map-inset) - 10px);
+  bottom: calc(var(--gd-map-inset) + var(--gd-control-h) + 2px);
+}
+
 /* Attribution and scale — present and readable, but never loud. */
 .app-map .leaflet-control-attribution {
   padding: 2px 8px;
@@ -500,39 +507,6 @@
   flex: 0 0 auto;
 }
 
-/* ── Panel entrance ─────────────────────────────────────────────────────────
-   The panel is swapped, not merely revealed: picking a device, a zone, or a
-   rail view replaces its whole contents. Sliding it in from the left tells the
-   operator the panel changed rather than the numbers inside it. */
-
-@keyframes gd-panel-in {
-  from {
-    opacity: 0;
-    transform: translateX(-12px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.map-overlay--stack .dd__stack,
-.map-overlay--stack .ops__stack {
-  animation: gd-panel-in 220ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-
-/* Cards inside a freshly swapped panel arrive a beat apart, so the eye follows
-   the stack down instead of everything landing at once. */
-.map-overlay--stack .dd-card,
-.map-overlay--stack .ops-card {
-  animation: gd-panel-in 260ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
-}
-
-.map-overlay--stack .dd-card:nth-child(1) { animation-delay: 0ms; }
-.map-overlay--stack .dd-card:nth-child(2) { animation-delay: 40ms; }
-.map-overlay--stack .dd-card:nth-child(3) { animation-delay: 80ms; }
-.map-overlay--stack .dd-card:nth-child(4) { animation-delay: 120ms; }
-
 .dd-hide {
   transition: background 140ms ease, color 140ms ease;
 }
@@ -575,15 +549,6 @@
   border-radius: var(--gd-radius-card);
   background: var(--gd-surface);
   box-shadow: var(--gd-shadow-card);
-  border-left: 4px solid var(--gd-ink-4);
-}
-
-.app-strip--degraded {
-  border-left-color: var(--gd-orange);
-}
-
-.app-strip--fatal {
-  border-left-color: var(--gd-red);
 }
 
 .app-strip__title {
@@ -855,19 +820,33 @@
 .map-overlay .dd-hide,
 .map-overlay .app-sim,
 .map-overlay .map-toolbar,
+.map-overlay.gd-map-location,
 .app-note {
   pointer-events: auto;
 }
 
 /* ── The map ground's tint ─────────────────────────────────────────────────
-   Dark blue turns Esri's dark grey canvas navy with a filter; every other
-   theme sets --gd-ground-tint to none. On the tile and label panes only — the
-   device dots, zone rings and markers live in other panes, so a red dot stays
-   exactly the red of the red zone: the tint moves the ground, never the data.
+   The VECTOR dark canvas is recoloured in its style (lib/mapStyle.js) — no
+   filter, nothing re-applied per frame. This rule is for the RASTER fallback
+   only: when the vector engine cannot run, Dark blue turns Esri's dark grey
+   canvas navy with a filter; every other theme sets --gd-ground-tint to none.
+   On the tile and label panes only — the device dots, zone rings and markers
+   live in other panes, so a red dot stays exactly the red of the red zone.
    And only on the grey canvas: satellite imagery and the street map exist to
    show what is really on the ground, and a tint would falsify exactly that. */
 
-.leaflet-container[data-basemap='dark'] .leaflet-tile-pane,
-.leaflet-container[data-basemap='dark'] .leaflet-shadow-pane {
+.leaflet-container[data-basemap='dark'][data-renderer='raster'] .leaflet-tile-pane,
+.leaflet-container[data-basemap='dark'][data-renderer='raster'] .leaflet-shadow-pane {
   filter: var(--gd-ground-tint);
+}
+
+/* The MapLibre layer's container. maplibre-gl.css makes every GL map
+   position: relative, which inside a Leaflet pane puts a second GL layer (the
+   brief overlap while one ground replaces another) BELOW the first in normal
+   flow instead of on top of it. Leaflet positions it by transform; pin its
+   origin to the pane's. */
+.leaflet-pane > .leaflet-gl-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
 }

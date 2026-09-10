@@ -68,13 +68,9 @@ export const SOURCE_LABEL = {
 }
 
 export const SOURCE_DETAIL = {
-  demo:
-    'Frames are generated inside this browser by the bundled Al Haouz scenario. ' +
-    'No supervisor is involved and nothing here reflects a real event.',
+  demo: 'Bundled browser demo. No supervisor is involved. Not a real event.',
   supervisor:
-    'Frames are arriving from the supervisor at the configured endpoint. Whether ' +
-    'that supervisor is reading Nokia CAMARA or its own bundled mocks is not ' +
-    'visible from here — the upstream source is unverified.',
+    'Frames come from the configured supervisor. Its upstream CAMARA source is unverified.',
 }
 
 const PHASE_TEXT = {
@@ -122,19 +118,19 @@ export function streamSentence(phase, source) {
   const origin = SOURCE_DETAIL[source] || SOURCE_DETAIL.supervisor
 
   const phaseSentence = {
-    connecting:   'Opening the connection.',
-    waiting:      'The connection is open but no frame has arrived on it yet.',
+    connecting:   'Connecting.',
+    waiting:      'Connected. Waiting for the first frame.',
     receiving:    'Frames are arriving.',
-    stalled:      `The connection is open but nothing has arrived for over ${Math.round(STALE_MS / 1000)} seconds. What is on screen is the last thing that was sent, not the current situation.`,
-    reconnecting: 'The connection dropped. Retrying with backoff.',
-    lost:         'The connection could not be re-established. What is on screen is the last thing that arrived.',
+    stalled:      `No frames for ${Math.round(STALE_MS / 1000)} seconds. Showing the last update.`,
+    reconnecting: 'Connection lost. Reconnecting.',
+    lost:         'Connection lost. Showing the last update.',
   }[phase] || ''
 
   if (source === 'demo') {
     const demoSentence = {
-      stalled: 'The bundled scenario has played to its end. It runs once and stops.',
+      stalled: 'The bundled scenario has finished.',
       lost:    'The demo was stopped.',
-    }[phase] || 'The bundled scenario is playing.'
+    }[phase] || 'The bundled scenario is running.'
     return `${demoSentence} ${origin}`
   }
 

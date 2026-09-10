@@ -11,8 +11,7 @@
   display: flex;
   align-items: flex-start;
   gap: 24px;
-  font-family: var(--gd-font, 'DM Sans', system-ui, sans-serif);
-  font-variation-settings: 'opsz' 14;
+  font-family: var(--gd-font);
 }
 
 .ops__stack {

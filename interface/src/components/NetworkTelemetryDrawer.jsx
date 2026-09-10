@@ -39,7 +39,7 @@ const CODES = [
     // code. A device whose location came back and whose reachability check
     // timed out is on the map, marked unreachable. The only honest statement
     // is that something about that device is missing.
-    blurb: 'A location or reachability call to the carrier did not answer in time. Those devices may be missing from the map, or on it with incomplete detail.',
+    blurb: 'The carrier did not return location or reachability in time.',
     surface: 'carrier',
   },
   {
@@ -49,7 +49,7 @@ const CODES = [
     // send attempt fails, which covers a refusal at submission, a transport
     // error, and a gateway that accepted and then dropped it. The console
     // cannot tell those apart and should not pick one.
-    blurb: 'The send failed. The message text and the reason are not forwarded here, so which stage failed is not visible.',
+    blurb: 'The SMS send failed. No failure reason was provided.',
     surface: 'carrier',
   },
   {
@@ -61,7 +61,7 @@ const CODES = [
   {
     code: 'AGENT_ERROR',
     title: 'Batch got no decision',
-    blurb: 'The AI agent failed on a batch of up to twenty devices. They are on the map, uncounted.',
+    blurb: 'No decision was returned for this batch.',
     surface: 'pipeline',
   },
   {
@@ -125,7 +125,7 @@ export default function NetworkTelemetryDrawer(props) {
         <header class="ntd-head">
           <div class="ntd-head__text">
             <h2 class="ntd-head__title">Network telemetry</h2>
-            <p class="ntd-head__sub">Nokia CAMARA and pipeline faults, as they arrive</p>
+            <p class="ntd-head__sub">CAMARA and pipeline faults</p>
           </div>
           <button
             type="button"
@@ -144,12 +144,7 @@ export default function NetworkTelemetryDrawer(props) {
 
             <Show
               when={located() > 0}
-              fallback={
-                <p class="ntd-empty">
-                  No devices located yet. Reachability appears as the supervisor works
-                  through the impact radius.
-                </p>
-              }
+              fallback={<p class="ntd-empty">No devices located yet.</p>}
             >
               <div class="ntd-split">
                 <div class="ntd-split__figure">
@@ -178,11 +173,8 @@ export default function NetworkTelemetryDrawer(props) {
               </span>
 
               <p class="ntd-note">
-                A device is reachable when the carrier reports CONNECTED_DATA or
-                CONNECTED_SMS. Anything else is a person the network cannot warn. The AI
-                decides which of them are flagged for rescue and can flag outside the red
-                zone; this console shows the flags it was sent rather than inferring them
-                from the band.
+                Reachable means the carrier reported CONNECTED_DATA or CONNECTED_SMS.
+                Rescue flags come from the supervisor.
               </p>
             </Show>
           </section>
@@ -222,6 +214,7 @@ export default function NetworkTelemetryDrawer(props) {
 
             <Show when={unknownCodes().length > 0}>
               <p class="ntd-note is-warn">
+                Unrecognised:{' '}
                 <For each={unknownCodes()}>
                   {(code, index) => (
                     <>
@@ -230,9 +223,7 @@ export default function NetworkTelemetryDrawer(props) {
                     </>
                   )}
                 </For>
-                {' '}
-                arrived and is not in the contract this console was built against. It is
-                counted in the total and listed below, but nothing here knows what it means.
+                . Kept in the total and recent list.
               </p>
             </Show>
           </section>
@@ -254,12 +245,7 @@ export default function NetworkTelemetryDrawer(props) {
 
             <Show
               when={recent().length > 0}
-              fallback={
-                <p class="ntd-empty">
-                  Nothing reported. Timeouts and failed sends land here as the supervisor
-                  hits them — expect dozens in a real event.
-                </p>
-              }
+              fallback={<p class="ntd-empty">No faults reported.</p>}
             >
               <ul class="ntd-list">
                 <For each={recent()}>
@@ -284,8 +270,7 @@ export default function NetworkTelemetryDrawer(props) {
               <Show when={errors().length > recent().length}>
                 <p class="ntd-note">
                   Showing the {num(recent().length)} most recent of {num(errors().length)}.
-                  Times are when this console received the frame, not when the fault
-                  happened — the supervisor does not stamp them.
+                  Times show when this console received each frame.
                 </p>
               </Show>
             </Show>
@@ -293,9 +278,7 @@ export default function NetworkTelemetryDrawer(props) {
 
           {/* ── What is missing, said out loud ───────────────────────────── */}
           <p class="ntd-gap">
-            Congestion level, QoS state and SMS delivery rate are read from CAMARA by the
-            supervisor to make its own decisions, and are not forwarded to this console.
-            They are absent here rather than estimated.
+            Congestion, QoS and SMS delivery rate are not forwarded to this console.
           </p>
         </div>
       </aside>

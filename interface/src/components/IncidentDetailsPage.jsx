@@ -49,8 +49,6 @@ import './IncidentDetailsPage.css'
 // a table nobody can read and a DOM nobody can scroll.
 const PAGE_SIZE = 50
 
-const GAP_NOTE = 'not sent by the supervisor'
-
 const ZONE_FILTERS = [
   { key: 'all',    label: 'All' },
   { key: 'red',    label: 'Red' },
@@ -271,10 +269,7 @@ export default function IncidentDetailsPage(props) {
           <Show
             when={props.event}
             fallback={
-              <p class="idp-empty">
-                No active event. The supervisor sends the epicentre, radius and risk levels
-                on <code>event_start</code>; nothing here is filled in until it does.
-              </p>
+              <p class="idp-empty">No active event.</p>
             }
           >
             <For
@@ -331,10 +326,7 @@ export default function IncidentDetailsPage(props) {
                 </div>
               )}
             </For>
-            <p class="idp-facts__note">
-              Depth is {GAP_NOTE}. The sensor reports it; the pipeline does not pass it on to
-              this console, so the row stays blank rather than being estimated.
-            </p>
+            <p class="idp-facts__note">Depth is not provided by the supervisor.</p>
           </Show>
         </section>
 
@@ -358,9 +350,7 @@ export default function IncidentDetailsPage(props) {
                 </For>
               </span>
             </Show>
-            <span class="idp-metric__sub">
-              Inside the impact radius, located through CAMARA
-            </span>
+            <span class="idp-metric__sub">CAMARA-located devices within the impact radius</span>
           </article>
 
           <article class="idp-card idp-metric">
@@ -417,7 +407,7 @@ export default function IncidentDetailsPage(props) {
                 }}
               />
             </span>
-            <span class="idp-metric__sub">Flagged by the AI — not confined to one zone</span>
+            <span class="idp-metric__sub">Rescue flags can appear in any zone</span>
           </article>
         </section>
 
@@ -425,9 +415,7 @@ export default function IncidentDetailsPage(props) {
         <section class="idp-section" aria-label="Zones">
           <div class="idp-section__head">
             <h2 class="idp-section__title">Zones</h2>
-            <span class="idp-section__meta">
-              Situation reports are written by the AI agent, one per batch
-            </span>
+            <span class="idp-section__meta">Reports update after each batch</span>
           </div>
 
           <div class="idp-zones">
@@ -475,9 +463,7 @@ export default function IncidentDetailsPage(props) {
                   <Show
                     when={props.narratives && props.narratives[zone]}
                     fallback={
-                      <p class="idp-empty">
-                        The situation report for this zone arrives after its first batch.
-                      </p>
+                      <p class="idp-empty">Waiting for the first zone report.</p>
                     }
                   >
                     {(report) => (
@@ -568,7 +554,7 @@ export default function IncidentDetailsPage(props) {
                         <td class="idp-table__empty" colspan="9">
                           <Show
                             when={allDevices().length > 0}
-                            fallback="No devices have arrived yet. Rows appear here as the supervisor locates them."
+                            fallback="No devices yet."
                           >
                             No device matches this filter.
                           </Show>
@@ -686,11 +672,7 @@ export default function IncidentDetailsPage(props) {
               </div>
             </div>
 
-            <p class="idp-note">
-              Priority, confidence and the assigned shelter are {GAP_NOTE}. They arrive only on
-              the bundled demo stream and stay blank against a live one. The AI's reasoning is an
-              audit record and is never shown on this screen.
-            </p>
+            <p class="idp-note">Priority, confidence and shelter are demo-only.</p>
           </div>
         </section>
 
@@ -753,10 +735,7 @@ export default function IncidentDetailsPage(props) {
             </div>
 
             <p class="idp-note">
-              DEMONSTRATION DATA. Shelter names, capacities and occupancy come from the bundled
-              Al Haouz scenario; the supervisor publishes no shelters, so none of it is live.
-              "Routed by the AI" counts devices in this stream that were pointed at the shelter
-              — also demo-only, and never added to the occupancy figure.
+              Demo data only. Shelter occupancy and routing are not provided by the supervisor.
             </p>
           </section>
 
@@ -822,9 +801,7 @@ export default function IncidentDetailsPage(props) {
               </dl>
 
               <p class="idp-note">
-                Congestion, QoS and delivery rate are {GAP_NOTE}. It reads all three from CAMARA
-                to make its own decisions, but does not forward them, so they stay blank here
-                rather than being guessed.
+                Congestion, QoS and delivery rate are not forwarded by the supervisor.
               </p>
             </div>
           </section>

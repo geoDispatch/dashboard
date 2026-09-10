@@ -5,6 +5,48 @@ untouched by everything below.
 
 ---
 
+## Unreleased — the map ground is vector (Leaflet + MapLibre)
+
+- **Leaflet stays; the ground under it is now MapLibre GL.** The dark, light
+  and streets basemaps are OpenFreeMap vector styles (`dark`, `positron`,
+  `liberty`) drawn inside a Leaflet layer by `@maplibre/maplibre-gl-leaflet`.
+  Leaflet still owns the view, the controls, the device canvas, the zone rings
+  and hit-testing, so nothing about selecting a dot or a band changed.
+  Satellite stays Esri raster imagery.
+- **Instant start, vector once it loads.** MapLibre (1.06 MB, 283 KB gzipped)
+  is a separate chunk fetched with a dynamic import after the console has
+  mounted; the main bundle is unchanged in weight. The ground fades in under
+  what is already on screen.
+- **Strictly 2D.** MapLibre 6 ships pre-bundled, so a bundler cannot tree-shake
+  its globe or terrain code out; instead `lib/mapStyle.js` strips `projection`,
+  `terrain`, `sky` and fill-extrusion layers from every style, and the GL map is
+  non-interactive with pitch locked at 0.
+- **Themes without a filter.** The dark canvas is recoloured in its style JSON
+  — graphite (land #383B41, darker sea) in Light and Dark, navy (land #16265A,
+  sea #091234) in Dark blue — instead of a CSS filter re-applied to a WebGL
+  canvas every frame. Switching theme, or between vector grounds, restyles the
+  live GL map with a style diff: every OpenFreeMap style reads the same tile
+  source, so no tile is re-fetched.
+- **The worker ships.** MapLibre 6 builds its worker's URL at runtime, which a
+  bundler cannot see, so the file was never emitted and every tile would have
+  failed. The worker is now bundled explicitly (`?worker&url`) and handed to
+  `setWorkerUrl`.
+- **Never an empty ground.** Every vector basemap keeps its Esri raster twin as
+  a fallback: no WebGL 2, a failed chunk, or an unreachable style host draws
+  the raster map (and, in Dark blue, the old filter tint) with one console
+  warning. Verified by simulating each failure.
+- **Previews are real.** Settings renders each vector basemap off-screen in the
+  current theme and shows the image — what you pick is what you get. A preview
+  falls back to the raster tile only when the live map would too.
+- Vector grounds zoom to 19 (the raster grey canvases stopped at 16).
+- Credit: "OpenFreeMap © OpenMapTiles, Data from OpenStreetMap", swapped
+  cleanly with Esri's when the ground changes.
+- New dependencies: `maplibre-gl` ^6.9.0, `@maplibre/maplibre-gl-leaflet`
+  ^0.1.4.
+- Tests: `lib/mapStyle.test.js` — colour parsing (every form the real styles
+  use), the graphite and navy remaps, expression walking, the 2D strip, water
+  pinning, and the basemap definitions.
+
 ## Unreleased — logo rebuilt as SVG, and three themes
 
 ### Logo

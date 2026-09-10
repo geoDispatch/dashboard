@@ -57,7 +57,7 @@ export function useOperatorLocation({ onLocated } = {}) {
       const fix = await resolveLocation({ locate: mapLocate })
       if (!fix) {
         setStatus('denied')
-        setError('Location unavailable — pick a region below instead.')
+        setError('Location unavailable. Select a region instead.')
         return null
       }
       setStatus('ok')

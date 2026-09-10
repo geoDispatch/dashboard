@@ -2,7 +2,9 @@ import { onMount, onCleanup, createEffect } from 'solid-js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { ZONE_COLORS } from '../constants/zones'
-import { basemapFor } from '../constants/basemaps'
+import { OFM_CREDIT, basemapFor, maxZoomFor, profileFor } from '../constants/basemaps'
+import { prepareStyle } from '../lib/mapStyle'
+import { createVectorLayer, fetchStyle, firstRender, loadVectorEngine } from '../lib/vectorBasemap'
 import { maskPhone } from '../lib/format'
 import { haversine } from '../lib/geo'
 import { isDarkTheme } from '../lib/theme'
@@ -23,7 +25,15 @@ import { isDarkTheme } from '../lib/theme'
 //              entries without coordinates are skipped, never guessed at.
 //   basemap  — a key from constants/basemaps.js. Changing it swaps the ground
 //              underneath everything else: the dots, rings and current view
-//              are untouched, because only the tile layers are replaced.
+//              are untouched, because only the ground layer is replaced.
+//   theme    — the resolved theme. The dark canvas is recoloured to it
+//              (graphite, or navy in Dark blue), and zone fills step back on
+//              either dark theme.
+//
+// The ground is a MapLibre GL vector layer for every basemap that has one, and
+// Leaflet raster tiles for satellite — or for any basemap when the vector
+// engine cannot run here (no WebGL 2, the chunk or the style failed to load).
+// See constants/basemaps.js and lib/vectorBasemap.js.
 
 const DEFAULT_CENTER = [31.0625, -8.4144]   // Al Haouz
 const DEFAULT_ZOOM   = 9
@@ -40,7 +50,13 @@ export default function DisasterMap(props) {
   let epicenterMarker = null
   let operatorMarker = null
   let shelterMarkers = []
-  let tileLayers = []         // the current basemap's ground + label layers
+  // The ground. `groundLayers` is what is committed on screen: raster tile
+  // layers, or the one GL layer. `vectorLayer` is that GL layer while it is
+  // the ground, so a switch between vector styles can restyle it in place.
+  let groundLayers = []
+  let vectorLayer = null
+  let groundWanted = null     // `${key}|${profile}` last asked for
+  let groundToken = 0         // bumps per request; stale async work checks it
   const markers = new Map()   // phone → L.CircleMarker
 
   // Leaflet fires the marker's click and then the map's click in the same tick,
@@ -143,51 +159,129 @@ export default function DisasterMap(props) {
     return !!props.layers[key]
   }
 
-  // Swap the ground without touching anything drawn on it.
-  //
-  // The new tiles are added BEFORE the old ones are removed. Do it the other
-  // way round and there is a frame where the map is the bare container colour,
-  // which reads as the map having crashed. Leaflet fades the new layer in over
-  // the old, so this way the change is a dissolve.
-  function applyBasemap(key) {
-    if (!map) return
-    const basemap = basemapFor(key)
-    const previous = tileLayers
-    const next = []
+  // ── the ground ─────────────────────────────────────────────────────────────
 
-    next.push(
-      L.tileLayer(basemap.base, {
-        maxZoom: basemap.maxZoom,
-        attribution: basemap.attribution,
+  // Put `layers` on screen as the ground and take the previous ground off —
+  // in that order, so there is never a frame of bare container, which reads
+  // as the map having crashed.
+  function commitGround(layers, renderer, basemap) {
+    const previous = groundLayers
+    groundLayers = layers
+    for (const layer of previous) {
+      if (!layers.includes(layer)) map.removeLayer(layer)
+    }
+    if (vectorLayer && !layers.includes(vectorLayer)) vectorLayer = null
+
+    // CSS keys off both: the raster dark canvas is filter-tinted in Dark blue
+    // (the vector one is recoloured in its style instead).
+    const el = map.getContainer()
+    el.dataset.basemap = basemap.key
+    el.dataset.renderer = renderer
+
+    // Each ground stops at a different zoom: the raster grey canvases run out
+    // at 16, imagery and every vector map go to 19. Raising the cap without
+    // telling the map would let the operator zoom into empty tiles; lowering
+    // it while they are deeper than the new maximum needs an explicit pull
+    // back, which setMaxZoom does not do on its own.
+    const max = maxZoomFor(basemap, renderer)
+    map.setMaxZoom(max)
+    if (map.getZoom() > max) map.setZoom(max)
+  }
+
+  function showRaster(basemap, token) {
+    const { raster } = basemap
+    const layers = [
+      L.tileLayer(raster.base, {
+        maxZoom: raster.maxZoom,
+        attribution: raster.attribution,
       }).addTo(map),
-    )
-
-    // Place names ride above the data so the operator can name a locality.
-    if (basemap.labels) {
-      next.push(
-        L.tileLayer(basemap.labels, {
-          maxZoom: basemap.maxZoom,
+    ]
+    // Place names ride above the ground so the operator can name a locality.
+    if (raster.labels) {
+      layers.push(
+        L.tileLayer(raster.labels, {
+          maxZoom: raster.maxZoom,
           pane: 'shadowPane',
           attribution: '',
         }).addTo(map),
       )
     }
 
-    tileLayers = next
-    for (const layer of previous) map.removeLayer(layer)
+    const commit = () => {
+      if (token !== groundToken || !map) {
+        for (const layer of layers) map?.removeLayer(layer)
+        return
+      }
+      commitGround(layers, 'raster', basemap)
+    }
+    if (!groundLayers.length) {
+      commit()
+      return
+    }
+    // Keep the old ground until the visible imagery has arrived (Leaflet's
+    // 'load' fires once every tile in view is in), so the swap never shows a
+    // frame of bare container — capped, so a slow tile cannot pin the old
+    // ground forever.
+    let done = false
+    const finish = () => {
+      if (done) return
+      done = true
+      clearTimeout(timer)
+      commit()
+    }
+    const timer = setTimeout(finish, 6000)
+    layers[0].once('load', finish)
+  }
 
-    // Name the ground on the container so CSS can treat it: Dark blue tints the
-    // grey canvas navy, and must know not to tint satellite imagery or streets.
-    map.getContainer().dataset.basemap = basemap.key
+  async function showVector(basemap, profile, token) {
+    const [engine, style] = await Promise.all([
+      loadVectorEngine(),
+      fetchStyle(basemap.vector.style),
+    ])
+    if (token !== groundToken || !map) return
+    const prepared = prepareStyle(style, profile)
 
+    // Already on a vector ground: restyle it in place. Every OpenFreeMap style
+    // reads the same tile source, so MapLibre diffs the two styles and swaps
+    // paint and layers without re-fetching a single tile.
+    if (vectorLayer) {
+      vectorLayer.getMaplibreMap().setStyle(prepared, { diff: true })
+      commitGround([vectorLayer], 'vector', basemap)
+      return
+    }
 
-    // Each basemap stops at a different zoom: the grey canvases run out at 16,
-    // imagery and streets go to 19. Raising the cap without telling the map
-    // would let the operator zoom into empty tiles; lowering it while they are
-    // already deeper than the new maximum needs an explicit pull back, which
-    // setMaxZoom does not do on its own.
-    map.setMaxZoom(basemap.maxZoom)
-    if (map.getZoom() > basemap.maxZoom) map.setZoom(basemap.maxZoom)
+    // First vector ground (or back from satellite): a new GL layer, kept under
+    // the old ground until it has drawn a complete frame.
+    const layer = createVectorLayer(engine, prepared, OFM_CREDIT)
+    layer.addTo(map)   // throws if a WebGL context cannot be created
+    await firstRender(layer.getMaplibreMap())
+    if (token !== groundToken || !map) {
+      map?.removeLayer(layer)
+      return
+    }
+    vectorLayer = layer
+    commitGround([layer], 'vector', basemap)
+  }
+
+  // Swap the ground without touching anything drawn on it.
+  function applyBasemap(key, theme) {
+    if (!map) return
+    const basemap = basemapFor(key)
+    const profile = profileFor(basemap, theme)
+    const wanted = `${basemap.key}|${profile}`
+    if (wanted === groundWanted) return   // a theme change this ground ignores
+    groundWanted = wanted
+    const token = ++groundToken
+
+    if (!basemap.vector) {
+      showRaster(basemap, token)
+      return
+    }
+    showVector(basemap, profile, token).catch((err) => {
+      if (token !== groundToken || !map) return
+      console.warn('[map] vector ground unavailable, drawing the raster fallback —', err?.message || err)
+      showRaster(basemap, token)
+    })
   }
 
   onMount(() => {
@@ -199,7 +293,7 @@ export default function DisasterMap(props) {
       zoomControl: false,
       preferCanvas: true,
       attributionControl: false,
-      maxZoom: initial.maxZoom,
+      maxZoom: maxZoomFor(initial, initial.vector ? 'vector' : 'raster'),
     })
 
     renderer = L.canvas({ padding: 0.5 })
@@ -212,7 +306,7 @@ export default function DisasterMap(props) {
     // operator had ever looked at.
     L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map)
 
-    applyBasemap(props.basemap)
+    applyBasemap(props.basemap, props.theme)
 
     L.control.zoom({ position: 'bottomright' }).addTo(map)
 
@@ -286,28 +380,34 @@ export default function DisasterMap(props) {
       // Leaflet's own geolocation — no third-party service, no API key.
       // The browser resolves it from GPS, Wi-Fi or IP, whichever it has.
       locate: () => new Promise((resolve) => {
-        map.once('locationfound', (e) => resolve({
+        const finish = (value) => {
+          map.off('locationfound', onFound)
+          map.off('locationerror', onError)
+          resolve(value)
+        }
+        const onFound = (e) => finish({
           latitude:  e.latlng.lat,
           longitude: e.latlng.lng,
           accuracyM: e.accuracy,
           source:    'browser',
-        }))
-        map.once('locationerror', () => resolve(null))
-        map.locate({ setView: true, maxZoom: 11, enableHighAccuracy: false, timeout: 8000 })
+        })
+        const onError = () => finish(null)
+
+        map.on('locationfound', onFound)
+        map.on('locationerror', onError)
+        // App's onLocated callback performs the one intentional animated move.
+        // Asking Leaflet to set the view too would make the button jump, then
+        // immediately fly to the same point a second time.
+        map.locate({ setView: false, maxZoom: 11, enableHighAccuracy: false, timeout: 8000 })
       }),
     })
 
-    // Reading props.basemap here is what subscribes the swap to the setting.
-    // It is inside onMount because applyBasemap needs the map to exist, and it
-    // skips the first run because onMount already drew that basemap.
-    let firstBasemapRun = true
+    // Reading props.basemap and props.theme here is what subscribes the swap
+    // to both. It is inside onMount because applyBasemap needs the map to
+    // exist; the first run repeats onMount's request, which applyBasemap
+    // recognises and ignores.
     createEffect(() => {
-      const key = props.basemap
-      if (firstBasemapRun) {
-        firstBasemapRun = false
-        return
-      }
-      applyBasemap(key)
+      applyBasemap(props.basemap, props.theme)
     })
 
     // The map lives inside a flex panel that resizes with the layout.
@@ -319,7 +419,12 @@ export default function DisasterMap(props) {
   onCleanup(() => {
     markers.clear()
     shelterMarkers = []
-    tileLayers = []
+    // Any vector ground still loading sees the bumped token (and map === null)
+    // and drops itself; map.remove() tears down a GL layer already on screen.
+    groundToken++
+    groundLayers = []
+    vectorLayer = null
+    groundWanted = null
     map?.remove()
     map = null
     // The shell holds this handle across view switches. Retract it on the way
@@ -501,6 +606,13 @@ export default function DisasterMap(props) {
     operatorMarker = null
     if (!loc) return
 
+    const sourceLabel = {
+      browser: 'Device location',
+      gps: 'GPS',
+      ip: 'IP estimate',
+      manual: 'Selected region',
+    }[loc.source] ?? 'Operator location'
+
     operatorMarker = L.marker([loc.latitude, loc.longitude], {
       zIndexOffset: 900,
       icon: L.divIcon({
@@ -510,10 +622,10 @@ export default function DisasterMap(props) {
         iconAnchor: [8, 8],
       }),
     })
-      .bindTooltip(
-        `You are here · ${loc.source === 'gps' ? 'GPS' : loc.source === 'ip' ? 'IP estimate' : 'manual'}`,
-        { direction: 'top', className: 'device-tip' },
-      )
+      .bindTooltip(`You are here · ${sourceLabel}`, {
+        direction: 'top',
+        className: 'device-tip',
+      })
       .addTo(map)
   })
 

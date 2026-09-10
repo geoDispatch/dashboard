@@ -27,9 +27,9 @@ export const ZONE_LABELS = {
 
 // Never encode a zone by colour alone — every zone carries a second channel.
 export const ZONE_MEANING = {
-  red:    'Critical — immediate danger',
-  orange: 'High — evacuation recommended',
-  green:  'Moderate — alert and monitor',
+  red:    'Critical: immediate danger',
+  orange: 'High: evacuation recommended',
+  green:  'Moderate: alert and monitor',
 }
 
 export const ZONE_ORDER = ['red', 'orange', 'green']

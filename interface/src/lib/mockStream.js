@@ -35,18 +35,18 @@ const SHELTERS = [
 
 const NARRATIVES = {
   red:
-    "Red zone: 1,129 devices confirmed within 17 km of the epicentre. 892 reachable via SMS — " +
-    "evacuation messages dispatched with shelter routing to Lycée Ibn Sina (1.2 km north) and " +
+    "Red zone: 1,129 devices confirmed within 17 km of the epicentre. 892 reachable via SMS. " +
+    "Evacuation messages dispatched with shelter routing to Lycée Ibn Sina (1.2 km north) and " +
     "Centre Sportif Asni (4.6 km east). 237 devices returned NOT_CONNECTED across three " +
     "consecutive polls in terrain flagged for collapse risk; rescue teams dispatched, 41 " +
     "currently en route. Network congestion HIGH along the R203 corridor, QoS boost active. " +
     "SMS delivery holding at 94%.",
   orange:
-    "Orange zone: 2,340 devices between 17 and 33 km. 2,106 reachable — evacuation SMS sent with " +
+    "Orange zone: 2,340 devices between 17 and 33 km. 2,106 reachable. Evacuation SMS sent with " +
     "shelter routing. Structural damage reported in Amizmiz and Moulay Brahim; no rescue flags " +
     "raised in this band. Congestion easing to MEDIUM north of Asni.",
   green:
-    "Green zone: 1,343 devices between 33 and 50 km. 1,298 reachable — alert and monitor only, " +
+    "Green zone: 1,343 devices between 33 and 50 km. 1,298 reachable. Alert and monitor only, " +
     "no evacuation ordered. Tahannaout and Marrakech Sud report power interruptions but intact " +
     "road access. Recommend holding capacity at Lycée Ibn Sina for red-zone arrivals.",
 }

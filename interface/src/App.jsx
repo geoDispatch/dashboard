@@ -25,6 +25,7 @@ import { Show, createEffect, createMemo, createSignal, onCleanup, onMount } from
 import TopBar from './components/TopBar'
 import NavRail from './components/NavRail'
 import MapToolbar from './components/MapToolbar'
+import MapLocationControl from './components/MapLocationControl'
 import DisasterMap from './components/DisasterMap'
 import DeviceDetails from './components/DeviceDetails'
 import ZoneDetails from './components/ZoneDetails'
@@ -263,6 +264,15 @@ export default function App(props) {
     if (map) map.flyTo(shelter.latitude, shelter.longitude, 12)
   }
 
+  function focusIncidentArea() {
+    const map = handle()
+    if (!state.event?.epicenter || !map) {
+      showNote('No active incident area is available yet.')
+      return
+    }
+    map.fitEvent()
+  }
+
   // ── map layers ───────────────────────────────────────────────────────────
   function toggleLayer(key) {
     setLayers((prev) => ({ ...prev, [key]: !prev[key] }))
@@ -409,7 +419,7 @@ export default function App(props) {
 
   function applyWsUrl(url) {
     if (stream.setUrl(url)) {
-      showNote(`Now listening on ${url}. The board clears until it sends a frame.`)
+      showNote(`Listening on ${url}. Waiting for the next frame.`)
     }
   }
 
@@ -420,8 +430,7 @@ export default function App(props) {
     setLauncherOpen(false)
     const magnitude = typeof sent.severity === 'number' ? ` M ${sent.severity}` : ''
     showNote(
-      `${sent.event_id} sent to the supervisor —${magnitude} ${sent.disaster_type}. ` +
-        'Devices appear as it works through the radius.',
+      `${sent.event_id} sent to the supervisor: ${magnitude.trim()} ${sent.disaster_type}.`,
     )
   }
 
@@ -497,12 +506,12 @@ export default function App(props) {
 
   function useDemoStream() {
     stream.useDemo()
-    showNote('Bundled demo. The console will stay here until you choose the supervisor.')
+    showNote('Bundled demo selected.')
   }
 
   function useSupervisorStream() {
     stream.useSupervisor()
-    showNote(`Connecting to ${stream.endpoint()}. The board clears until it sends a frame.`)
+    showNote(`Connecting to ${stream.endpoint()}. Waiting for the next frame.`)
   }
 
   // ── halted pipeline ──────────────────────────────────────────────────────
@@ -520,7 +529,7 @@ export default function App(props) {
 
   function clearIncident() {
     actions.reset()
-    showNote('Incident cleared. The board waits for the next event_start.')
+    showNote('Incident cleared. Waiting for the next event.')
   }
 
   // ── rail ─────────────────────────────────────────────────────────────────
@@ -604,6 +613,13 @@ export default function App(props) {
             }
             onSelectZone={pickZone}
             onReady={(api) => setHandle(() => api)}
+          />
+
+          <MapLocationControl
+            locating={locationBusy()}
+            canFocusIncident={!!state.event?.epicenter}
+            onUseMyLocation={useMyLocation}
+            onFocusIncident={focusIncidentArea}
           />
 
           {/* Left overlay — whichever view the rail is on. */}
@@ -731,9 +747,8 @@ export default function App(props) {
           request; what the console can do is say that it happened. */}
       <Show when={state.dropped.foreign > 0}>
         <p class="app-foreign" role="status">
-          {num(state.dropped.foreign)} frame{state.dropped.foreign === 1 ? '' : 's'} from
-          incident {state.dropped.lastId} {state.dropped.foreign === 1 ? 'was' : 'were'}{' '}
-          ignored — this board is showing {state.activeEventId || 'the current incident'}.
+          Ignored {num(state.dropped.foreign)} frame{state.dropped.foreign === 1 ? '' : 's'} from
+          incident {state.dropped.lastId}. Showing {state.activeEventId || 'the current incident'}.
         </p>
       </Show>
 

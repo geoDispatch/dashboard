@@ -1,7 +1,8 @@
 # GeoDispatch dashboard
 
 Read-mostly operations console for the GeoDispatch pipeline. **SolidJS + Vite +
-Leaflet**, plain CSS, no component framework.
+Leaflet** (with a lazily loaded **MapLibre GL** vector basemap underneath),
+plain CSS, no component framework.
 
 It consumes one WebSocket and sends exactly one request — `POST /sensor`, from
 the incident launcher, which is the same thing a seismic sensor does. Nothing

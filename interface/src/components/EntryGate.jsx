@@ -47,7 +47,7 @@ export default function EntryGate(props) {
     const badge = badgeId().trim()
 
     if (!badge || !accessKey()) {
-      setMessage('Enter both your operator ID and access key to continue.')
+      setMessage('Enter your operator ID and access key.')
       if (!badge) badgeInput?.focus()
       return
     }
@@ -59,7 +59,7 @@ export default function EntryGate(props) {
   }
 
   function explainRecovery() {
-    setMessage('Key recovery is unavailable until an authentication service is connected.')
+    setMessage('Key recovery is not available yet.')
   }
 
   return (
@@ -98,7 +98,7 @@ export default function EntryGate(props) {
               innerHTML={logoLockup}
             />
             <h1 id="entry-title" class="entry-login__title">Operator access</h1>
-            <p class="entry-login__subtitle">Emergency Operations Portal</p>
+            <p class="entry-login__subtitle">Emergency operations</p>
           </header>
 
           <form class="entry-form" onSubmit={submit} novalidate>
@@ -161,7 +161,7 @@ export default function EntryGate(props) {
           </form>
 
           <p class="entry-login__truth">
-            Frontend access gate only. Credentials are not sent, stored, or verified by a server.
+            Demo access only. Credentials are not sent, stored, or verified.
           </p>
         </div>
       </div>

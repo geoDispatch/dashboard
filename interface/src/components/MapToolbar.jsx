@@ -44,16 +44,15 @@ export default function MapToolbar(props) {
   // every place it appears says whose connection it describes.
   const netSentence = () => {
     if (!props.netLabel) return ''
-    const quality = props.netQuality ? ` — ${props.netQuality}` : ''
-    return `Console link (this browser): ${props.netLabel}${quality}. ` +
-           `That is your own connection, not the disaster area's network.`
+    const quality = props.netQuality ? `, ${props.netQuality}` : ''
+    return `This browser's connection: ${props.netLabel}${quality}.`
   }
 
   const streamLine = () => {
     const rate = fpsNumber() === null
       ? 'Frame rate unknown.'
       : `${fpsNumber()} frames per second.`
-    return `${SOURCE_LABEL[source()]} — ${labelText()}. ${rate} ${streamSentence(phase(), source())}`
+    return `${SOURCE_LABEL[source()]}. ${labelText()}. ${rate} ${streamSentence(phase(), source())}`
   }
 
   const pillTitle = () => {

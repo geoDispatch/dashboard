@@ -53,7 +53,7 @@ const UTILITY_NAV = [
   { key: 'settings', label: 'Settings', icon: settingsIcon, opens: 'basemap', highlight: true,
     hint: 'Console settings' },
   { key: 'signout',  label: 'Sign out', icon: signOutIcon,  opens: 'station', highlight: false,
-    hint: 'End shift — clears this station' },
+    hint: 'End shift and clear this station' },
 ]
 
 // props.markup is read inside the JSX so the span re-renders if the glyph ever

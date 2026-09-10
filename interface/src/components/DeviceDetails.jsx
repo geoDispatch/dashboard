@@ -46,10 +46,10 @@ import './DeviceDetails.css'
 
 // Statements, not apologies. One per card, so the panel never repeats itself.
 const EMPTY_TEXT = {
-  overview: 'No device selected. Pick a dot on the map to inspect it.',
-  status: 'Reachability, SMS delivery and the rescue flag appear here once a device is picked.',
-  location: 'Distance from the epicenter and coordinates appear here once a device is picked.',
-  ai: 'The dispatch decision — action, shelter, confidence and priority — appears here once a device is picked.',
+  overview: 'Select a device on the map.',
+  status: 'Select a device to view status.',
+  location: 'Select a device to view location.',
+  ai: 'Select a device to view its dispatch decision.',
 }
 
 // Height of each card's filled row block, so the empty state holds the same

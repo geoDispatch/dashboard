@@ -38,7 +38,6 @@
   background: var(--gd-surface);
   box-shadow: var(--gd-shadow-pop);
   font-family: var(--gd-font);
-  font-variation-settings: 'opsz' 14;
   color: var(--gd-ink);
   animation: ntd-slide var(--gd-dur-slow) var(--gd-ease);
 }

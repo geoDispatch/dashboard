@@ -34,12 +34,13 @@
   --gd-surface:        #ffffff;   /* cards, top bar, nav rail */
   --gd-field:          #f6f7f9;   /* search field + location pill fill */
   --gd-field-hover:    #eef0f3;   /* pressed/hover step down from --gd-field */
-  --gd-map-bg:         #e6e8ea;   /* ground under the basemap while tiles load */
-  --gd-map-ground:     #ececec;   /* what the grey canvas reads as, once loaded —
+  --gd-map-bg:         #eef0ec;   /* ground under the basemap while it loads */
+  --gd-map-ground:     #f2f3f0;   /* what the light canvas reads as, once loaded —
                                      for the map drawn in miniature (Settings) */
 
-  /* A filter for the grey canvas's tiles. Only Dark blue sets one (it tints the
-     dark canvas navy); everywhere else the canvas is drawn as Esri serves it. */
+  /* A filter for the RASTER grey canvas (the fallback when the vector engine
+     cannot run). Only Dark blue sets one (it tints the dark canvas navy);
+     everywhere else the canvas is drawn as Esri serves it. */
   --gd-ground-tint:    none;
 
   /* ── Semantic accents ──────────────────────────────────────────────────── */
@@ -211,7 +212,8 @@
    ── The working surface ───────────────────────────────────────────────────
    Cards, panels, dialogs and the drawer sit at #161A23; what is BEHIND them —
    the incident page, the settings sidebar — is darker still, so a card reads
-   as a card. The map is Esri's dark grey canvas, untinted.
+   as a card. The map is the dark vector canvas recoloured graphite (land
+   #383B41, darker sea), close to the Esri grey canvas it replaced.
 
    ── Status colours ─────────────────────────────────────────────────────────
    Dots, rings, bars and badges keep the exact zone colours. Status WORDS use
@@ -234,8 +236,8 @@
   --gd-surface:        #161a23;   /* cards, panels, dialogs, the drawer */
   --gd-field:          #1f2430;   /* inputs and quiet buttons inside a card */
   --gd-field-hover:    #282e3c;
-  --gd-map-bg:         #0c0f15;
-  --gd-map-ground:     #414141;   /* Esri's dark grey canvas */
+  --gd-map-bg:         #2c2f34;   /* between the graphite land and sea */
+  --gd-map-ground:     #383b41;   /* the dark canvas, recoloured graphite */
 
   /* Text colours that were darkened to read on white are lifted to read on
      graphite. */
@@ -316,10 +318,11 @@
    inside it and still reads as the frame rather than as one more navy panel.
 
    ── The map ──────────────────────────────────────────────────────────────
-   Esri serves no navy basemap, so the dark grey canvas is tinted with a
-   filter (--gd-ground-tint): land #404040 becomes #14285C, the sea #202024
-   becomes #081030. Only the canvas's tiles — the device dots, zone rings and
-   markers live in other panes and keep their exact colours, and satellite
+   The vector dark canvas is recoloured navy in its style (lib/mapStyle.js,
+   profile "navy"): land #16265A, the sea #091234. Only if the vector engine
+   cannot run does the raster fallback get the filter below instead
+   (--gd-ground-tint: Esri's land #404040 becomes #14285C). Either way the
+   device dots, zone rings and markers keep their exact colours, and satellite
    imagery and streets are never tinted: they show what is really there.
 
    ── Ink ───────────────────────────────────────────────────────────────────
@@ -356,8 +359,8 @@
   --gd-surface:        #0d1848;   /* cards, panels, dialogs, the drawer */
   --gd-field:          #17235f;   /* inputs and quiet buttons inside a card */
   --gd-field-hover:    #1e2b70;
-  --gd-map-bg:         #081030;   /* the tinted sea, so loading tiles don't flash */
-  --gd-map-ground:     #14285c;
+  --gd-map-bg:         #101d49;   /* between the navy land and sea, so the load doesn't flash */
+  --gd-map-ground:     #16265a;   /* the dark canvas, recoloured navy */
   --gd-ground-tint:    sepia(1) saturate(6) hue-rotate(193deg) brightness(0.56) contrast(1.05);
 
   --gd-select:           rgba(125, 150, 255, 0.24);

@@ -33,10 +33,10 @@ const DISASTER_LABELS = {
 }
 
 const EMPTY_TEXT = {
-  overview: 'No zone selected. Click a zone ring on the map to read the event.',
-  status:   'Device counts for the zone appear here once a ring is picked.',
-  location: 'The epicentre and this zone\'s distance band appear here once a ring is picked.',
-  ai:       'The AI situation report for the zone appears here once a ring is picked.',
+  overview: 'Select a zone on the map.',
+  status:   'Select a zone to view device counts.',
+  location: 'Select a zone to view its location.',
+  ai:       'Select a zone to view its situation report.',
 }
 
 const EMPTY_HEIGHT = { overview: 56, status: 96, location: 60, ai: 96 }
@@ -144,7 +144,7 @@ export default function ZoneDetails(props) {
               <div class="dd-identity__row">
                 <span class="dd-identity__icon" aria-hidden="true" innerHTML={zoneIcon} />
                 <p class="dd-identity__zone" style={{ color: color() }}>
-                  {ZONE_LABELS[zone()]} — {ZONE_MEANING[zone()]}
+                  {ZONE_LABELS[zone()]}: {ZONE_MEANING[zone()]}
                 </p>
               </div>
             </div>
@@ -209,7 +209,7 @@ export default function ZoneDetails(props) {
               fallback={
                 <EmptyState
                   height={EMPTY_HEIGHT.ai}
-                  text="No report for this zone yet. The agent sends one after the first batch completes."
+                  text="Waiting for the first zone report."
                 />
               }
             >

@@ -12,7 +12,9 @@
 
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
 
-import { BASEMAPS, basemapPreview } from '../constants/basemaps'
+import { BASEMAPS, basemapPreview, maxZoomFor, profileFor } from '../constants/basemaps'
+import { prepareStyle } from '../lib/mapStyle'
+import { fetchStyle, loadVectorEngine, snapshotStyle } from '../lib/vectorBasemap'
 import { INTERFACE_SCALES, LANGUAGES, isWsUrl, useSettings } from '../lib/settings'
 import { playAlert } from '../lib/audio'
 import { SOURCE_DETAIL, SOURCE_LABEL, streamChip } from '../lib/streamState'
@@ -182,6 +184,70 @@ function ThemeCard(props) {
   )
 }
 
+// A basemap as it really is, over the Al Haouz epicentre. Vector basemaps are
+// rendered — in the current theme, so the dark canvas shows graphite or navy
+// exactly as the live map will — and read back as an image; satellite is one
+// real imagery tile. If the vector engine cannot run in this browser, the
+// live map falls back to raster tiles, and so does this preview: it shows the
+// fallback's tile, which is then genuinely what the operator will get. If the
+// engine runs but one render fails (a slow network, a timeout), the preview
+// keeps the plain ground colour rather than show a raster tile the live map
+// would not be drawing; the next time the tab opens, it tries again.
+function BasemapPreview(props) {
+  const [src, setSrc] = createSignal(null)
+  const [renderer, setRenderer] = createSignal(props.basemap.vector ? 'vector' : 'raster')
+
+  createEffect(() => {
+    const basemap = props.basemap
+    const profile = profileFor(basemap, props.theme)
+    let live = true
+    onCleanup(() => { live = false })
+
+    if (!basemap.vector) {
+      setRenderer('raster')
+      setSrc(basemapPreview(basemap))
+      return
+    }
+
+    setSrc(null)
+    fetchStyle(basemap.vector.style)
+      .then((style) => snapshotStyle(`${basemap.vector.style}|${profile}`, prepareStyle(style, profile)))
+      .then((url) => {
+        if (!live) return
+        setRenderer('vector')
+        setSrc(url)
+      })
+      .catch(() =>
+        loadVectorEngine().then(
+          () => {},   // the engine works; only this render failed
+          () => {
+            if (!live) return
+            setRenderer('raster')
+            setSrc(basemapPreview(basemap))
+          },
+        ),
+      )
+  })
+
+  return (
+    <span
+      class="set-basemap__preview"
+      data-basemap={props.basemap.key}
+      data-renderer={renderer()}
+      style={{ background: props.basemap.ground }}
+    >
+      <Show when={src()}>
+        <img
+          src={src()}
+          alt=""
+          onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
+        />
+      </Show>
+      {props.children}
+    </span>
+  )
+}
+
 // label + explanation on the left, control on the right.
 function Row(props) {
   return (
@@ -261,7 +327,7 @@ export default function SettingsModal(props) {
     if (played) return setAudioNote(null)
     setAudioNote(
       settings().volume === 0
-        ? 'Volume is at zero — nothing to hear.'
+        ? 'Volume is at zero.'
         : 'This browser is not letting the console play audio.',
     )
   }
@@ -331,9 +397,9 @@ export default function SettingsModal(props) {
           <p class="set-rail__foot">
             <Show
               when={store.canPersist()}
-              fallback="This browser is blocking storage — changes last for this session only."
+              fallback="Storage is blocked. Changes last for this session only."
             >
-              Changes apply at once and are saved in this browser.
+              Saved in this browser.
             </Show>
           </p>
         </nav>
@@ -358,7 +424,7 @@ export default function SettingsModal(props) {
             <Show when={tab() === 'station'}>
               <Card
                 title="Station identity"
-                note="Held in this browser and nowhere else. This console has no account service behind it, so nothing here is verified against an agency directory and nothing is sent anywhere."
+                note="Stored only in this browser. Not verified by an agency account service."
               >
                 <div class="set-fields">
                   <For each={PROFILE_FIELDS}>
@@ -380,11 +446,11 @@ export default function SettingsModal(props) {
 
               <Card
                 title="End of shift"
-                note="Signing out of a service is not something this console can do — there is no session to end. What this button really does is forget the station profile and every preference on these five tabs, which is what handing the desk to the next operator needs."
+                note="Ends the shift and resets this station's profile and settings."
               >
                 <Row
                   label="Clear this station"
-                  hint="Profile, basemap, alert settings, endpoint and region preferences all return to their defaults."
+                  hint="Resets the profile and all console settings."
                 >
                   <Show
                     when={confirmEnd()}
@@ -409,7 +475,7 @@ export default function SettingsModal(props) {
                           props.onEndShift && props.onEndShift()
                         }}
                       >
-                        Confirm — clear it
+                        Clear station
                       </button>
                       <button
                         type="button"
@@ -428,7 +494,7 @@ export default function SettingsModal(props) {
             <Show when={tab() === 'basemap'}>
               <Card
                 title="Interface size"
-                note="75% is the compact default. This setting changes only the console presentation; browser zoom remains available and the map data is unchanged."
+                note="75% is the default. Browser zoom remains available."
               >
                 <Row
                   label="Interface scale"
@@ -445,13 +511,13 @@ export default function SettingsModal(props) {
 
               <Card
                 title="Appearance"
-                note="Both dark themes keep the same layout. Dark is graphite throughout, top bar and left rail included. Dark blue turns the top bar and the left rail into one #001DF3 frame around navy cards and tints the dark grey map navy — the device dots and zone rings keep their exact colours. Moving between Light and a dark theme also switches the grey basemap to match; satellite and street maps are left as they are."
+                note="Choose a theme. Map markers and zone colours stay unchanged."
               >
                 <Row
                   label="Theme mode"
                   hint={
                     syncTheme()
-                      ? 'Light while this computer is in light mode, your night theme while it is in dark mode — and it switches with it.'
+                      ? "Follows your computer's light and dark modes."
                       : 'One theme, kept until you change it here.'
                   }
                 >
@@ -517,8 +583,8 @@ export default function SettingsModal(props) {
 
               <Card
                 title="Map ground"
-                meta="Applies to the live map immediately"
-                note="Every preview is one real tile of that basemap over the Al Haouz epicentre, so what you pick is what you get. Swapping the ground never touches the device dots, the zone rings or the current view."
+                meta="Updates immediately"
+                note="Choose the map style. Markers, zones and the current view stay unchanged."
               >
                 <div class="set-basemaps">
                   <For each={BASEMAPS}>
@@ -530,26 +596,19 @@ export default function SettingsModal(props) {
                         aria-pressed={settings().basemap === basemap.key}
                         onClick={() => store.set('basemap', basemap.key)}
                       >
-                        <span
-                          class="set-basemap__preview"
-                          data-basemap={basemap.key}
-                          style={{ background: basemap.ground }}
-                        >
-                          <img
-                            src={basemapPreview(basemap)}
-                            alt=""
-                            loading="lazy"
-                            onError={(e) => { e.currentTarget.style.visibility = 'hidden' }}
-                          />
+                        <BasemapPreview basemap={basemap} theme={props.theme}>
                           <Show when={settings().basemap === basemap.key}>
                             <span class="set-basemap__tick" aria-hidden="true">
                               <Icon markup={checkIcon} />
                             </span>
                           </Show>
-                        </span>
+                        </BasemapPreview>
                         <span class="set-basemap__name">{basemap.name}</span>
                         <span class="set-basemap__blurb">{basemap.blurb}</span>
-                        <span class="set-basemap__meta">Zooms to {basemap.maxZoom}</span>
+                        <span class="set-basemap__meta">
+                          {basemap.vector ? 'Vector map' : 'Imagery tiles'} · zooms to{' '}
+                          {maxZoomFor(basemap, basemap.vector ? 'vector' : 'raster')}
+                        </span>
                       </button>
                     )}
                   </For>
@@ -561,11 +620,11 @@ export default function SettingsModal(props) {
             <Show when={tab() === 'sound'}>
               <Card
                 title="Dispatch alerts"
-                note="Both tones are generated in the browser, so nothing is downloaded and nothing plays before the operator has clicked into the page — that last part is the browser's rule, not ours. Use Test to grant it."
+                note="Use Test once to enable browser audio."
               >
                 <Row
                   label="Rescue chime"
-                  hint="A rising two-note bell the first time the AI flags a P1 rescue. Repeats are held for a few seconds so a batch of flags is one chime, not forty."
+                  hint="Plays once when a P1 rescue is first flagged."
                 >
                   <div class="set-inline">
                     <button type="button" class="set-btn" onClick={() => test('rescue')}>
@@ -581,7 +640,7 @@ export default function SettingsModal(props) {
 
                 <Row
                   label="Pipeline alarm"
-                  hint="A falling three-pulse buzz when a fatal error stops the supervisor — DB_ERROR today. It fires once: after it, nothing on screen is live any more."
+                  hint="Plays once when a fatal pipeline error stops dispatch."
                 >
                   <div class="set-inline">
                     <button type="button" class="set-btn" onClick={() => test('fatal')}>
@@ -623,11 +682,11 @@ export default function SettingsModal(props) {
             <Show when={tab() === 'stream'}>
               <Card
                 title="Supervisor endpoint"
-                note="The console only ever listens on this socket; it never sends. Applying a new address closes the current one and reconnects, which clears the board — the supervisor sends no snapshot on connect, so nothing arrives until its next frame."
+                note="Changing the WebSocket URL reconnects and clears the board. New data appears with the next frame."
               >
                 <Row
                   label="WebSocket URL"
-                  hint="ws:// or wss://. The default is the local supervisor from docker-compose."
+                  hint="Must start with ws:// or wss://."
                   stacked
                 >
                   <div class="set-url">
@@ -687,7 +746,7 @@ export default function SettingsModal(props) {
 
               <Card
                 title="Frame source"
-                note="Choosing the bundled demo keeps the console there: the socket is closed and no reconnect is scheduled, so nothing drags you back to a supervisor you deliberately left. Choosing the supervisor closes the demo and connects. Either way the board is cleared first — there is no snapshot to carry over."
+                note="Changing the frame source clears the board."
               >
                 <Row
                   label="Where frames come from"
@@ -741,11 +800,8 @@ export default function SettingsModal(props) {
                   </div>
                 </dl>
                 <p class="set-note">
-                  "Console link" is this browser's own connection, not the disaster area's cell
-                  network. CAMARA congestion for the impact zone is read by the supervisor but
-                  never forwarded here. "Transport" describes the socket only — whether the
-                  supervisor behind it is reading Nokia CAMARA or its own bundled mocks is not
-                  visible from this console.
+                  Console link describes this browser's connection. Transport describes the
+                  WebSocket. The upstream CAMARA source cannot be verified here.
                 </p>
               </Card>
             </Show>
@@ -754,7 +810,7 @@ export default function SettingsModal(props) {
             <Show when={tab() === 'locale'}>
               <Card
                 title="Language"
-                note="This sets the document language for assistive technology and for the browser's own text handling. The console's own strings are still English only — no translation layer is wired, and a picker that silently changed nothing would be worse than one that says so."
+                note="Changes the document language only. Interface translations are not available yet."
               >
                 <div class="set-langs">
                   <For each={LANGUAGES}>
@@ -778,18 +834,14 @@ export default function SettingsModal(props) {
                   </For>
                 </div>
                 <Show when={settings().language === 'ar'}>
-                  <p class="set-warn">
-                    Arabic is written right to left. The console's layout is still left to right —
-                    mirroring it is a real piece of work, not a `dir` attribute, and it has not
-                    been done.
-                  </p>
+                  <p class="set-warn">Right-to-left layout is not available yet.</p>
                 </Show>
               </Card>
 
               <Card title="Casualty data privacy">
                 <Row
                   label="Masked phone numbers"
-                  hint="Every number on every screen is drawn as +212 6** *** 678. This is a locked rule of the data contract, not a preference."
+                  hint="Phone numbers are always masked."
                 >
                   <Toggle label="Masked phone numbers" checked disabled />
                 </Row>
@@ -797,12 +849,9 @@ export default function SettingsModal(props) {
                 <div class="set-gate">
                   <span class="set-gate__icon" innerHTML={lockIcon} aria-hidden="true" />
                   <div class="set-gate__text">
-                    <p class="set-gate__title">Authorised full view</p>
+                    <p class="set-gate__title">Full phone numbers</p>
                     <p class="set-gate__body">
-                      Showing unmasked numbers requires authorised government dispatch
-                      credentials. No credential service is connected to this console, so it
-                      cannot check anyone against anything — and a switch that grants itself
-                      authorisation is not authorisation. Masking stays on.
+                      Unavailable until an authorised credential service is connected.
                     </p>
                   </div>
                 </div>
@@ -810,7 +859,7 @@ export default function SettingsModal(props) {
 
               <Card
                 title="Units and coordinates"
-                note="Distances arrive from the pipeline in kilometres; miles are converted here for display only. Nothing upstream ever sees them."
+                note="Miles are converted for display only."
               >
                 <Row
                   label="Coordinate format"

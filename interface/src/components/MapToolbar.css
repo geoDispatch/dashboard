@@ -11,7 +11,7 @@
      overlay positions it absolutely, in a flex row, or in a grid cell. */
   width: max-content;
   height: var(--gd-control-h, 44px);
-  font-family: 'DM Sans', system-ui, sans-serif;
+  font-family: var(--gd-font);
 
   /* No token exists for the pressed-segment fill or for the darkened ink used
      by the amber / red pill states, so they are declared here as overridable

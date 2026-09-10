@@ -56,7 +56,15 @@ wrong. See `docs/WEBSOCKET.md` §1.
 
 ## Map
 
-`DisasterMap.jsx` — Leaflet, canvas-rendered.
+`DisasterMap.jsx` — Leaflet, canvas-rendered, over a MapLibre GL vector ground.
+
+Leaflet owns everything interactive — the view, the controls, the device dots
+(one canvas), the zone rings, the epicentre, hit-testing — and initialises
+instantly. The ground under it is a vector map drawn by MapLibre GL inside a
+Leaflet layer (`@maplibre/maplibre-gl-leaflet`), loaded lazily as its own chunk
+(`lib/vectorBasemap.js`) and faded in when ready. Strictly 2D: projection,
+terrain, sky and extrusions are stripped from every style (`lib/mapStyle.js`),
+and the GL map takes no input — Leaflet never pitches or rotates.
 
 | Value | Provenance |
 |---|---|
@@ -65,7 +73,9 @@ wrong. See `docs/WEBSOCKET.md` §1.
 | Three concentric bands at 0.33 / 0.66 / 1.00 × `radius_km` | LIVE radius, DERIVED thresholds |
 | Epicentre marker | LIVE |
 | Shelter markers | DEMO — plotted only where the name resolves to a known locality |
-| Basemap | Esri, keyless. **Not CARTO**: those URLs return HTTP 200 with an "API KEY REQUIRED" watermark baked into the tile. |
+| Basemap — dark, light, streets | OpenFreeMap vector styles (`dark`, `positron`, `liberty`), keyless, drawn by MapLibre. The dark canvas is recoloured to the theme in its style JSON (graphite; navy in Dark blue). Switching between vector grounds, or between themes, restyles the live GL map with a style diff — no tiles re-fetched. |
+| Basemap — satellite | Esri World Imagery raster, keyless. Imagery has no vector equivalent. |
+| Basemap fallback | Every vector ground has an Esri raster twin, drawn instead when WebGL 2 is missing or the engine / style cannot load — never an empty ground. **Not CARTO**: its tiles return HTTP 200 with an "API KEY REQUIRED" watermark baked in. |
 | Scale bar units | Local setting |
 
 Bands stack, so the fills are chosen for the composite: ~6 % at the rim, ~15 %
