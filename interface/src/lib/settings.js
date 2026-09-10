@@ -33,11 +33,14 @@ export const LANGUAGES = [
   { key: 'ar', label: 'Arabic',   native: 'العربية',  locale: 'ar-MA', rtl: true },
 ]
 
+export const INTERFACE_SCALES = [0.75, 0.9, 1, 1.1]
+
 export const DEFAULT_SETTINGS = {
   // display
   theme: 'light',           // light | dark | dark-blue | system
   nightTheme: 'dark',       // dark | dark-blue — what 'system' paints at night
   basemap: DEFAULT_BASEMAP,
+  interfaceScale: 0.75,     // compact by default; adjustable in Display
 
   // sound
   rescueChime: true,
@@ -92,6 +95,7 @@ const VALIDATORS = {
   theme:       oneOf(THEME_PREFS),
   nightTheme:  oneOf(NIGHT_THEMES),
   basemap:     oneOf(BASEMAP_KEYS),
+  interfaceScale: oneOf(INTERFACE_SCALES),
   rescueChime: bool,
   fatalAlarm:  bool,
   volume:      unitFloat,

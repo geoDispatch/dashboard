@@ -2,7 +2,7 @@ import { createSignal, onMount, onCleanup, Show, For } from 'solid-js'
 import { ZONE_COLORS, ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
 // Inlined (?raw) rather than loaded through <img>: the lockup is drawn in
 // currentColor with real knockouts, so it takes the header's ink — black on the
-// light bar, white on the #001DF3 dark-mode bar — from one file.
+// light bar, white on the graphite and #001DF3 dark bars — from one file.
 import logoLockup from '../assets/icons/geo-dispatch-logo.svg?raw'
 // Icons are inlined with Vite's ?raw suffix rather than loaded through <img>.
 // An SVG behind <img src> is an isolated document, so its stroke="currentColor"
@@ -22,11 +22,9 @@ import './TopBar.css'
 // device index, and the right-hand control names the station this console is
 // signed in as.
 //
-// There is no Sign in and no Get Started. This is not a product anyone signs
-// up to from this screen — reaching it at all means being inside a Protection
-// Civile operations room on a station that already has an account, so a
-// sign-in button could only ever have been decoration. What the corner needs
-// to answer is "whose console is this", and that is what it answers now.
+// The separate entry screen is deliberately a frontend-only gate until a real
+// credential service exists. This corner answers "whose local station profile
+// is this" and opens its settings; it does not claim an authenticated identity.
 //
 // props is never destructured — in Solid that would read each value once, at
 // setup, and freeze it.

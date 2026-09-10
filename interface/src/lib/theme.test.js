@@ -11,7 +11,7 @@ import {
   isDarkTheme,
   resolveTheme,
 } from './theme'
-import { createSettingsStore } from './settings'
+import { INTERFACE_SCALES, createSettingsStore } from './settings'
 
 describe('theme lists', () => {
   it('offers Light, Dark and Dark blue, plus system', () => {
@@ -126,5 +126,18 @@ describe('theme settings', () => {
 
     store.set('nightTheme', 'system')
     expect(store.settings.nightTheme).toBe('dark')
+  })
+
+  it('defaults to a 75% interface and accepts only the displayed scale choices', () => {
+    const store = createSettingsStore()
+    expect(store.settings.interfaceScale).toBe(0.75)
+
+    for (const scale of INTERFACE_SCALES) {
+      store.set('interfaceScale', scale)
+      expect(store.settings.interfaceScale).toBe(scale)
+    }
+
+    store.set('interfaceScale', 0.42)
+    expect(store.settings.interfaceScale).toBe(0.75)
   })
 })

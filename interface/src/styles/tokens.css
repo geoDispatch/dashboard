@@ -1,10 +1,11 @@
 /* ============================================================================
    GeoDispatch design tokens — Figma "Frame 18" (KeXVGPYSxafPGIkzLANt75, 6:95).
-   Three themes, one layout. Light is the default. Dark and Dark blue are the
-   same console — same components, same sizes, same positions — with a dark
-   working surface (graphite or navy) and the top bar and left rail turned
-   into one #001DF3 frame around the map. Switching theme changes colour and
-   nothing else; every size token below is shared by all three.
+   Three themes, one layout. Light is the default. Dark is the same console —
+   same components, same sizes, same positions — in graphite from edge to edge,
+   top bar and left rail included. Dark blue is Dark with navy surfaces and the
+   top bar and left rail turned into one #001DF3 frame around the map.
+   Switching theme changes colour and nothing else; every size token below is
+   shared by all three.
 
    Every theme block is keyed on a bare [data-theme] attribute, not on :root
    alone, so any element can carry a theme for its own subtree — that is how
@@ -195,20 +196,22 @@
    Applied by <html data-theme="dark|dark-blue"> (see lib/theme.js). Only
    colours are redefined — no size, radius, type or spacing token changes, so
    the dark consoles are pixel-for-pixel the light one. This block is Dark;
-   Dark blue shares all of it and swaps only the working surface (next block).
+   Dark blue shares all of it and swaps the surfaces and the frame (next block).
+
+   Regular dark: neutral graphite with a slight cool cast, everywhere.
 
    ── The frame ─────────────────────────────────────────────────────────────
-   #001DF3 on the top bar and the left rail, and on the shell behind them, so
-   the map's rounded inner corner is cut out of one continuous L of blue. Text
-   on it is white (8.5:1). Anything that was a grey field on the light bar is
-   white at 12% on the blue one, so it stays a field without becoming a hole.
-   In Dark, the frame is the only blue surface; Dark blue follows it inward.
+   The top bar, the left rail and the shell behind them sit at #0F1218, a step
+   darker than the cards — chrome recedes, content comes forward, and the map's
+   rounded inner corner is cut out of one continuous graphite L. Fields on the
+   bar are the card-field graphite; the active rail tile is the same blue tint
+   as a selection inside a dialog; Launch incident inverts to a light button,
+   exactly as it is a dark one in light mode.
 
    ── The working surface ───────────────────────────────────────────────────
-   Regular dark: neutral graphite with a slight cool cast. Cards, panels,
-   dialogs and the drawer sit at #161A23; what is BEHIND them — the incident
-   page, the settings sidebar — is darker still, so a card reads as a card.
-   The map is Esri's dark grey canvas, untinted.
+   Cards, panels, dialogs and the drawer sit at #161A23; what is BEHIND them —
+   the incident page, the settings sidebar — is darker still, so a card reads
+   as a card. The map is Esri's dark grey canvas, untinted.
 
    ── Status colours ─────────────────────────────────────────────────────────
    Dots, rings, bars and badges keep the exact zone colours. Status WORDS use
@@ -248,28 +251,24 @@
   --gd-orange-soft:    rgba(255, 165, 31, 0.16);
   --gd-zone-green-soft: rgba(34, 208, 122, 0.16);
 
-  /* Frame — the one blue surface */
-  --gd-frame:            #001df3;
-  --gd-frame-ink:        #ffffff;
-  --gd-frame-ink-2:      rgba(255, 255, 255, 0.84);
-  --gd-frame-ink-3:      rgba(255, 255, 255, 0.66);
-  --gd-frame-field:      rgba(255, 255, 255, 0.12);
-  --gd-frame-field-hover: rgba(255, 255, 255, 0.20);
-  --gd-frame-line:       rgba(255, 255, 255, 0.22);
-  /* The active rail tile inverts: white tile, blue glyph. On a saturated band a
-     tint reads as "hover"; only a solid tile reads as "you are here". */
-  --gd-frame-select:     #ffffff;
-  --gd-frame-select-ink: #001df3;
-  --gd-frame-primary:    #ffffff;
-  --gd-frame-primary-hover: #e6eaff;
-  --gd-frame-primary-ink: #001df3;
-  /* Red on #001DF3 vibrates and fails contrast, so counts become white pills
-     with red figures. The red still says "attention"; the pill says "count". */
-  --gd-frame-badge:      #ffffff;
-  --gd-frame-badge-ink:  #e0142a;
+  /* Frame — graphite, a step darker than the cards */
+  --gd-frame:            #0f1218;
+  --gd-frame-ink:        #f3f5f9;   /* 17:1 */
+  --gd-frame-ink-2:      #c4cad5;
+  --gd-frame-ink-3:      #9aa3b2;   /* idle rail icon, 7.4:1 */
+  --gd-frame-field:      #1f2430;   /* location pill, search field */
+  --gd-frame-field-hover: #282e3c;
+  --gd-frame-line:       rgba(255, 255, 255, 0.10);
+  --gd-frame-select:     rgba(64, 102, 255, 0.22);   /* the active rail tile */
+  --gd-frame-select-ink: #b8c6ff;                    /* 9:1 on it */
+  --gd-frame-primary:    #f3f5f9;   /* Launch incident, inverted */
+  --gd-frame-primary-hover: #ffffff;
+  --gd-frame-primary-ink: #0f1218;
+  --gd-frame-badge:      #ff2d3d;   /* counts: red pills, as in light mode */
+  --gd-frame-badge-ink:  #ffffff;
 
-  /* Selection inside cards picks up the frame's blue as a tint, so "selected"
-     means the same thing on the rail and in a dialog. */
+  /* Selection inside cards is the same blue tint as the active rail tile, so
+     "selected" means the same thing on the rail and in a dialog. */
   --gd-select:           rgba(64, 102, 255, 0.22);
   --gd-select-ink:       #b8c6ff;
 
@@ -299,9 +298,16 @@
 /* ============================================================================
    Dark blue.
 
-   Dark, with the working surface in the frame's own hue instead of graphite.
-   The frame, the status colours, the badges — everything that is not a
-   surface, a line or a quiet ink — is inherited from the block above.
+   Dark, with the top bar and left rail turned into one #001DF3 frame and the
+   working surface in that frame's own hue instead of graphite. The status
+   colours and everything else that is not a surface, a line, a quiet ink or
+   the frame is inherited from the block above.
+
+   ── The frame ─────────────────────────────────────────────────────────────
+   #001DF3 on the top bar and the left rail, and on the shell behind them, so
+   the map's rounded inner corner is cut out of one continuous L of blue. Text
+   on it is white (8.5:1). Anything that was a grey field on the light bar is
+   white at 12% on the blue one, so it stays a field without becoming a hole.
 
    ── Surfaces ──────────────────────────────────────────────────────────────
    One hue (the frame's, ~231°), stepped in lightness so the layers stay
@@ -322,6 +328,25 @@
    ========================================================================= */
 
 [data-theme='dark-blue'] {
+  --gd-frame:            #001df3;
+  --gd-frame-ink:        #ffffff;
+  --gd-frame-ink-2:      rgba(255, 255, 255, 0.84);
+  --gd-frame-ink-3:      rgba(255, 255, 255, 0.66);
+  --gd-frame-field:      rgba(255, 255, 255, 0.12);
+  --gd-frame-field-hover: rgba(255, 255, 255, 0.20);
+  --gd-frame-line:       rgba(255, 255, 255, 0.22);
+  /* The active rail tile inverts: white tile, blue glyph. On a saturated band a
+     tint reads as "hover"; only a solid tile reads as "you are here". */
+  --gd-frame-select:     #ffffff;
+  --gd-frame-select-ink: #001df3;
+  --gd-frame-primary:    #ffffff;
+  --gd-frame-primary-hover: #e6eaff;
+  --gd-frame-primary-ink: #001df3;
+  /* Red on #001DF3 vibrates and fails contrast, so counts become white pills
+     with red figures. The red still says "attention"; the pill says "count". */
+  --gd-frame-badge:      #ffffff;
+  --gd-frame-badge-ink:  #e0142a;
+
   --gd-ink:            #f4f6ff;
   --gd-ink-2:          #c9d0f2;
   --gd-ink-3:          #9da7d7;

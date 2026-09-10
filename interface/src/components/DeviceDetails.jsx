@@ -195,8 +195,8 @@ export default function DeviceDetails(props) {
     if (!z) return DASH
     return ZONE_LABELS[z]
   }
-  // The WORD's colour, theme-aware — pure zone red is unreadable on the dark
-  // theme's #001DF3 card. See ZONE_TEXT in constants/zones.js.
+  // The WORD's colour, theme-aware — the dark themes lift the pure zone hues
+  // so the word clears contrast on their cards. See ZONE_TEXT in constants/zones.js.
   const zoneColor = () => {
     const z = zoneKey()
     if (!z) return 'var(--gd-ink-3, #525e6b)'

@@ -404,8 +404,8 @@
   outline-offset: 2px;
 }
 
-/* Counts on the bar. White pill with a red figure in dark mode — red on the
-   #001DF3 band vibrates and fails contrast. */
+/* Counts on the bar. A red pill in Light and Dark; a white pill with a red
+   figure in Dark blue — red on the #001DF3 band vibrates and fails contrast. */
 .gd-notifications__badge {
   position: absolute;
   top: 4px;

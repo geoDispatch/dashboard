@@ -16,7 +16,7 @@
 // suffix and injected with innerHTML into a sized wrapper span; an <img> would
 // be an isolated document and would resolve currentColor to its own black.
 
-import { For, Show } from 'solid-js'
+import { For } from 'solid-js'
 import { num } from '../lib/format'
 
 import mapIcon from '../assets/icons/nav-map.svg?raw'
@@ -56,13 +56,6 @@ const UTILITY_NAV = [
     hint: 'End shift — clears this station' },
 ]
 
-// A four-digit count would blow past the 48px tile, so the pill caps its own
-// text. The full value still reaches assistive tech through the button's
-// accessible name.
-function badgeText(count) {
-  return count > 999 ? '999+' : String(count)
-}
-
 // props.markup is read inside the JSX so the span re-renders if the glyph ever
 // changes. The SVG inherits its stroke from the button's `color`.
 function NavIcon(props) {
@@ -100,13 +93,6 @@ export default function NavRail(props) {
                   onClick={() => props.onNavigate?.(item.key)}
                 >
                   <NavIcon markup={item.icon} />
-                  <Show when={badgeOf(item.key)}>
-                    {(count) => (
-                      <span class="navrail__badge" aria-hidden="true">
-                        {badgeText(count())}
-                      </span>
-                    )}
-                  </Show>
                 </button>
               </li>
             )}

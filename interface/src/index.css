@@ -60,6 +60,11 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+.app-runtime {
+  width: 100%;
+  height: 100%;
+}
+
 /* ── Elements ─────────────────────────────────────────────────────────────
    Media behaves as a block and never overflows its box; icons are imported
    as SVG URLs and rendered as <img>, so this covers them too. */

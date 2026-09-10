@@ -12,9 +12,8 @@
 //     reading, the same way the seismic sensor does, and nothing else in this
 //     console ever talks back to the pipeline;
 //   - when the pipeline is fatal the console stops claiming to be live;
-//   - there are no sign-in controls to be dishonest with: this console is only
-//     reachable from a station that already has an account, so the corner names
-//     that station and opens its profile instead;
+//   - the entry screen is a frontend-only gate, never a claim of backend auth;
+//     the corner names the local station profile and opens its settings;
 //   - nothing is invented to fill a row — missing values reach the panels as
 //     null and render as an em dash there.
 //
@@ -90,7 +89,7 @@ const PANEL_LABELS = {
   errors: 'Errors',
 }
 
-export default function App() {
+export default function App(props) {
   // ── settings, store, selectors, stream ───────────────────────────────────
   // Settings come first: the socket needs the operator's endpoint before it
   // opens, and the map needs their basemap before it draws a tile.
@@ -300,6 +299,7 @@ export default function App() {
   createEffect(() => {
     activeView()
     panelHidden()
+    settings.interfaceScale
     const map = handle()
     if (map) map.invalidate()
   })
@@ -431,7 +431,7 @@ export default function App() {
     // on it too, or the settings screen would name one supervisor while the
     // console went on listening to another. A no-op if it never moved.
     stream.setUrl(settings.wsUrl)
-    showNote('Station cleared. Profile and preferences are back to their defaults.')
+    props.onEndShift?.()
   }
 
   // ── export ───────────────────────────────────────────────────────────────
@@ -540,7 +540,7 @@ export default function App() {
 
   return (
     <SettingsContext.Provider value={settingsStore}>
-    <div class="app-shell">
+    <div class="app-shell" data-scale={settings.interfaceScale}>
       <TopBar
         locationLabel={locationLabel()}
         locationBusy={locationBusy()}

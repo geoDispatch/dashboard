@@ -13,7 +13,7 @@
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
 
 import { BASEMAPS, basemapPreview } from '../constants/basemaps'
-import { LANGUAGES, isWsUrl, useSettings } from '../lib/settings'
+import { INTERFACE_SCALES, LANGUAGES, isWsUrl, useSettings } from '../lib/settings'
 import { playAlert } from '../lib/audio'
 import { SOURCE_DETAIL, SOURCE_LABEL, streamChip } from '../lib/streamState'
 import { DASH, ago, coords, distance, dms, num, percent } from '../lib/format'
@@ -55,6 +55,10 @@ const THEME_CHOICES = [
   { key: 'dark-blue', name: 'Dark blue' },
 ]
 const NIGHT_CHOICES = THEME_CHOICES.filter((choice) => choice.key !== 'light')
+const SCALE_CHOICES = INTERFACE_SCALES.map((scale) => ({
+  key: scale,
+  label: `${Math.round(scale * 100)}%`,
+}))
 
 // A sample point for the coordinate-format preview when no event has arrived.
 const SAMPLE_POINT = { latitude: 31.0625, longitude: -8.4144 }
@@ -423,8 +427,25 @@ export default function SettingsModal(props) {
             {/* ── Display ────────────────────────────────────────────────── */}
             <Show when={tab() === 'basemap'}>
               <Card
+                title="Interface size"
+                note="75% is the compact default. This setting changes only the console presentation; browser zoom remains available and the map data is unchanged."
+              >
+                <Row
+                  label="Interface scale"
+                  hint="Saved in this browser and applied immediately."
+                >
+                  <Segmented
+                    label="Interface scale"
+                    value={settings().interfaceScale}
+                    options={SCALE_CHOICES}
+                    onChange={(scale) => store.set('interfaceScale', scale)}
+                  />
+                </Row>
+              </Card>
+
+              <Card
                 title="Appearance"
-                note="Dark and Dark blue keep the same layout and turn the top bar and the left rail into one #001DF3 frame around the map. Moving between Light and a dark theme also switches the grey basemap to match; satellite and street maps are left as they are. Dark blue tints the dark grey map navy — the device dots and zone rings keep their exact colours."
+                note="Both dark themes keep the same layout. Dark is graphite throughout, top bar and left rail included. Dark blue turns the top bar and the left rail into one #001DF3 frame around navy cards and tints the dark grey map navy — the device dots and zone rings keep their exact colours. Moving between Light and a dark theme also switches the grey basemap to match; satellite and street maps are left as they are."
               >
                 <Row
                   label="Theme mode"

@@ -9,7 +9,7 @@
 
 .navrail {
   /* Local tokens, fed from the frame tokens so the rail follows the theme:
-     white with grey glyphs in light mode, #001DF3 with white glyphs in dark.
+     white with grey glyphs in Light, graphite in Dark, #001DF3 in Dark blue.
      The icons are stroked with currentColor, so these are the single source of
      truth for the glyph colour as well as the tile. */
   --nav-idle-ink: var(--gd-frame-ink-3);
@@ -122,32 +122,6 @@
   width: 24px;
   height: 24px;
   max-width: none;
-}
-
-/* --- badge -------------------------------------------------------------- */
-
-/* Count pill in the tile's top-right corner. The white ring keeps it legible
-   over both the plain and the selected tile. Purely decorative — the count is
-   announced through the button's aria-label. */
-.navrail__badge {
-  position: absolute;
-  top: 2px;
-  right: 0;
-  box-sizing: content-box;
-  min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  border: 2px solid var(--gd-frame);
-  border-radius: 999px;
-
-  background: var(--gd-frame-badge);
-  color: var(--gd-frame-badge-ink);
-  font-size: 11px;
-  font-weight: 700;
-  line-height: 16px;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
 }
 
 @media (prefers-reduced-motion: reduce) {

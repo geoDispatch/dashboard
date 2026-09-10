@@ -10,9 +10,9 @@ export const ZONE_COLORS = {
 
 // The colour a zone WORD is drawn in. Dots, rings and bars use ZONE_COLORS
 // directly; words go through these tokens so a theme can lift them. In light
-// mode they are the zone colours exactly. In dark mode the surface is #001DF3,
-// where pure zone red is 2.3:1 — so words get pale tints that pass, while the
-// dot beside them keeps the true colour.
+// mode they are the zone colours exactly. On the dark themes' graphite and
+// navy cards the pure hues sit just on the contrast line, so words get lifted
+// tints that pass, while the dot beside them keeps the true colour.
 export const ZONE_TEXT = {
   red:    'var(--gd-zone-red-text)',
   orange: 'var(--gd-zone-orange-text)',

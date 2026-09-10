@@ -1,8 +1,8 @@
 /* @refresh reload */
 import { render } from 'solid-js/web'
 import './index.css'
-import App from './App.jsx'
+import ConsoleRoot from './ConsoleRoot.jsx'
 
 const root = document.getElementById('root')
 
-render(() => <App />, root)
+render(() => <ConsoleRoot />, root)
