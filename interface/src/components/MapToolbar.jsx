@@ -1,5 +1,6 @@
 import { For, Show } from 'solid-js'
 import { DASH } from '../lib/format'
+import { useT } from '../lib/i18n'
 import { PHASES, SIMULATION_LABEL, SIMULATION_PHASE, SOURCE_LABEL, streamChip, streamSentence } from '../lib/streamState'
 // Inlined with Vite's ?raw suffix, not <img src>. An SVG behind <img> is an
 // isolated document, so stroke="currentColor" would resolve to that document's
@@ -10,11 +11,12 @@ import exportIcon from '../assets/icons/export.svg?raw'
 import './MapToolbar.css'
 
 // The three map layers. More than one may be on at a time, so these are
-// independent toggle buttons (aria-pressed), not a radio group.
+// independent toggle buttons (aria-pressed), not a radio group. Label and hint
+// are dictionary keys (lib/i18n.js).
 const LAYERS = [
-  { key: 'zones',    label: 'Zones',    hint: 'Show the red, orange and green zone rings' },
-  { key: 'devices',  label: 'Devices',  hint: 'Show one dot per located device' },
-  { key: 'shelters', label: 'Shelters', hint: 'Show the shelter markers' },
+  { key: 'zones',    label: 'toolbar.zones',    hint: 'toolbar.zonesHint' },
+  { key: 'devices',  label: 'toolbar.devices',  hint: 'toolbar.devicesHint' },
+  { key: 'shelters', label: 'toolbar.shelters', hint: 'toolbar.sheltersHint' },
 ]
 
 // The pill's words come from one place — lib/streamState.js — so the toolbar,
@@ -24,13 +26,17 @@ const LAYERS = [
 // bundled mocks, which is not something this console can see.
 
 export default function MapToolbar(props) {
+  const t = useT()
+
   // Anything unrecognised is treated as "connecting" rather than as healthy:
   // an unknown state must never read as a good one.
   const simulating = () => props.phase === SIMULATION_PHASE
   const phase = () => (PHASES.includes(props.phase) || simulating() ? props.phase : 'connecting')
 
   const chip = () => streamChip(phase())
-  const labelText = () => chip().text
+  // The chip's word in the operator's language. The longer sentence in the
+  // tooltip and the screen-reader line is still streamState's English.
+  const labelText = () => t(`stream.${phase()}`)
 
   const fpsNumber = () => (Number.isFinite(props.fps) ? Math.round(props.fps) : null)
   const fpsText = () => (fpsNumber() === null ? DASH : `${fpsNumber()}/s`)
@@ -51,7 +57,7 @@ export default function MapToolbar(props) {
       ? 'Frame rate unknown.'
       : `${fpsNumber()} frames per second.`
     if (simulating()) return `${SIMULATION_LABEL}. ${rate} ${streamSentence(phase())}`
-    return `${SOURCE_LABEL}. ${labelText()}. ${rate} ${streamSentence(phase())}`
+    return `${SOURCE_LABEL}. ${chip().text}. ${rate} ${streamSentence(phase())}`
   }
 
   const pillTitle = () => {
@@ -60,7 +66,7 @@ export default function MapToolbar(props) {
   }
 
   return (
-    <div class="map-toolbar" role="group" aria-label="Map controls">
+    <div class="map-toolbar" role="group" aria-label={t('toolbar.mapControls')}>
       <div
         class="mt-stream"
         data-status={phase()}
@@ -78,7 +84,7 @@ export default function MapToolbar(props) {
         </Show>
       </div>
 
-      <div class="mt-layers" role="group" aria-label="Map layers">
+      <div class="mt-layers" role="group" aria-label={t('toolbar.mapLayers')}>
         <For each={LAYERS}>
           {(layer) => (
             <button
@@ -87,11 +93,11 @@ export default function MapToolbar(props) {
               aria-pressed={layerOn(layer.key)}
               /* The visible word must survive into the accessible name, so the
                  hint is the tooltip only — a bare title would replace it. */
-              aria-label={`${layer.label} layer`}
-              title={layer.hint}
+              aria-label={t('toolbar.layerLabel', t(layer.label))}
+              title={t(layer.hint)}
               onClick={() => props.onToggleLayer?.(layer.key)}
             >
-              {layer.label}
+              {t(layer.label)}
             </button>
           )}
         </For>
@@ -100,8 +106,8 @@ export default function MapToolbar(props) {
       <button
         type="button"
         class="mt-icon-btn mt-fullscreen"
-        aria-label="Toggle fullscreen map"
-        title="Fullscreen"
+        aria-label={t('toolbar.toggleFull')}
+        title={t('toolbar.fullscreen')}
         onClick={() => props.onFullscreen?.()}
       >
         <span
@@ -114,8 +120,8 @@ export default function MapToolbar(props) {
       <button
         type="button"
         class="mt-icon-btn mt-export"
-        aria-label="Export the current event and devices as JSON"
-        title="Export JSON"
+        aria-label={t('toolbar.exportLabel')}
+        title={t('toolbar.exportJson')}
         onClick={() => props.onExport?.()}
       >
         <span

@@ -1,6 +1,7 @@
 import { createSignal, onMount, onCleanup, Show, For } from 'solid-js'
 import { ZONE_COLORS, ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
 import { MIN_QUERY_LENGTH, parseCoordinates, searchPlaces } from '../lib/geocode'
+import { useT } from '../lib/i18n'
 // Inlined (?raw) rather than loaded through <img>: the lockup is drawn in
 // currentColor with real knockouts, so it takes the header's ink — black on the
 // light bar, white on the graphite and #001DF3 dark bars — from one file.
@@ -30,6 +31,7 @@ import './TopBar.css'
 // props is never destructured — in Solid that would read each value once, at
 // setup, and freeze it.
 export default function TopBar(props) {
+  const t = useT()
   const [menuOpen, setMenuOpen] = createSignal(false)
   const [searchFocused, setSearchFocused] = createSignal(false)
 
@@ -47,7 +49,7 @@ export default function TopBar(props) {
   let locationRef
   let searchRef
 
-  const locationText = () => props.locationLabel || 'Set Location'
+  const locationText = () => props.locationLabel || t('topbar.setLocation')
   const results = () => props.results || []
   const query = () => props.query || ''
   const errorCount = () => (typeof props.errorCount === 'number' ? props.errorCount : 0)
@@ -62,13 +64,17 @@ export default function TopBar(props) {
   // not an empty one.
   const operatorName = () => {
     const name = props.operator && props.operator.name
-    return name && name.trim() ? name : 'Unnamed station'
+    return name && name.trim() ? name : t('topbar.unnamedStation')
   }
 
   const notificationsLabel = () =>
     errorCount() > 0
-      ? `Notifications, ${errorCount()} unresolved`
-      : 'Notifications, none unresolved'
+      ? t('topbar.notifCount', errorCount())
+      : t('topbar.notifNone')
+
+  // geocode.js explains a failed search in English. Other languages get one
+  // translated sentence, with the English detail kept as its tooltip.
+  const placeErrorText = () => (t.lang() === 'en' ? placeError() : t('topbar.placeError'))
 
   function closeAll() {
     setMenuOpen(false)
@@ -190,24 +196,24 @@ export default function TopBar(props) {
                 the title keeps the whole name one hover away. */}
             <span class="gd-location__label" title={locationText()}>
               <Show when={props.locationBusy} fallback={locationText()}>
-                Resolving location…
+                {t('topbar.resolving')}
               </Show>
             </span>
             <span class="gd-location__chevron" aria-hidden="true" innerHTML={chevronIcon} />
           </button>
 
           <Show when={menuOpen()}>
-            <div class="gd-menu" role="dialog" aria-label="Set location">
+            <div class="gd-menu" role="dialog" aria-label={t('topbar.setLocationMenu')}>
               <div class="gd-menu__search">
                 <span class="gd-menu__search-icon" aria-hidden="true" innerHTML={searchIcon} />
                 <input
                   ref={placeInput}
                   type="search"
                   class="gd-menu__input"
-                  placeholder="Search a city, or 31.06, -8.38"
+                  placeholder={t('topbar.placePlaceholder')}
                   autocomplete="off"
                   spellcheck={false}
-                  aria-label="Search a place or coordinates"
+                  aria-label={t('topbar.placeLabel')}
                   value={placeQuery()}
                   onInput={(e) => onPlaceInput(e.currentTarget.value)}
                   onKeyDown={onPlaceKey}
@@ -215,15 +221,15 @@ export default function TopBar(props) {
               </div>
 
               <Show when={placeQuery().trim()}>
-                <div class="gd-menu__places" role="listbox" aria-label="Places">
+                <div class="gd-menu__places" role="listbox" aria-label={t('topbar.places')}>
                   <Show when={placeState() === 'searching' && !places().length}>
-                    <p class="gd-menu__hint">Searching…</p>
+                    <p class="gd-menu__hint">{t('topbar.searching')}</p>
                   </Show>
                   <Show when={placeState() === 'error'}>
-                    <p class="gd-menu__hint">{placeError()}</p>
+                    <p class="gd-menu__hint" title={placeError()}>{placeErrorText()}</p>
                   </Show>
                   <Show when={placeState() === 'done' && !places().length}>
-                    <p class="gd-menu__hint">No place by that name.</p>
+                    <p class="gd-menu__hint">{t('topbar.noPlace')}</p>
                   </Show>
                   <For each={places()}>
                     {(place) => (
@@ -235,11 +241,13 @@ export default function TopBar(props) {
                         onClick={() => pickPlace(place)}
                       >
                         <span class="gd-menu__place-name">{place.name}</span>
-                        <span class="gd-menu__place-sub">{place.label}</span>
+                        <span class="gd-menu__place-sub">
+                          {place.kind === 'coordinates' ? t('topbar.coordinates') : place.label}
+                        </span>
                       </button>
                     )}
                   </For>
-                  <p class="gd-menu__credit">Places: Photon · © OpenStreetMap contributors</p>
+                  <p class="gd-menu__credit">{t('topbar.placesCredit')}</p>
                 </div>
               </Show>
 
@@ -249,7 +257,7 @@ export default function TopBar(props) {
                 class="gd-menu__item"
                 onClick={useMyLocation}
               >
-                Use my location
+                {t('topbar.useMyLocation')}
               </button>
               <div class="gd-menu__divider" role="separator" />
               <For each={props.regions || []}>
@@ -275,14 +283,14 @@ export default function TopBar(props) {
           <input
             type="search"
             class="gd-search__input"
-            placeholder="Search devices, zones, or coordinates"
+            placeholder={t('topbar.searchPlaceholder')}
             autocomplete="off"
             spellcheck={false}
             role="combobox"
             aria-expanded={showResults()}
             aria-controls="gd-search-results"
             aria-autocomplete="list"
-            aria-label="Search devices"
+            aria-label={t('topbar.searchLabel')}
             value={query()}
             onInput={(e) => props.onQueryInput?.(e.currentTarget.value)}
             onFocus={() => setSearchFocused(true)}
@@ -293,12 +301,12 @@ export default function TopBar(props) {
               class="gd-results"
               id="gd-search-results"
               role="listbox"
-              aria-label="Search results"
+              aria-label={t('topbar.searchResults')}
               onMouseDown={(e) => e.preventDefault()}
             >
               <Show
                 when={results().length > 0}
-                fallback={<p class="gd-results__empty">No device matches that search.</p>}
+                fallback={<p class="gd-results__empty">{t('topbar.noMatch')}</p>}
               >
                 <For each={results()}>
                   {(item) => (
@@ -323,7 +331,7 @@ export default function TopBar(props) {
                             class="gd-results__dot"
                             style={{ background: ZONE_COLORS[item.zone] }}
                           />
-                          {ZONE_LABELS[item.zone]}
+                          {t(`zone.${item.zone}`)}
                         </span>
                       </Show>
                     </button>
@@ -345,7 +353,7 @@ export default function TopBar(props) {
           onClick={() => props.onLaunchIncident?.()}
         >
           <span class="gd-launch__plus" aria-hidden="true">+</span>
-          <span class="gd-launch__label">Launch incident</span>
+          <span class="gd-launch__label">{t('topbar.launch')}</span>
         </button>
 
         {/* Stop ⇄ Run. While a browser simulation is on the board this stops
@@ -358,11 +366,11 @@ export default function TopBar(props) {
               <button
                 type="button"
                 class="gd-stop-sim gd-stop-sim--run"
-                title={props.runSimulationTitle || 'Run the last simulation again'}
+                title={props.runSimulationTitle || t('topbar.runSimTitle')}
                 onClick={() => props.onRunSimulation?.()}
               >
                 <span class="gd-run-sim__icon" aria-hidden="true" />
-                <span class="gd-stop-sim__label">Run simulation</span>
+                <span class="gd-stop-sim__label">{t('topbar.runSim')}</span>
               </button>
             </Show>
           }
@@ -370,11 +378,11 @@ export default function TopBar(props) {
           <button
             type="button"
             class="gd-stop-sim"
-            title="Stop the simulation and return to the supervisor"
+            title={t('topbar.stopSimTitle')}
             onClick={() => props.onStopSimulation?.()}
           >
             <span class="gd-stop-sim__icon" aria-hidden="true" />
-            <span class="gd-stop-sim__label">Stop simulation</span>
+            <span class="gd-stop-sim__label">{t('topbar.stopSim')}</span>
           </button>
         </Show>
 
@@ -401,8 +409,8 @@ export default function TopBar(props) {
         <button
           type="button"
           class="gd-account"
-          aria-label={`Account: ${operatorName()}. Open station profile.`}
-          title="Station profile and console settings"
+          aria-label={t('topbar.accountLabel', operatorName())}
+          title={t('topbar.accountTitle')}
           onClick={() => props.onOpenAccount?.()}
         >
           <span class="gd-account__icon" innerHTML={accountIcon} aria-hidden="true" />

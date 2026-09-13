@@ -42,9 +42,10 @@ import { checkHealth, createStream } from './lib/socket'
 import { buildSimulation } from './lib/simulation'
 import { readLastSimulation, writeLastSimulation } from './lib/lastSimulation'
 import { LANGUAGES, SettingsContext, createSettingsStore, makeDisplay } from './lib/settings'
+import { enumLabel, makeT, severityText } from './lib/i18n'
 import { applyTheme, basemapForTheme, isDarkTheme, resolveTheme, systemDarkQuery } from './lib/theme'
 import { playAlert } from './lib/audio'
-import { lifecycleLabel, maskPhone, num, severityLabel } from './lib/format'
+import { maskPhone, num } from './lib/format'
 import { CAPABILITIES_URL, HEALTH_URL, SENSOR_URL, ZONE_LABELS } from './constants/zones'
 import { capabilitiesTarget, healthTarget, sensorTarget } from './lib/endpoints'
 
@@ -61,14 +62,15 @@ const NOTE_MS = 6000
 // a solid tone — which tells the operator nothing except to mute it.
 const CHIME_HOLD_MS = 6000
 
-// The rail keys that own a left-overlay view. 'errors' is reached from the
-// notification bell rather than the rail.
+// The rail keys that own a left-overlay view, and the dictionary key of each
+// one's name. 'errors' is reached from the notification bell rather than the
+// rail.
 const PANEL_LABELS = {
-  details: 'Incident details',
-  rescue: 'Rescue queue',
-  devices: 'Devices',
-  shelters: 'Shelters',
-  errors: 'Errors',
+  details: 'app.incidentDetails',
+  rescue: 'app.rescueQueue',
+  devices: 'app.devicesLabel',
+  shelters: 'app.sheltersLabel',
+  errors: 'app.errorsLabel',
 }
 
 export default function App(props) {
@@ -102,8 +104,9 @@ export default function App(props) {
 
   // The shell reads coordinates for the search list, so it needs the operator's
   // format too. It binds the store directly rather than through the context it
-  // is itself about to provide.
+  // is itself about to provide — and the same goes for its words.
   const fmt = makeDisplay(settingsStore)
+  const t = makeT(settingsStore)
 
   // ── ui signals ───────────────────────────────────────────────────────────
   const [handle, setHandle] = createSignal(null)   // DisasterMap's imperative handle
@@ -168,16 +171,13 @@ export default function App(props) {
     // geolocation source, not a wrapper around some third-party lookup.
     const fix = await operator.locate(map ? { locate: map.locate } : {})
     if (!fix) {
-      showNote(
-        operator.error() ||
-          'Location unavailable. Pick a region from the Set Location list instead.',
-      )
+      showNote(operator.error() || t('app.noteNoLocation'))
     }
   }
 
   function selectRegion(name) {
     const region = operator.selectRegion(name)
-    if (!region) showNote(`No region named ${name} is on the list.`)
+    if (!region) showNote(t('app.noteNoRegion', name))
   }
 
   // A place from the location search: the map goes there and the pill names
@@ -207,7 +207,8 @@ export default function App(props) {
     const out = []
     for (const device of Object.values(state.devices)) {
       const masked = maskPhone(device.phone)
-      const zoneWord = ZONE_LABELS[device.zone] || ''
+      // The English word and the operator's own, so "red" and "الحمراء" both find it.
+      const zoneWord = ZONE_LABELS[device.zone] ? `${ZONE_LABELS[device.zone]} ${t(`zone.${device.zone}`)}` : ''
       const point = fmt.coords(device.latitude, device.longitude)
       const raw = `${device.latitude} ${device.longitude}`
 
@@ -269,7 +270,7 @@ export default function App(props) {
   function focusIncidentArea() {
     const map = handle()
     if (!state.event?.epicenter || !map) {
-      showNote('No active incident area is available yet.')
+      showNote(t('app.noteNoArea'))
       return
     }
     map.fitEvent()
@@ -287,12 +288,12 @@ export default function App(props) {
       return
     }
     if (!mapEl || !mapEl.requestFullscreen) {
-      showNote('This browser will not put the map into fullscreen.')
+      showNote(t('app.noteNoFullscreen'))
       return
     }
     const request = mapEl.requestFullscreen()
     if (request && typeof request.catch === 'function') {
-      request.catch(() => showNote('The browser refused fullscreen for this page.'))
+      request.catch(() => showNote(t('app.noteFullscreenRefused')))
     }
   }
 
@@ -331,11 +332,12 @@ export default function App(props) {
 
   // ── settings side effects ────────────────────────────────────────────────
 
-  // The document language is the one part of the language setting that is
-  // real: assistive technology and the browser's own text handling read it.
-  // `dir` is deliberately NOT set — mirroring this layout is a piece of work
-  // that has not been done, and a half-mirrored console is worse than an
-  // honest left-to-right one. The settings screen says so.
+  // The document language. Assistive technology and the browser's own text
+  // handling read it, and so does index.css: `html[lang='ar']` switches to
+  // the Arabic font and mirrors the console — the rail moves to the right and
+  // the translated chrome reads right to left. `dir` is deliberately NOT set
+  // on the document: the dialogs that are not translated yet (settings, the
+  // launcher, the incident page) stay left to right instead of half-mirrored.
   createEffect(() => {
     const language = LANGUAGES.find((l) => l.key === settings.language)
     document.documentElement.lang = language ? language.key : 'en'
@@ -434,7 +436,7 @@ export default function App(props) {
 
   function applyWsUrl(url) {
     if (stream.setUrl(url)) {
-      showNote(`Listening on ${url}. Waiting for the next frame.`)
+      showNote(t('app.noteListening', url))
     }
   }
 
@@ -446,10 +448,16 @@ export default function App(props) {
     setLauncherOpen(true)
   }
 
+  // "M 6.8 earthquake", in the operator's language.
+  const disasterPhrase = (sensor) => [
+    severityText(t, sensor.disaster_type, sensor.severity),
+    enumLabel(t, 'disaster', sensor.disaster_type, sensor.disaster_type),
+  ]
+
   function onLaunched(result, sent) {
     setLauncherOpen(false)
-    const outcome = result?.outcome === 'duplicate' ? 'already accepted' : 'accepted'
-    showNote(`${sent.event_id} ${outcome}: ${severityLabel(sent.disaster_type, sent.severity)} ${sent.disaster_type}.`)
+    const key = result?.outcome === 'duplicate' ? 'app.launchDuplicate' : 'app.launchAccepted'
+    showNote(t(key, sent.event_id, ...disasterPhrase(sent)))
   }
 
   // ── browser simulation ───────────────────────────────────────────────────
@@ -470,15 +478,20 @@ export default function App(props) {
   const replayTitle = () => {
     const s = lastSimulation()
     if (!s) return ''
-    return `Run ${s.event_id} again: ${severityLabel(s.disaster_type, s.severity)} ${s.disaster_type}, ` +
-      `${fmt.coords(s.epicenter.latitude, s.epicenter.longitude)}, ${fmt.distance(s.radius_km)} radius`
+    return t(
+      'app.replayTitle',
+      s.event_id,
+      ...disasterPhrase(s),
+      fmt.coords(s.epicenter.latitude, s.epicenter.longitude),
+      fmt.distance(s.radius_km),
+    )
   }
 
   async function runSimulation(sensor) {
     setLauncherOpen(false)
     setActiveView('map')
     const token = ++simToken
-    showNote(`Preparing simulation ${sensor.event_id}…`)
+    showNote(t('app.simPreparing', sensor.event_id))
 
     await Promise.resolve()   // the map view mounts and hands over its handle
     const map = handle()
@@ -504,13 +517,13 @@ export default function App(props) {
     writeLastSimulation(sensor)
     stream.startSimulation(frames)
     showNote(devices.length
-      ? `Simulation ${sensor.event_id}: ${num(devices.length)} synthetic devices. Not real data.`
-      : `Simulation ${sensor.event_id}: no land inside the radius, so nobody to place.`)
+      ? t('app.simStarted', sensor.event_id, num(devices.length))
+      : t('app.simNoLand', sensor.event_id))
   }
 
   function exitSimulation() {
     simToken += 1
-    if (stream.stopSimulation()) showNote('Simulation stopped. Back on the supervisor.')
+    if (stream.stopSimulation()) showNote(t('app.simStopped'))
   }
 
   function endShift() {
@@ -562,9 +575,9 @@ export default function App(props) {
       document.body.appendChild(anchor)
       anchor.click()
       anchor.remove()
-      showNote(`Exported ${num(payload.devices.length)} devices as JSON.`)
+      showNote(t('app.exported', num(payload.devices.length)))
     } catch (err) {
-      showNote(`Export failed: ${String((err && err.message) || err)}`)
+      showNote(t('app.exportFailed', String((err && err.message) || err)))
     } finally {
       if (url) setTimeout(() => URL.revokeObjectURL(url), 10_000)
     }
@@ -585,13 +598,11 @@ export default function App(props) {
     const complete = state.lifecycle.complete
     if (!complete || state.lifecycle.status === 'failed') return null
     const pieces = [
-      `${lifecycleLabel(state.lifecycle.status)}.`,
-      `${num(complete.devices_decided)} of ${num(complete.devices_triaged)} triaged devices decided.`,
+      `${enumLabel(t, 'lifecycle', state.lifecycle.status)}.`,
+      t('app.decidedOf', num(complete.devices_decided), num(complete.devices_triaged)),
     ]
     if (complete.sms_not_sent_no_gateway > 0) {
-      pieces.push(
-        `${num(complete.sms_not_sent_no_gateway)} SMS not sent — no SMS gateway configured.`,
-      )
+      pieces.push(t('app.smsNoGateway', num(complete.sms_not_sent_no_gateway)))
     }
     return pieces.join(' ')
   }
@@ -601,12 +612,12 @@ export default function App(props) {
   // local board. A reconnect preserves the last state until replay completes.
   function reconnectNow() {
     stream.reconnect()
-    showNote('Reconnecting to the supervisor and requesting a fresh snapshot.')
+    showNote(t('app.reconnecting'))
   }
 
   function clearIncident() {
     actions.reset()
-    showNote('Incident cleared. Waiting for the next event.')
+    showNote(t('app.cleared'))
   }
 
   // ── rail ─────────────────────────────────────────────────────────────────
@@ -624,7 +635,7 @@ export default function App(props) {
     if (key !== 'map') setPanelHidden(false)
   }
 
-  const panelLabel = () => PANEL_LABELS[activeView()] || 'Panel'
+  const panelLabel = () => t(PANEL_LABELS[activeView()] || 'app.panel')
   const toggleHidden = () => setPanelHidden(!panelHidden())
 
   return (
@@ -803,18 +814,19 @@ export default function App(props) {
         {(fatal) => (
           <div class="app-fatal" role="alert">
             <p class="app-fatal__text">
-              <strong>Pipeline reported {fatal().code || 'a fatal error'}.</strong>{' '}
-              {fatal().message || 'No detail was sent.'} Dispatch has stopped at the
-              supervisor. Anything that still arrives on the connection is applied to this
-              board, and {num(state.pipeline.framesAfterFatal)} frame
-              {state.pipeline.framesAfterFatal === 1 ? ' has' : 's have'} arrived since.
+              <strong>{t('app.pipelineReported', fatal().code || t('app.fatalError'))}</strong>{' '}
+              {fatal().message || t('app.noDetail')} {t('app.dispatchStopped')}{' '}
+              {t(
+                state.pipeline.framesAfterFatal === 1 ? 'app.framesSinceOne' : 'app.framesSinceMany',
+                num(state.pipeline.framesAfterFatal),
+              )}
             </p>
             <span class="app-fatal__actions">
               <button type="button" class="app-fatal__btn" onClick={reconnectNow}>
-                Reconnect
+                {t('app.reconnect')}
               </button>
               <button type="button" class="app-fatal__btn" onClick={clearIncident}>
-                Clear incident
+                {t('app.clearIncident')}
               </button>
             </span>
           </div>
@@ -833,8 +845,12 @@ export default function App(props) {
           store requests a supervisor snapshot to recover the authoritative state. */}
       <Show when={state.counters.foreign > 0}>
         <p class="app-foreign" role="status">
-          Ignored {num(state.counters.foreign)} frame{state.counters.foreign === 1 ? '' : 's'} from
-          incident {state.counters.lastForeignId}. Resynchronizing {state.activeEventId || 'the board'}.
+          {t(
+            state.counters.foreign === 1 ? 'app.ignoredOne' : 'app.ignoredMany',
+            num(state.counters.foreign),
+            state.counters.lastForeignId,
+            state.activeEventId || t('app.theBoard'),
+          )}
         </p>
       </Show>
 
@@ -862,8 +878,7 @@ export default function App(props) {
       <Show when={simulating()}>
         <div class="app-sim" role="status">
           <p class="app-sim__text">
-            <strong>Simulation.</strong> Synthetic devices, zones and shelters generated in this
-            browser. Not real data, and nothing was sent to the supervisor.
+            <strong>{t('app.simTitle')}</strong> {t('app.simBody')}
           </p>
           <span class="app-sim__actions">
             <button
@@ -872,10 +887,10 @@ export default function App(props) {
               title={replayTitle()}
               onClick={replaySimulation}
             >
-              Replay
+              {t('app.replay')}
             </button>
             <button type="button" class="app-sim__btn" onClick={exitSimulation}>
-              Stop simulation
+              {t('topbar.stopSim')}
             </button>
           </span>
         </div>

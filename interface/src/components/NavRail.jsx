@@ -18,6 +18,7 @@
 
 import { For } from 'solid-js'
 import { num } from '../lib/format'
+import { useT } from '../lib/i18n'
 
 import mapIcon from '../assets/icons/nav-map.svg?raw'
 import detailsIcon from '../assets/icons/nav-details.svg?raw'
@@ -36,12 +37,15 @@ import './NavRail.css'
 // Third is Devices (the ring-and-spokes locator glyph) and fifth is Rescue
 // (the phone). They were the other way round; the glyphs kept their places
 // and the sections traded, so each file is named for what it opens.
+//
+// Labels and hints are dictionary keys (lib/i18n.js), read at render time so
+// a language change relabels the rail.
 const PRIMARY_NAV = [
-  { key: 'map',      label: 'Map',      hint: 'Live map',        icon: mapIcon },
-  { key: 'details',  label: 'Details',  hint: 'Incident details', icon: detailsIcon },
-  { key: 'devices',  label: 'Devices',  hint: 'Devices by area', icon: devicesIcon },
-  { key: 'shelters', label: 'Shelters', hint: 'Shelters',        icon: sheltersIcon },
-  { key: 'rescue',   label: 'Rescue',   hint: 'Rescue queue',    icon: rescueIcon },
+  { key: 'map',      label: 'nav.map',      hint: 'nav.mapHint',      icon: mapIcon },
+  { key: 'details',  label: 'nav.details',  hint: 'nav.detailsHint',  icon: detailsIcon },
+  { key: 'devices',  label: 'nav.devices',  hint: 'nav.devicesHint',  icon: devicesIcon },
+  { key: 'shelters', label: 'nav.shelters', hint: 'nav.sheltersHint', icon: sheltersIcon },
+  { key: 'rescue',   label: 'nav.rescue',   hint: 'nav.rescueHint',   icon: rescueIcon },
 ]
 
 // All three open the same dialog, on the tab that answers what the word
@@ -52,12 +56,12 @@ const PRIMARY_NAV = [
 // `highlight` is false for Sign out so that opening the dialog does not light
 // up three tiles at once; it is a door, not a place you can be.
 const UTILITY_NAV = [
-  { key: 'account',  label: 'Account',  icon: accountIcon,  opens: 'station', highlight: true,
-    hint: 'Station profile' },
-  { key: 'settings', label: 'Settings', icon: settingsIcon, opens: 'basemap', highlight: true,
-    hint: 'Console settings' },
-  { key: 'signout',  label: 'Sign out', icon: signOutIcon,  opens: 'station', highlight: false,
-    hint: 'End shift and clear this station' },
+  { key: 'account',  label: 'nav.account',  icon: accountIcon,  opens: 'station', highlight: true,
+    hint: 'nav.accountHint' },
+  { key: 'settings', label: 'nav.settings', icon: settingsIcon, opens: 'basemap', highlight: true,
+    hint: 'nav.settingsHint' },
+  { key: 'signout',  label: 'nav.signout',  icon: signOutIcon,  opens: 'station', highlight: false,
+    hint: 'nav.signoutHint' },
 ]
 
 // props.markup is read inside the JSX so the span re-renders if the glyph ever
@@ -69,12 +73,13 @@ function NavIcon(props) {
 }
 
 export default function NavRail(props) {
+  const t = useT()
   const isActive = (key) => props.active === key
   const badgeOf = (key) => props.badges?.[key]
 
   return (
     <div class="navrail">
-      <nav class="navrail__nav" aria-label="Main sections">
+      <nav class="navrail__nav" aria-label={t('nav.mainSections')}>
         <ul class="navrail__list">
           <For each={PRIMARY_NAV}>
             {(item) => (
@@ -86,13 +91,13 @@ export default function NavRail(props) {
                   aria-current={isActive(item.key) ? 'page' : undefined}
                   aria-label={
                     badgeOf(item.key)
-                      ? `${item.label}, ${num(badgeOf(item.key))}`
-                      : item.label
+                      ? `${t(item.label)}, ${num(badgeOf(item.key))}`
+                      : t(item.label)
                   }
                   title={
                     badgeOf(item.key)
-                      ? `${item.hint} (${num(badgeOf(item.key))})`
-                      : item.hint
+                      ? `${t(item.hint)} (${num(badgeOf(item.key))})`
+                      : t(item.hint)
                   }
                   onClick={() => props.onNavigate?.(item.key)}
                 >
@@ -104,7 +109,7 @@ export default function NavRail(props) {
         </ul>
       </nav>
 
-      <nav class="navrail__nav" aria-label="Account and session">
+      <nav class="navrail__nav" aria-label={t('nav.accountSession')}>
         <ul class="navrail__list">
           <For each={UTILITY_NAV}>
             {(item) => (
@@ -113,9 +118,9 @@ export default function NavRail(props) {
                   type="button"
                   class="navrail__btn navrail__btn--utility"
                   classList={{ 'navrail__btn--active': item.highlight && !!props.settingsOpen }}
-                  aria-label={item.label}
+                  aria-label={t(item.label)}
                   aria-expanded={!!props.settingsOpen}
-                  title={item.hint}
+                  title={t(item.hint)}
                   onClick={() => props.onOpenSettings?.(item.opens)}
                 >
                   <NavIcon markup={item.icon} />

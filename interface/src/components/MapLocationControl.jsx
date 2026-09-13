@@ -1,10 +1,12 @@
 import { createEffect, createSignal, onCleanup, onMount, Show } from 'solid-js'
 
+import { useT } from '../lib/i18n'
 import locateIcon from '../assets/icons/locate.svg?raw'
 import mapIcon from '../assets/icons/nav-map.svg?raw'
 import './MapLocationControl.css'
 
 export default function MapLocationControl(props) {
+  const t = useT()
   const [open, setOpen] = createSignal(false)
 
   let root
@@ -43,7 +45,7 @@ export default function MapLocationControl(props) {
   }
 
   const triggerLabel = () =>
-    props.locating ? 'Finding your location…' : 'Open map location options'
+    props.locating ? t('mapLocation.finding') : t('mapLocation.open')
 
   return (
     <div
@@ -56,7 +58,7 @@ export default function MapLocationControl(props) {
           id="map-location-options"
           class="gd-map-location__menu"
           role="group"
-          aria-label="Map location options"
+          aria-label={t('mapLocation.options')}
         >
           <button
             ref={firstOption}
@@ -71,8 +73,8 @@ export default function MapLocationControl(props) {
               innerHTML={locateIcon}
             />
             <span class="gd-map-location__copy">
-              <strong>Use my location</strong>
-              <small>Center on this device</small>
+              <strong>{t('topbar.useMyLocation')}</strong>
+              <small>{t('mapLocation.center')}</small>
             </span>
           </button>
 
@@ -88,9 +90,9 @@ export default function MapLocationControl(props) {
               innerHTML={mapIcon}
             />
             <span class="gd-map-location__copy">
-              <strong>Go to incident</strong>
+              <strong>{t('mapLocation.goTo')}</strong>
               <small>
-                {props.canFocusIncident ? 'Show the disaster zone' : 'No active incident'}
+                {props.canFocusIncident ? t('mapLocation.showZone') : t('mapLocation.noIncident')}
               </small>
             </span>
           </button>
@@ -107,7 +109,7 @@ export default function MapLocationControl(props) {
         aria-expanded={open()}
         aria-controls="map-location-options"
         aria-label={triggerLabel()}
-        title={props.locating ? 'Finding your location…' : 'Location'}
+        title={props.locating ? t('mapLocation.finding') : t('mapLocation.title')}
         onClick={() => setOpen((value) => !value)}
       >
         <span

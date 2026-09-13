@@ -799,7 +799,7 @@ export default function SettingsModal(props) {
             <Show when={tab() === 'locale'}>
               <Card
                 title="Language"
-                note="Changes the document language only. Interface translations are not available yet."
+                note="Arabic translates the main console and mirrors it right to left. This dialog, the incident launcher and the incident page are still in English."
               >
                 <div class="set-langs">
                   <For each={LANGUAGES}>
@@ -822,8 +822,8 @@ export default function SettingsModal(props) {
                     )}
                   </For>
                 </div>
-                <Show when={settings().language === 'ar'}>
-                  <p class="set-warn">Right-to-left layout is not available yet.</p>
+                <Show when={settings().language === 'fr'}>
+                  <p class="set-warn">French is not translated yet. The console stays in English.</p>
                 </Show>
               </Card>
 

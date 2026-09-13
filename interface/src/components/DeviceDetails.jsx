@@ -18,18 +18,10 @@
 
 import { createSignal, Show } from 'solid-js'
 
-import {
-  DASH,
-  actionLabel,
-  maskPhone,
-  percent,
-  reachabilityLabel,
-  rescueStatusLabel,
-  smsStatusLabel,
-  stageLabel,
-} from '../lib/format'
+import { DASH, maskPhone, percent } from '../lib/format'
 import { ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
 import { useDisplay } from '../lib/settings'
+import { enumLabel, reachabilityText, useT } from '../lib/i18n'
 
 // Icons are inlined with Vite's `?raw` suffix and written into a sized <span>
 // with innerHTML. An <img src="...svg"> is an isolated document and cannot see
@@ -47,11 +39,12 @@ import hideChevron from '../assets/icons/panel-hide-chevron.svg?raw'
 import './DeviceDetails.css'
 
 // Statements, not apologies. One per card, so the panel never repeats itself.
+// Dictionary keys (lib/i18n.js).
 const EMPTY_TEXT = {
-  overview: 'Select a device on the map.',
-  status: 'Select a device to view status.',
-  location: 'Select a device to view location.',
-  ai: 'Select a device to view its dispatch decision.',
+  overview: 'device.emptyOverview',
+  status: 'device.emptyStatus',
+  location: 'device.emptyLocation',
+  ai: 'device.emptyAi',
 }
 
 // Height of each card's filled row block, so the empty state holds the same
@@ -61,17 +54,17 @@ const EMPTY_HEIGHT = { overview: 56, status: 132, location: 96, ai: 96 }
 
 // Why a decision field is empty, by stage. Only `decided` carries one.
 const UNDECIDED_NOTE = {
-  triaged:         'awaiting AI decision',
-  decision_failed: 'AI decision failed',
+  triaged:         'device.awaitingDecision',
+  decision_failed: 'device.decisionFailed',
 }
 
 function isNumber(n) {
   return typeof n === 'number' && Number.isFinite(n)
 }
 
-function collapseLabel(collapsed, title) {
-  if (collapsed) return `Expand ${title}`
-  return `Collapse ${title}`
+function collapseLabel(t, collapsed, title) {
+  if (collapsed) return t('device.expand', title)
+  return t('device.collapse', title)
 }
 
 // ---------------------------------------------------------------------------
@@ -79,9 +72,10 @@ function collapseLabel(collapsed, title) {
 // ---------------------------------------------------------------------------
 
 export function HideButton(props) {
+  const t = useT()
   const label = () => {
-    if (props.hidden) return 'Show'
-    return 'Hide'
+    if (props.hidden) return t('device.show')
+    return t('device.hide')
   }
 
   return (
@@ -90,7 +84,7 @@ export function HideButton(props) {
       class="dd-hide"
       classList={{ 'dd-hide--show': !!props.hidden }}
       aria-expanded={!props.hidden}
-      aria-label={`${label()} device details`}
+      aria-label={t('device.toggleLabel', label())}
       onClick={() => props.onClick && props.onClick()}
     >
       <span class="dd-hide__chevron" aria-hidden="true" innerHTML={hideChevron} />
@@ -131,6 +125,7 @@ export function DetailRow(props) {
 }
 
 export function DetailCard(props) {
+  const t = useT()
   return (
     <section class="dd-card" aria-labelledby={`dd-title-${props.id}`}>
       <div class="dd-card__heading">
@@ -147,7 +142,7 @@ export function DetailCard(props) {
           class="dd-card__collapse"
           aria-expanded={!props.collapsed}
           aria-controls={`dd-body-${props.id}`}
-          aria-label={collapseLabel(props.collapsed, props.title)}
+          aria-label={collapseLabel(t, props.collapsed, props.title)}
           onClick={() => props.onToggle()}
         >
           <span class="dd-card__glyph" classList={{ 'is-plus': !!props.collapsed }}>
@@ -182,6 +177,7 @@ export default function DeviceDetails(props) {
   // Coordinates and distances are drawn the way the operator asked for them
   // in settings; every screen reads the same formatters so they cannot drift.
   const fmt = useDisplay()
+  const t = useT()
 
   const device = () => props.device || null
 
@@ -200,7 +196,7 @@ export default function DeviceDetails(props) {
   const zoneLabel = () => {
     const z = zoneKey()
     if (!z) return DASH
-    return ZONE_LABELS[z]
+    return t(`zone.${z}`)
   }
   // The WORD's colour, theme-aware — the dark themes lift the pure zone hues
   // so the word clears contrast on their cards. See ZONE_TEXT in constants/zones.js.
@@ -215,23 +211,23 @@ export default function DeviceDetails(props) {
   const escalationNote = () => {
     const d = device()
     if (!d || !d.zone_escalated || !ZONE_LABELS[d.escalated_zone]) return null
-    return `AI escalation to ${ZONE_LABELS[d.escalated_zone]}`
+    return t('device.escalation', t(`zone.${d.escalated_zone}`))
   }
 
   // CAMARA's answer, with "(assumed — lookup failed)" when there was none.
-  const reachability = () => reachabilityLabel(device())
+  const reachability = () => reachabilityText(t, device())
 
-  const stageValue = () => stageLabel(device()?.stage)
+  const stageValue = () => enumLabel(t, 'stage', device()?.stage)
 
   // What the gateway did, in words: "Not sent — no SMS gateway configured" is
   // a different fact from "Failed", and neither is "Sent".
-  const smsValue = () => smsStatusLabel(device()?.sms_status)
+  const smsValue = () => enumLabel(t, 'sms', device()?.sms_status)
 
   const rescueValue = () => {
     const d = device()
     if (!d) return DASH
-    if (!d.rescue_flag) return 'Not flagged'
-    return `Flagged · ${rescueStatusLabel(d.rescue_status)}`
+    if (!d.rescue_flag) return t('device.notFlagged')
+    return t('device.flaggedWith', enumLabel(t, 'rescueStatus', d.rescue_status))
   }
 
   // The supervisor's own haversine distance; selectors only compute one as a
@@ -239,10 +235,10 @@ export default function DeviceDetails(props) {
   const distanceValue = () => {
     const d = device()
     if (!d || !isNumber(d.distance_km)) return DASH
-    return `${fmt.distance(d.distance_km)} from epicenter`
+    return t('distance.fromEpicenter', fmt.distance(d.distance_km))
   }
   const distanceNote = () =>
-    device()?.distanceSource === 'computed' ? 'computed here — not sent by supervisor' : null
+    device()?.distanceSource === 'computed' ? t('device.computedNote') : null
 
   const coordsValue = () => {
     const d = device()
@@ -264,9 +260,12 @@ export default function DeviceDetails(props) {
     const d = device()
     return !d || d.stage !== 'decided'
   }
-  const undecidedNote = () => UNDECIDED_NOTE[device()?.stage] || null
+  const undecidedNote = () => {
+    const key = UNDECIDED_NOTE[device()?.stage]
+    return key ? t(key) : null
+  }
 
-  const actionValue = () => actionLabel(device()?.action)
+  const actionValue = () => enumLabel(t, 'action', device()?.action)
 
   const confidenceMissing = () => {
     const d = device()
@@ -281,7 +280,7 @@ export default function DeviceDetails(props) {
   const priorityValue = () => {
     const d = device()
     if (!d || !isNumber(d.rescue_priority)) return DASH
-    if (d.rescue_priority <= 0) return 'None'
+    if (d.rescue_priority <= 0) return t('device.priorityNone')
     return String(d.rescue_priority)
   }
 
@@ -293,17 +292,17 @@ export default function DeviceDetails(props) {
           <HideButton hidden onClick={() => props.onToggleHidden && props.onToggleHidden()} />
         }
       >
-        <div class="dd__stack" role="region" aria-label="Device details">
+        <div class="dd__stack" role="region" aria-label={t('device.detailsRegion')}>
           <DetailCard
             id="overview"
-            title="Device Overview"
+            title={t('device.overview')}
             icon={overviewIcon}
             collapsed={isCollapsed('overview')}
             onToggle={() => toggle('overview')}
           >
             <Show
               when={device()}
-              fallback={<EmptyState height={EMPTY_HEIGHT.overview} text={EMPTY_TEXT.overview} />}
+              fallback={<EmptyState height={EMPTY_HEIGHT.overview} text={t(EMPTY_TEXT.overview)} />}
             >
               <div class="dd-identity">
                 <div class="dd-identity__row">
@@ -325,64 +324,64 @@ export default function DeviceDetails(props) {
 
           <DetailCard
             id="status"
-            title="Status"
+            title={t('device.status')}
             icon={statusIcon}
             collapsed={isCollapsed('status')}
             onToggle={() => toggle('status')}
           >
             <Show
               when={device()}
-              fallback={<EmptyState height={EMPTY_HEIGHT.status} text={EMPTY_TEXT.status} />}
+              fallback={<EmptyState height={EMPTY_HEIGHT.status} text={t(EMPTY_TEXT.status)} />}
             >
               <div class="dd-details">
-                <DetailRow label="Reachability" value={reachability()} />
-                <DetailRow label="Stage" value={stageValue()} />
-                <DetailRow label="SMS" value={smsValue()} />
-                <DetailRow label="Rescue" value={rescueValue()} />
+                <DetailRow label={t('device.reachability')} value={reachability()} />
+                <DetailRow label={t('device.stage')} value={stageValue()} />
+                <DetailRow label={t('device.sms')} value={smsValue()} />
+                <DetailRow label={t('device.rescue')} value={rescueValue()} />
               </div>
             </Show>
           </DetailCard>
 
           <DetailCard
             id="location"
-            title="Location"
+            title={t('device.location')}
             icon={locationIcon}
             collapsed={isCollapsed('location')}
             onToggle={() => toggle('location')}
           >
             <Show
               when={device()}
-              fallback={<EmptyState height={EMPTY_HEIGHT.location} text={EMPTY_TEXT.location} />}
+              fallback={<EmptyState height={EMPTY_HEIGHT.location} text={t(EMPTY_TEXT.location)} />}
             >
               <div class="dd-details">
-                <DetailRow label="Distance" value={distanceValue()} note={distanceNote()} />
-                <DetailRow label="Coordinates" value={coordsValue()} />
-                <DetailRow label="Accuracy" value={accuracyValue()} />
+                <DetailRow label={t('device.distance')} value={distanceValue()} note={distanceNote()} />
+                <DetailRow label={t('device.coordinates')} value={coordsValue()} />
+                <DetailRow label={t('device.accuracy')} value={accuracyValue()} />
               </div>
             </Show>
           </DetailCard>
 
           <DetailCard
             id="ai"
-            title="AI Decision"
+            title={t('device.aiDecision')}
             icon={aiIcon}
             collapsed={isCollapsed('ai')}
             onToggle={() => toggle('ai')}
           >
             <Show
               when={device()}
-              fallback={<EmptyState height={EMPTY_HEIGHT.ai} text={EMPTY_TEXT.ai} />}
+              fallback={<EmptyState height={EMPTY_HEIGHT.ai} text={t(EMPTY_TEXT.ai)} />}
             >
               <div class="dd-details">
                 <DetailRow
-                  label="Action"
+                  label={t('device.action')}
                   value={actionValue()}
                   missing={undecided()}
                   note={undecidedNote()}
                 />
-                <DetailRow label="Priority" value={priorityValue()} />
+                <DetailRow label={t('device.priority')} value={priorityValue()} />
                 <DetailRow
-                  label="Confidence"
+                  label={t('device.confidence')}
                   value={confidenceValue()}
                   missing={confidenceMissing()}
                   note={undecided() ? undecidedNote() : null}

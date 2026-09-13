@@ -7,6 +7,9 @@
    ========================================================================= */
 
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&display=swap');
+/* Arabic script, for the Arabic interface. Its @font-face rules only cover
+   Arabic code points, so Latin text and digits keep falling through to DM Sans. */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@400;500;700&display=swap');
 @import './styles/tokens.css';
 
 /* ── Reset ────────────────────────────────────────────────────────────────
@@ -202,6 +205,98 @@ table {
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
+}
+
+/* ── Arabic ───────────────────────────────────────────────────────────────
+   Settings → Region → العربية sets <html lang="ar"> (App.jsx), and this
+   mirrors the console: the rail moves to the right of the map and the
+   translated chrome reads right to left.
+
+   Direction is set per surface, never on body or the shell. The shell is
+   scaled with a transform from its top-left corner and is wider than the
+   window below 100% — in a right-to-left parent it would hang off the left
+   edge. Leaving it left to right also keeps the dialogs that are not
+   translated yet (settings, the launcher, the incident page) readable. */
+
+html[lang='ar'] {
+  --gd-font: 'Noto Sans Arabic', 'DM Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html[lang='ar'] .app-shell {
+  grid-template-columns: 1fr var(--gd-rail-w);
+  grid-template-areas:
+    'topbar topbar'
+    'map    rail';
+}
+
+/* The rounded inner corner follows the rail to the other side. */
+html[lang='ar'] .app-map,
+html[lang='ar'] .idp,
+html[lang='ar'] .idp-head {
+  border-top-left-radius: 0;
+  border-top-right-radius: var(--gd-radius-card);
+}
+
+html[lang='ar'] .app-map:fullscreen {
+  border-top-right-radius: 0;
+}
+
+html[lang='ar'] .gd-topbar,
+html[lang='ar'] .navrail,
+html[lang='ar'] .map-toolbar,
+html[lang='ar'] .gd-map-location,
+html[lang='ar'] .dd,
+html[lang='ar'] .ops,
+html[lang='ar'] .app-note,
+html[lang='ar'] .app-fatal,
+html[lang='ar'] .app-foreign,
+html[lang='ar'] .app-complete,
+html[lang='ar'] .app-sim {
+  direction: rtl;
+  text-align: right;
+}
+
+/* Controls whose own stylesheet pins their text to the left. */
+html[lang='ar'] .gd-location__trigger,
+html[lang='ar'] .gd-menu__item,
+html[lang='ar'] .gd-menu__place,
+html[lang='ar'] .gd-results__item,
+html[lang='ar'] .gd-account,
+html[lang='ar'] .ops-row {
+  text-align: right;
+}
+
+/* A value sits at the far edge from its label, which is now the left. */
+html[lang='ar'] .ops-stat__value {
+  text-align: left;
+}
+
+/* Values mix Arabic words with coordinates, distances and masked phone
+   numbers. Each takes its direction from its own first letter, so
+   "31.0600, -8.3800" and "+212 6** *** 678" keep their order while an
+   Arabic sentence still reads right to left. What the operator types is
+   treated the same way, and so is the AI's zone report, which is written
+   in whatever language the agent answered in. */
+html[lang='ar'] .gd-location__label,
+html[lang='ar'] .gd-menu__input,
+html[lang='ar'] .gd-menu__place-name,
+html[lang='ar'] .gd-menu__place-sub,
+html[lang='ar'] .gd-search__input,
+html[lang='ar'] .gd-results__label,
+html[lang='ar'] .gd-results__sub,
+html[lang='ar'] .gd-account__name,
+html[lang='ar'] .gd-account__badge,
+html[lang='ar'] .mt-stream-fps,
+html[lang='ar'] .dd-identity__phone,
+html[lang='ar'] .dd-row__value,
+html[lang='ar'] .dd-row__note,
+html[lang='ar'] .dd-narrative,
+html[lang='ar'] .ops-row__title,
+html[lang='ar'] .ops-row__sub,
+html[lang='ar'] .ops-row__pri,
+html[lang='ar'] .ops-stat__value,
+html[lang='ar'] .app-note {
+  unicode-bidi: plaintext;
 }
 
 /* ── Reduced motion ───────────────────────────────────────────────────────

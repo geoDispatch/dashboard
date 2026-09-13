@@ -19,8 +19,9 @@ import { For, Show } from 'solid-js'
 
 import { HideButton } from './DeviceDetails'
 import { ERROR_SEVERITY, ZONE_COLORS, ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
-import { DASH, ago, maskPhone, num, percent, reachabilityLabel, rescueStatusLabel } from '../lib/format'
+import { DASH, maskPhone, num, percent } from '../lib/format'
 import { useDisplay } from '../lib/settings'
+import { agoText, enumLabel, reachabilityText, useT } from '../lib/i18n'
 
 import './OpsPanels.css'
 
@@ -69,10 +70,10 @@ function Card(props) {
 
 // Colour is only ever the second channel — the word is always drawn.
 function ZoneWord(props) {
+  const t = useT()
   const word = () => {
-    const label = ZONE_LABELS[props.zone]
-    if (!label) return DASH
-    return label
+    if (!ZONE_LABELS[props.zone]) return DASH
+    return t(`zone.${props.zone}`)
   }
   const tone = () => {
     const colour = ZONE_COLORS[props.zone]
@@ -105,14 +106,14 @@ function StatRow(props) {
 
 const RESCUE_LIMIT = 40
 
-function priorityText(device) {
+function priorityText(device, t) {
   if (!isNumber(device.rescue_priority)) return DASH
-  if (device.rescue_priority <= 0) return 'None'
+  if (device.rescue_priority <= 0) return t('device.priorityNone')
   return `P${device.rescue_priority}`
 }
 
-// `fmt` comes from the panel, not from module scope: the operator's units are
-// context and a module-level helper cannot read it.
+// `fmt` and `t` come from the panel, not from module scope: the operator's
+// units and language are context and a module-level helper cannot read them.
 function distanceText(device, fmt) {
   if (!isNumber(device.distance_km)) return DASH
   return fmt.distance(device.distance_km)
@@ -120,15 +121,16 @@ function distanceText(device, fmt) {
 
 export function RescuePanel(props) {
   const fmt = useDisplay()
+  const t = useT()
   const queue = () => props.queue || []
   const shown = () => queue().slice(0, RESCUE_LIMIT)
 
   return (
     <>
-      <Card title="Rescue queue" meta={`${num(queue().length)} flagged`}>
+      <Card title={t('ops.rescueQueue')} meta={t('ops.flaggedCount', num(queue().length))}>
         <Show
           when={queue().length > 0}
-          fallback={<p class="ops-empty">No devices are flagged for rescue.</p>}
+          fallback={<p class="ops-empty">{t('ops.rescueEmpty')}</p>}
         >
           <ul class="ops-list">
             <For each={shown()}>
@@ -144,15 +146,15 @@ export function RescuePanel(props) {
                     <span class="ops-row__main">
                       <span class="ops-row__title">{maskPhone(device.phone)}</span>
                       <span class="ops-row__sub">
-                        {distanceText(device, fmt)} from epicenter · {reachabilityLabel(device)}
+                        {t('distance.fromEpicenter', distanceText(device, fmt))} · {reachabilityText(t, device)}
                         <Show when={device.rescue_status === 'failed'}>
-                          {' '}· {rescueStatusLabel(device.rescue_status)}
+                          {' '}· {enumLabel(t, 'rescueStatus', device.rescue_status)}
                         </Show>
                       </span>
                     </span>
                     <span class="ops-row__side">
                       <ZoneWord zone={device.zone} />
-                      <span class="ops-row__pri">Priority {priorityText(device)}</span>
+                      <span class="ops-row__pri">{t('ops.priority', priorityText(device, t))}</span>
                     </span>
                   </button>
                 </li>
@@ -162,13 +164,10 @@ export function RescuePanel(props) {
 
           <Show when={queue().length > shown().length}>
             <p class="ops-note">
-              Showing the first {num(shown().length)} of {num(queue().length)}.
+              {t('ops.showingFirst', num(shown().length), num(queue().length))}
             </p>
           </Show>
-          <p class="ops-note">
-            Ordered by the supervisor's rescue priority (P1 first), then distance.
-            Flags come from any zone.
-          </p>
+          <p class="ops-note">{t('ops.rescueOrder')}</p>
         </Show>
       </Card>
     </>
@@ -180,42 +179,43 @@ export function RescuePanel(props) {
 // ---------------------------------------------------------------------------
 
 export function DevicesPanel(props) {
+  const t = useT()
   const counts = () => props.counts || { total: 0 }
   const groups = () => props.groups || []
 
   return (
     <>
-      <Card title="Devices" meta={`${num(counts().total)} located`}>
+      <Card title={t('ops.devices')} meta={t('ops.locatedCount', num(counts().total))}>
         <Show
           when={counts().total > 0}
-          fallback={<p class="ops-empty">No devices located yet.</p>}
+          fallback={<p class="ops-empty">{t('ops.devicesEmpty')}</p>}
         >
           <div class="ops-stats">
-            <StatRow label="Located" value={num(counts().total)} />
+            <StatRow label={t('ops.locatedLabel')} value={num(counts().total)} />
             <StatRow
-              label="Reachable"
+              label={t('ops.reachable')}
               value={`${num(counts().reachable)} · ${percent(counts().reachableRate, 0)}`}
             />
-            <StatRow label="Unreachable" value={num(counts().unreachable)} />
-            <StatRow label="AI decided" value={num(counts().decided)} />
-            <StatRow label="AI decision failed" value={num(counts().decisionFailed)} />
-            <StatRow label="SMS accepted by gateway" value={num(counts().sms)} />
-            <StatRow label="SMS failed" value={num(counts().smsFailed)} />
+            <StatRow label={t('ops.unreachable')} value={num(counts().unreachable)} />
+            <StatRow label={t('ops.aiDecided')} value={num(counts().decided)} />
+            <StatRow label={t('ops.aiFailed')} value={num(counts().decisionFailed)} />
+            <StatRow label={t('ops.smsAccepted')} value={num(counts().sms)} />
+            <StatRow label={t('ops.smsFailed')} value={num(counts().smsFailed)} />
             <Show when={counts().smsNotConfigured > 0}>
               <StatRow
-                label="SMS not sent — no gateway"
+                label={t('ops.smsNoGateway')}
                 value={num(counts().smsNotConfigured)}
               />
             </Show>
-            <StatRow label="Rescue flagged" value={num(counts().rescue)} />
+            <StatRow label={t('ops.rescueFlagged')} value={num(counts().rescue)} />
           </div>
         </Show>
       </Card>
 
-      <Card title="By zone" meta={`${num(counts().total)} devices`}>
+      <Card title={t('ops.byZone')} meta={t('ops.devicesCount', num(counts().total))}>
         <Show
           when={counts().total > 0}
-          fallback={<p class="ops-empty">No devices located yet.</p>}
+          fallback={<p class="ops-empty">{t('ops.devicesEmpty')}</p>}
         >
           <ul class="ops-list">
             <For each={groups()}>
@@ -227,18 +227,18 @@ export function DevicesPanel(props) {
                         <ZoneWord zone={group.zone} />
                       </span>
                       <span class="ops-row__sub">
-                        {num(group.reachable)} reachable · {num(group.rescue)} rescue
+                        {t('ops.zoneSub', num(group.reachable), num(group.rescue))}
                       </span>
                     </span>
                     <span class="ops-row__side">
-                      <span class="ops-row__pri">{num(group.total)} devices</span>
+                      <span class="ops-row__pri">{t('ops.devicesCount', num(group.total))}</span>
                     </span>
                   </div>
                 </li>
               )}
             </For>
           </ul>
-          <p class="ops-note">Location names are not provided by the supervisor.</p>
+          <p class="ops-note">{t('ops.noPlaceNames')}</p>
         </Show>
       </Card>
     </>
@@ -251,16 +251,16 @@ export function DevicesPanel(props) {
 
 // The database holds a capacity and nothing about occupancy, so there is no
 // "space free" or "full" to show — only what the record says.
-function shelterSub(shelter) {
+function shelterSub(shelter, t) {
   const parts = []
   if (shelter.address) parts.push(shelter.address)
-  parts.push(isNumber(shelter.capacity) ? `capacity ${num(shelter.capacity)}` : 'capacity —')
+  parts.push(t('ops.capacity', isNumber(shelter.capacity) ? num(shelter.capacity) : DASH))
   return parts.join(' · ')
 }
 
-function shelterDistance(shelter, fmt) {
+function shelterDistance(shelter, fmt, t) {
   if (!isNumber(shelter.distance_km)) return DASH
-  return `${fmt.distance(shelter.distance_km)} from epicenter`
+  return t('distance.fromEpicenter', fmt.distance(shelter.distance_km))
 }
 
 const hasPoint = (shelter) =>
@@ -268,19 +268,20 @@ const hasPoint = (shelter) =>
 
 export function SheltersPanel(props) {
   const fmt = useDisplay()
+  const t = useT()
   const shelters = () => props.shelters || []
 
   // Why the list is empty, when it is. Four different facts, four sentences.
   const emptyText = () => {
-    if (!props.hasEvent) return 'No incident yet.'
-    if (props.status === 'unavailable') return 'Shelter records unavailable (database query failed).'
-    if (!props.status) return 'Waiting for the supervisor\'s shelter lookup.'
-    return 'No shelter records near this incident.'
+    if (!props.hasEvent) return t('ops.noIncident')
+    if (props.status === 'unavailable') return t('ops.sheltersUnavailable')
+    if (!props.status) return t('ops.sheltersWaiting')
+    return t('ops.sheltersEmpty')
   }
 
   return (
     <>
-      <Card title="Shelters" meta={`${num(shelters().length)} listed`}>
+      <Card title={t('ops.shelters')} meta={t('ops.listedCount', num(shelters().length))}>
         <Show
           when={shelters().length > 0}
           fallback={<p class="ops-empty">{emptyText()}</p>}
@@ -297,10 +298,10 @@ export function SheltersPanel(props) {
                   >
                     <span class="ops-row__main">
                       <span class="ops-row__title">{shelter.name}</span>
-                      <span class="ops-row__sub">{shelterSub(shelter)}</span>
+                      <span class="ops-row__sub">{shelterSub(shelter, t)}</span>
                     </span>
                     <span class="ops-row__side">
-                      <span class="ops-row__pri">{shelterDistance(shelter, fmt)}</span>
+                      <span class="ops-row__pri">{shelterDistance(shelter, fmt, t)}</span>
                     </span>
                   </button>
                 </li>
@@ -308,13 +309,8 @@ export function SheltersPanel(props) {
             </For>
           </ul>
           <p class="ops-note">
-            <Show
-              when={props.simulated}
-              fallback="The nearest shelter records to the epicentre, from the supervisor's database."
-            >
-              Simulated shelters, generated in this browser. Not real places.
-            </Show>{' '}
-            Occupancy is not recorded.
+            {props.simulated ? t('ops.sheltersSimNote') : t('ops.sheltersNote')}{' '}
+            {t('ops.noOccupancy')}
           </p>
         </Show>
       </Card>
@@ -326,22 +322,24 @@ export function SheltersPanel(props) {
 // Errors — selectors.errorGroups(), opened from the notification bell
 // ---------------------------------------------------------------------------
 
-function errorReads(code) {
-  const entry = ERROR_SEVERITY[code]
-  if (!entry) return 'Unclassified error from the supervisor'
-  return entry.reads
+// ERROR_SEVERITY decides which codes are known; the words come from the
+// dictionary, whose English is held equal to ERROR_SEVERITY's by i18n.test.js.
+function errorReads(code, t) {
+  if (!ERROR_SEVERITY[code]) return t('error.unknown')
+  return t(`error.${code}`)
 }
 
 export function ErrorsPanel(props) {
+  const t = useT()
   const groups = () => props.groups || []
   const total = () => props.total || 0
 
   return (
     <>
-      <Card title="Errors" meta={`${num(total())} received`}>
+      <Card title={t('ops.errors')} meta={t('ops.receivedCount', num(total()))}>
         <Show
           when={groups().length > 0}
-          fallback={<p class="ops-empty">No errors reported.</p>}
+          fallback={<p class="ops-empty">{t('ops.errorsEmpty')}</p>}
         >
           <ul class="ops-list">
             <For each={groups()}>
@@ -349,14 +347,14 @@ export function ErrorsPanel(props) {
                 <li class="ops-list__item">
                   <div class="ops-row ops-row--static" classList={{ 'is-fatal': group.fatal }}>
                     <span class="ops-row__main">
-                      <span class="ops-row__title">{errorReads(group.code)}</span>
+                      <span class="ops-row__title">{errorReads(group.code, t)}</span>
                       <span class="ops-row__sub">
-                        {group.code} · latest {ago(group.latest && group.latest.receivedAt)}
+                        {t('ops.errorSub', group.code, agoText(t, group.latest && group.latest.receivedAt))}
                       </span>
                     </span>
                     <span class="ops-row__side">
                       <Show when={group.fatal}>
-                        <span class="ops-row__word is-full">Fatal</span>
+                        <span class="ops-row__word is-full">{t('ops.fatal')}</span>
                       </Show>
                       <span class="ops-row__pri">{num(group.count)}</span>
                     </span>
@@ -367,10 +365,10 @@ export function ErrorsPanel(props) {
           </ul>
           <div class="ops-actions">
             <button type="button" class="ops-btn" onClick={() => props.onClear && props.onClear()}>
-              Clear the list
+              {t('ops.clearList')}
             </button>
           </div>
-          <p class="ops-note">Clears this list only.</p>
+          <p class="ops-note">{t('ops.clearNote')}</p>
         </Show>
       </Card>
     </>
