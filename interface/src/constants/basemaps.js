@@ -48,7 +48,7 @@ export const OFM_CREDIT =
 // basemap zooms as deep as imagery does.
 const VECTOR_MAX_ZOOM = 19
 
-// One real raster tile over the Al Haouz epicentre, used as the picker's
+// One real raster tile over a neutral preview point, used as the picker's
 // preview for raster basemaps (and for vector ones when WebGL is unavailable).
 // It is the basemap itself at z11, not an illustration of it.
 const PREVIEW_TILE = { z: 11, x: 976, y: 837 }
@@ -134,8 +134,8 @@ export function profileFor(basemap, theme) {
   return theme === 'dark-blue' ? 'navy' : 'graphite'
 }
 
-/** The Al Haouz epicentre view the picker's previews are drawn at. */
-export const PREVIEW_VIEW = { center: [-8.4144, 31.0625], zoom: 10 }
+/** Neutral Rabat view used only by the basemap picker, never as incident data. */
+export const PREVIEW_VIEW = { center: [-6.8416, 34.0209], zoom: 10 }
 
 /** A single real RASTER tile of this basemap, for the picker's preview image. */
 export function basemapPreview(basemap) {

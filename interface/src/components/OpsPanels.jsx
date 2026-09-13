@@ -2,8 +2,9 @@
 //
 // The rail switches what floats over the top-left of the map. "Map" shows
 // DeviceDetails; Rescue, Devices, Shelters and the notification bell show the
-// panels below. They are driven entirely by the existing selectors, so they are
-// real views over the same store the map is drawing — not placeholders.
+// panels below. They are driven entirely by the selectors and the supervisor's
+// event_context, so they are real views over the same store the map is drawing
+// — not placeholders.
 //
 // Contract rules enforced here, same as in DeviceDetails:
 //   - phone numbers only ever appear through maskPhone();
@@ -18,7 +19,7 @@ import { For, Show } from 'solid-js'
 
 import { HideButton } from './DeviceDetails'
 import { ERROR_SEVERITY, ZONE_COLORS, ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
-import { DASH, ago, maskPhone, num, percent, reachabilityLabel } from '../lib/format'
+import { DASH, ago, maskPhone, num, percent, reachabilityLabel, rescueStatusLabel } from '../lib/format'
 import { useDisplay } from '../lib/settings'
 
 import './OpsPanels.css'
@@ -144,6 +145,9 @@ export function RescuePanel(props) {
                       <span class="ops-row__title">{maskPhone(device.phone)}</span>
                       <span class="ops-row__sub">
                         {distanceText(device, fmt)} from epicenter · {reachabilityLabel(device)}
+                        <Show when={device.rescue_status === 'failed'}>
+                          {' '}· {rescueStatusLabel(device.rescue_status)}
+                        </Show>
                       </span>
                     </span>
                     <span class="ops-row__side">
@@ -161,9 +165,10 @@ export function RescuePanel(props) {
               Showing the first {num(shown().length)} of {num(queue().length)}.
             </p>
           </Show>
-          <Show when={queue().length > 0 && !isNumber(shown()[0].rescue_priority)}>
-            <p class="ops-note">Priority not provided. Sorted by distance.</p>
-          </Show>
+          <p class="ops-note">
+            Ordered by the supervisor's rescue priority (P1 first), then distance.
+            Flags come from any zone.
+          </p>
         </Show>
       </Card>
     </>
@@ -171,12 +176,12 @@ export function RescuePanel(props) {
 }
 
 // ---------------------------------------------------------------------------
-// Devices — selectors.counts() + selectors.byLocality()
+// Devices — selectors.counts() + selectors.zoneGroups()
 // ---------------------------------------------------------------------------
 
 export function DevicesPanel(props) {
   const counts = () => props.counts || { total: 0 }
-  const areas = () => props.areas || []
+  const groups = () => props.groups || []
 
   return (
     <>
@@ -192,38 +197,48 @@ export function DevicesPanel(props) {
               value={`${num(counts().reachable)} · ${percent(counts().reachableRate, 0)}`}
             />
             <StatRow label="Unreachable" value={num(counts().unreachable)} />
-            <StatRow label="SMS sent" value={num(counts().sms)} />
+            <StatRow label="AI decided" value={num(counts().decided)} />
+            <StatRow label="AI decision failed" value={num(counts().decisionFailed)} />
+            <StatRow label="SMS accepted by gateway" value={num(counts().sms)} />
+            <StatRow label="SMS failed" value={num(counts().smsFailed)} />
+            <Show when={counts().smsNotConfigured > 0}>
+              <StatRow
+                label="SMS not sent — no gateway"
+                value={num(counts().smsNotConfigured)}
+              />
+            </Show>
             <StatRow label="Rescue flagged" value={num(counts().rescue)} />
           </div>
         </Show>
       </Card>
 
-      <Card title="By area" meta={`${num(areas().length)} areas`}>
+      <Card title="By zone" meta={`${num(counts().total)} devices`}>
         <Show
-          when={areas().length > 0}
-          fallback={<p class="ops-empty">No areas yet.</p>}
+          when={counts().total > 0}
+          fallback={<p class="ops-empty">No devices located yet.</p>}
         >
           <ul class="ops-list">
-            <For each={areas()}>
-              {(area) => (
+            <For each={groups()}>
+              {(group) => (
                 <li class="ops-list__item">
                   <div class="ops-row ops-row--static">
                     <span class="ops-row__main">
-                      <span class="ops-row__title">{area.name}</span>
+                      <span class="ops-row__title">
+                        <ZoneWord zone={group.zone} />
+                      </span>
                       <span class="ops-row__sub">
-                        {num(area.reachable)} reachable · {num(area.rescue)} rescue
+                        {num(group.reachable)} reachable · {num(group.rescue)} rescue
                       </span>
                     </span>
                     <span class="ops-row__side">
-                      <ZoneWord zone={area.zone} />
-                      <span class="ops-row__pri">{num(area.total)} devices</span>
+                      <span class="ops-row__pri">{num(group.total)} devices</span>
                     </span>
                   </div>
                 </li>
               )}
             </For>
           </ul>
-          <p class="ops-note">Area names use the nearest known locality.</p>
+          <p class="ops-note">Location names are not provided by the supervisor.</p>
         </Show>
       </Card>
     </>
@@ -231,38 +246,44 @@ export function DevicesPanel(props) {
 }
 
 // ---------------------------------------------------------------------------
-// Shelters — SHELTERS from the bundled demo scenario
+// Shelters — event_context.shelters, as the supervisor looked them up
 // ---------------------------------------------------------------------------
 
-function occupancyRate(shelter) {
-  if (!isNumber(shelter.occupied) || !isNumber(shelter.capacity) || shelter.capacity <= 0) {
-    return null
-  }
-  return shelter.occupied / shelter.capacity
+// The database holds a capacity and nothing about occupancy, so there is no
+// "space free" or "full" to show — only what the record says.
+function shelterSub(shelter) {
+  const parts = []
+  if (shelter.address) parts.push(shelter.address)
+  parts.push(isNumber(shelter.capacity) ? `capacity ${num(shelter.capacity)}` : 'capacity —')
+  return parts.join(' · ')
 }
 
-function occupancyText(shelter) {
-  if (!isNumber(shelter.occupied) || !isNumber(shelter.capacity)) return DASH
-  return `${num(shelter.occupied)} of ${num(shelter.capacity)}`
+function shelterDistance(shelter, fmt) {
+  if (!isNumber(shelter.distance_km)) return DASH
+  return `${fmt.distance(shelter.distance_km)} from epicenter`
 }
 
-function capacityWord(shelter) {
-  const rate = occupancyRate(shelter)
-  if (rate === null) return DASH
-  if (rate >= 1) return 'At capacity'
-  if (rate >= 0.9) return 'Nearly full'
-  return 'Space free'
-}
+const hasPoint = (shelter) =>
+  isNumber(shelter?.location?.latitude) && isNumber(shelter?.location?.longitude)
 
 export function SheltersPanel(props) {
+  const fmt = useDisplay()
   const shelters = () => props.shelters || []
+
+  // Why the list is empty, when it is. Four different facts, four sentences.
+  const emptyText = () => {
+    if (!props.hasEvent) return 'No incident yet.'
+    if (props.status === 'unavailable') return 'Shelter records unavailable (database query failed).'
+    if (!props.status) return 'Waiting for the supervisor\'s shelter lookup.'
+    return 'No shelter records near this incident.'
+  }
 
   return (
     <>
       <Card title="Shelters" meta={`${num(shelters().length)} listed`}>
         <Show
           when={shelters().length > 0}
-          fallback={<p class="ops-empty">No shelters are listed for this scenario.</p>}
+          fallback={<p class="ops-empty">{emptyText()}</p>}
         >
           <ul class="ops-list">
             <For each={shelters()}>
@@ -271,28 +292,15 @@ export function SheltersPanel(props) {
                   <button
                     type="button"
                     class="ops-row"
-                    disabled={!isNumber(shelter.latitude)}
+                    disabled={!hasPoint(shelter)}
                     onClick={() => props.onFocus && props.onFocus(shelter)}
                   >
                     <span class="ops-row__main">
                       <span class="ops-row__title">{shelter.name}</span>
-                      <span class="ops-row__sub">
-                        {occupancyText(shelter)} · {percent(occupancyRate(shelter), 0)}
-                      </span>
+                      <span class="ops-row__sub">{shelterSub(shelter)}</span>
                     </span>
                     <span class="ops-row__side">
-                      <span
-                        class="ops-row__word"
-                        classList={{ 'is-full': occupancyRate(shelter) >= 1 }}
-                      >
-                        {capacityWord(shelter)}
-                      </span>
-                      <Show
-                        when={isNumber(shelter.latitude)}
-                        fallback={<span class="ops-row__pri">No coordinates</span>}
-                      >
-                        <span class="ops-row__pri">Near {shelter.anchor}</span>
-                      </Show>
+                      <span class="ops-row__pri">{shelterDistance(shelter, fmt)}</span>
                     </span>
                   </button>
                 </li>
@@ -300,7 +308,13 @@ export function SheltersPanel(props) {
             </For>
           </ul>
           <p class="ops-note">
-            Demo data only. Shelter details are not provided by the supervisor.
+            <Show
+              when={props.simulated}
+              fallback="The nearest shelter records to the epicentre, from the supervisor's database."
+            >
+              Simulated shelters, generated in this browser. Not real places.
+            </Show>{' '}
+            Occupancy is not recorded.
           </p>
         </Show>
       </Card>

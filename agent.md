@@ -368,7 +368,9 @@ cp .env.example .env          # leave NOKIA_NAC_API_KEY empty → mock CAMARA is
 docker compose -f docker-compose.dev.yml up --build
 ```
 
-Brings up Postgres+PostGIS (seeded), mock CAMARA on `:8081`, mock AI agent on `:5000`, supervisor on
+(Since contract v2: `docker compose -f docker-compose.standalone.yml up -d --build` — the dev file is
+now the deploy include.) Brings up Postgres+PostGIS (seeded), mock CAMARA on `:8081`, mock AI agent on
+`:8082` (not 5000 — macOS AirPlay owns it), supervisor on
 `:8080`.
 
 Then fire a disaster:

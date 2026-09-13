@@ -1,13 +1,15 @@
 import { onMount, onCleanup, createEffect } from 'solid-js'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { ZONE_COLORS } from '../constants/zones'
+import { ZONE_COLORS, ZONE_RADIUS_THRESHOLDS } from '../constants/zones'
 import { OFM_CREDIT, basemapFor, maxZoomFor, profileFor } from '../constants/basemaps'
 import { prepareStyle } from '../lib/mapStyle'
 import { createVectorLayer, fetchStyle, firstRender, loadVectorEngine } from '../lib/vectorBasemap'
-import { maskPhone } from '../lib/format'
-import { haversine } from '../lib/geo'
+import { dms, maskPhone } from '../lib/format'
+import { useDisplay } from '../lib/settings'
 import { isDarkTheme } from '../lib/theme'
+import { eventFitKey } from '../lib/mapFit'
+import shelterIcon from '../assets/icons/nav-shelters.svg?raw'
 
 // The impact map. Leaflet, canvas-rendered — a 50 km radius over a populated
 // region is thousands of dots and SVG markers stop being viable well before that.
@@ -21,8 +23,15 @@ import { isDarkTheme } from '../lib/theme'
 //   layers   — { zones, devices, shelters }; each key genuinely adds or removes
 //              its objects from the map rather than just hiding them. Omit the
 //              prop entirely and zones + devices draw, shelters do not.
-//   shelters — [{ name, latitude, longitude, occupied, capacity, anchor }];
-//              entries without coordinates are skipped, never guessed at.
+//   shelters — event_context shelters; entries without a valid location are
+//              skipped, never guessed at. Each is a labelled house marker;
+//              clicking one gives its details and its coordinates to copy.
+//   onLaunchAt — ({ latitude, longitude }) from a clicked point's popup.
+//
+// Clicking the map anywhere that is not a dot or a band edge does NOT clear
+// the selection — an operator reading a zone should not lose it to a stray
+// click. It opens a popup with that point's coordinates instead, to copy and
+// send to a team, or to launch an incident at.
 //   basemap  — a key from constants/basemaps.js. Changing it swaps the ground
 //              underneath everything else: the dots, rings and current view
 //              are untouched, because only the ground layer is replaced.
@@ -35,14 +44,17 @@ import { isDarkTheme } from '../lib/theme'
 // engine cannot run here (no WebGL 2, the chunk or the style failed to load).
 // See constants/basemaps.js and lib/vectorBasemap.js.
 
-const DEFAULT_CENTER = [31.0625, -8.4144]   // Al Haouz
-const DEFAULT_ZOOM   = 9
+// Neutral Morocco overview. It is only the idle camera, never an incident.
+const DEFAULT_CENTER = [31.7917, -7.0926]
+const DEFAULT_ZOOM   = 5
 
 // Defaults for when no `layers` prop is passed at all. Once it IS passed it is
 // read literally, so a key the caller left out means "off", not "on".
 const LAYER_DEFAULTS = { zones: true, devices: true, shelters: false }
 
 export default function DisasterMap(props) {
+  const fmt = useDisplay()
+
   let container
   let map
   let renderer
@@ -50,6 +62,8 @@ export default function DisasterMap(props) {
   let epicenterMarker = null
   let operatorMarker = null
   let shelterMarkers = []
+  // The vector ground's water layers, for isLand(). Found once per style.
+  let waterLayerIds = null
   // The ground. `groundLayers` is what is committed on screen: raster tile
   // layers, or the one GL layer. `vectorLayer` is that GL layer while it is
   // the ground, so a switch between vector styles can restyle it in place.
@@ -171,6 +185,7 @@ export default function DisasterMap(props) {
       if (!layers.includes(layer)) map.removeLayer(layer)
     }
     if (vectorLayer && !layers.includes(vectorLayer)) vectorLayer = null
+    waterLayerIds = null
 
     // CSS keys off both: the raster dark canvas is filter-tinted in Dark blue
     // (the vector one is recoloured in its style instead).
@@ -344,7 +359,8 @@ export default function DisasterMap(props) {
       const zone = edgeHitZone(e.containerPoint)
       if (zone) return props.onSelectZone?.(zone)
 
-      props.onSelect?.(null)
+      // Anywhere else: the point itself, not a change of selection.
+      openPointPopup(e.latlng)
     })
 
     // Hover feedback, so the edge reads as a target rather than decoration.
@@ -371,11 +387,28 @@ export default function DisasterMap(props) {
     props.onReady?.({
       flyTo: (lat, lng, zoom = 11) => map.flyTo([lat, lng], zoom, { duration: 1.2 }),
       fitEvent: () => fitToEvent(),
+      getCenter: () => {
+        const center = map.getCenter()
+        return { latitude: center.lat, longitude: center.lng }
+      },
       focusDevice: (phone) => {
         const m = markers.get(phone)
         if (m) map.flyTo(m.getLatLng(), Math.max(map.getZoom(), 12), { duration: 0.8 })
       },
       invalidate: () => map.invalidateSize(),
+
+      // A place from the location search: its extent when it has one.
+      flyToPlace: (place) => {
+        if (place.bounds) map.flyToBounds(place.bounds, { duration: 1.2, maxZoom: place.zoom })
+        else map.flyTo([place.latitude, place.longitude], place.zoom ?? 11, { duration: 1.2 })
+      },
+
+      // Frame an area before anything is drawn in it, so a simulation can
+      // ask the ground where the water is.
+      fitArea: (lat, lng, radiusKm) => fitBoundsAround(lat, lng, radiusKm),
+      whenIdle,
+      isLand,
+      closePopup: () => map.closePopup(),
 
       // Leaflet's own geolocation — no third-party service, no API key.
       // The browser resolves it from GPS, Wi-Fi or IP, whichever it has.
@@ -436,6 +469,11 @@ export default function DisasterMap(props) {
   function fitToEvent() {
     const ev = props.event
     if (!map || !ev?.epicenter) return
+    fitBoundsAround(ev.epicenter.latitude, ev.epicenter.longitude, ev.radius_km)
+  }
+
+  function fitBoundsAround(lat, lng, radiusKm) {
+    if (!map) return
     // Leaflet sizes the fit from its cached container size. If that is stale or
     // the container has not been laid out yet, fitBounds silently resolves to
     // maxZoom — the map ends up at street level over an empty field instead of
@@ -444,8 +482,150 @@ export default function DisasterMap(props) {
     map.invalidateSize({ animate: false })
     if (map.getSize().x < 50) return
 
-    const c = L.latLng(ev.epicenter.latitude, ev.epicenter.longitude)
-    map.fitBounds(c.toBounds(ev.radius_km * 2000), { padding: [24, 24], animate: false })
+    const c = L.latLng(lat, lng)
+    map.fitBounds(c.toBounds(radiusKm * 2000), { padding: [24, 24], animate: false })
+  }
+
+  // ── where the water is ────────────────────────────────────
+  //
+  // The vector ground knows its seas and lakes; a simulation asks it so that
+  // nobody is placed in them. Only points on screen can be answered, and a
+  // raster ground cannot answer at all — both count as land, the honest
+  // "don't know" for a check that only ever removes points.
+
+  function glMap() {
+    return vectorLayer?.getMaplibreMap?.() ?? null
+  }
+
+  function isLand(lat, lng) {
+    const gl = glMap()
+    if (!gl || !gl.isStyleLoaded?.()) return true
+    if (!waterLayerIds) {
+      waterLayerIds = (gl.getStyle()?.layers || [])
+        .filter((l) => l.type === 'fill' && (l['source-layer'] === 'water' || /^water/.test(l.id)))
+        .map((l) => l.id)
+    }
+    if (!waterLayerIds.length) return true
+    const p = gl.project([lng, lat])
+    const canvas = gl.getCanvas()
+    if (p.x < 0 || p.y < 0 || p.x > canvas.clientWidth || p.y > canvas.clientHeight) return true
+    return gl.queryRenderedFeatures([p.x, p.y], { layers: waterLayerIds }).length === 0
+  }
+
+  // Resolves once the ground has drawn the current view, or after timeoutMs.
+  function whenIdle(timeoutMs = 2500) {
+    return new Promise((resolve) => {
+      let done = false
+      const finish = () => {
+        if (done) return
+        done = true
+        clearTimeout(timer)
+        resolve()
+      }
+      const timer = setTimeout(finish, timeoutMs)
+      const gl = glMap()
+      if (gl) {
+        gl.once('idle', finish)
+        gl.triggerRepaint?.()
+      } else if (groundLayers[0]?.once) {
+        groundLayers[0].once('load', finish)
+      } else {
+        finish()
+      }
+    })
+  }
+
+  // ── a clicked point ───────────────────────────────────────
+
+  // Copies, and says so. When the browser refuses the clipboard, the text is
+  // selected on screen instead and the button says to copy it by hand — a
+  // silent failure here would be a rescue team waiting on coordinates that
+  // never left this screen.
+  function copyText(text, button, done, selectNode) {
+    const flash = (label) => {
+      const original = button.dataset.label || button.textContent
+      button.dataset.label = original
+      button.textContent = label
+      setTimeout(() => {
+        button.textContent = original
+      }, 1800)
+    }
+    const refused = () => {
+      if (fallbackCopy(text)) return flash(done)
+      if (selectNode) window.getSelection()?.selectAllChildren(selectNode)
+      flash(/Mac/.test(navigator.platform) ? 'Blocked: press ⌘C' : 'Blocked: press Ctrl+C')
+    }
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(() => flash(done), refused)
+    } else {
+      refused()
+    }
+  }
+
+  function fallbackCopy(text) {
+    const area = document.createElement('textarea')
+    area.value = text
+    area.setAttribute('readonly', '')
+    area.style.position = 'fixed'
+    area.style.opacity = '0'
+    document.body.appendChild(area)
+    area.select()
+    let ok = false
+    try {
+      ok = document.execCommand('copy')
+    } catch {
+      ok = false
+    }
+    area.remove()
+    return ok
+  }
+
+  function el(tag, className, text) {
+    const node = document.createElement(tag)
+    if (className) node.className = className
+    if (text != null) node.textContent = text
+    return node
+  }
+
+  // Coordinates in both forms, and the actions a point can take. Built from
+  // DOM nodes, never an HTML string: a shelter's name comes off the wire.
+  function pointCard(title, lat, lng, { lines = [], launch = true } = {}) {
+    const card = el('div', 'pt-pop')
+    card.appendChild(el('p', 'pt-pop__title', title))
+    for (const line of lines) card.appendChild(el('p', 'pt-pop__line', line))
+    const coordsText = `${lat.toFixed(5)}, ${lng.toFixed(5)}`
+    const coordsNode = el('p', 'pt-pop__coords', coordsText)
+    card.appendChild(coordsNode)
+    card.appendChild(el('p', 'pt-pop__dms', dms(lat, lng)))
+
+    const actions = el('div', 'pt-pop__actions')
+    const copy = el('button', 'pt-pop__btn', 'Copy coordinates')
+    copy.type = 'button'
+    copy.addEventListener('click', () => copyText(coordsText, copy, 'Copied', coordsNode))
+    const mapLink = `https://www.google.com/maps/search/?api=1&query=${lat.toFixed(6)},${lng.toFixed(6)}`
+    const link = el('button', 'pt-pop__btn', 'Copy map link')
+    link.type = 'button'
+    link.addEventListener('click', () => copyText(mapLink, link, 'Link copied', coordsNode))
+    actions.append(copy, link)
+    if (launch && props.onLaunchAt) {
+      const go = el('button', 'pt-pop__btn pt-pop__btn--primary', 'Launch incident here')
+      go.type = 'button'
+      go.addEventListener('click', () => {
+        map.closePopup()
+        props.onLaunchAt({ latitude: round5(lat), longitude: round5(lng) })
+      })
+      actions.appendChild(go)
+    }
+    card.appendChild(actions)
+    return card
+  }
+
+  function openPointPopup(latlng) {
+    const p = latlng.wrap()
+    L.popup({ className: 'gd-popup', maxWidth: 300, autoPanPadding: [24, 24] })
+      .setLatLng(latlng)
+      .setContent(pointCard('Location', p.lat, p.lng))
+      .openOn(map)
   }
 
   // ── epicentre + zone rings ────────────────────────────────
@@ -470,10 +650,11 @@ export default function DisasterMap(props) {
     const radius = ev.radius_km ?? 0
 
     // Outermost first so the red band draws on top of the green disc.
+    const zoneBands = ev.zone_bands || ZONE_RADIUS_THRESHOLDS
     const bands = [
-      { zone: 'green',  frac: 1.00, color: ZONE_COLORS.green },
-      { zone: 'orange', frac: 0.66, color: ZONE_COLORS.orange },
-      { zone: 'red',    frac: 0.33, color: ZONE_COLORS.red },
+      { zone: 'green',  frac: zoneBands.green,  color: ZONE_COLORS.green },
+      { zone: 'orange', frac: zoneBands.orange, color: ZONE_COLORS.orange },
+      { zone: 'red',    frac: zoneBands.red,    color: ZONE_COLORS.red },
     ]
 
     for (const band of bands) {
@@ -502,7 +683,7 @@ export default function DisasterMap(props) {
       }),
     }).addTo(map)
 
-    const eventKey = `${ev.event_id ?? ''}:${radius}`
+    const eventKey = eventFitKey(ev)
     if (eventKey !== fittedEventKey) {
       fittedEventKey = eventKey
       fitToEvent()
@@ -565,10 +746,9 @@ export default function DisasterMap(props) {
   })
 
   // ── shelters ──────────────────────────────────────────────
-  // Shelters come from the bundled Al Haouz scenario — the supervisor does not
-  // publish them. Only the ones whose name resolves to a known locality carry
-  // coordinates; the rest are listed in the panel and left off the map rather
-  // than dropped at an invented point.
+  // Shelters come from event_context. The database record owns the location;
+  // no browser-side place table or inferred coordinate is involved. At most
+  // three, so each carries its name on the map rather than behind a hover.
   createEffect(() => {
     const show = layerOn('shelters')
     const list = props.shelters || []
@@ -580,23 +760,44 @@ export default function DisasterMap(props) {
     if (!show) return
 
     for (const shelter of list) {
-      if (typeof shelter.latitude !== 'number' || typeof shelter.longitude !== 'number') continue
+      const point = shelter?.location
+      if (typeof point?.latitude !== 'number' || typeof point?.longitude !== 'number') continue
 
-      const marker = L.marker([shelter.latitude, shelter.longitude], {
+      const marker = L.marker([point.latitude, point.longitude], {
         zIndexOffset: 800,
+        keyboard: false,
         icon: L.divIcon({
           className: '',
-          html: '<div class="shelter-pin"></div>',
-          iconSize: [18, 18],
-          iconAnchor: [9, 9],
+          html: `<div class="shelter-pin">${shelterIcon}</div>`,
+          iconSize: [26, 26],
+          iconAnchor: [13, 13],
         }),
       })
-        .bindTooltip(shelterTip(shelter), { direction: 'top', className: 'device-tip' })
+        .bindTooltip(el('span', null, shelter.name || 'Shelter'), {
+          permanent: true,
+          direction: 'right',
+          offset: [14, 0],
+          className: 'shelter-label',
+        })
+        .bindPopup(() => pointCard(shelter.name || 'Shelter', point.latitude, point.longitude, {
+          lines: shelterLines(shelter),
+          launch: false,
+        }), { className: 'gd-popup', maxWidth: 300 })
         .addTo(map)
 
       shelterMarkers.push(marker)
     }
   })
+
+  function shelterLines(shelter) {
+    const lines = []
+    if (typeof shelter.capacity === 'number') {
+      lines.push(`Capacity ${shelter.capacity.toLocaleString('en-US')} · occupancy not recorded`)
+    }
+    if (typeof shelter.distance_km === 'number') lines.push(`${fmt.distance(shelter.distance_km)} from the epicentre`)
+    if (shelter.address) lines.push(shelter.address)
+    return lines
+  }
 
   // ── operator position (Set location) ──────────────────────
   createEffect(() => {
@@ -613,6 +814,11 @@ export default function DisasterMap(props) {
       manual: 'Selected region',
     }[loc.source] ?? 'Operator location'
 
+    // A searched place is where the operator is LOOKING, not where they are.
+    const tip = loc.source === 'search'
+      ? `${loc.name || 'Searched place'} · searched place`
+      : `You are here · ${sourceLabel}`
+
     operatorMarker = L.marker([loc.latitude, loc.longitude], {
       zIndexOffset: 900,
       icon: L.divIcon({
@@ -622,7 +828,7 @@ export default function DisasterMap(props) {
         iconAnchor: [8, 8],
       }),
     })
-      .bindTooltip(`You are here · ${sourceLabel}`, {
+      .bindTooltip(el('span', null, tip), {
         direction: 'top',
         className: 'device-tip',
       })
@@ -630,6 +836,10 @@ export default function DisasterMap(props) {
   })
 
   return <div ref={container} class="map-canvas" />
+}
+
+function round5(v) {
+  return Math.round(v * 1e5) / 1e5
 }
 
 function styleFor(device, isSelected) {
@@ -647,14 +857,6 @@ function styleFor(device, isSelected) {
     // Unreachable devices are hollow — the second channel for reachability.
     fillOpacity: reachable ? 0.92 : 0.12,
   }
-}
-
-// Occupancy is only stated when both numbers are actually present.
-function shelterTip(shelter) {
-  const known =
-    typeof shelter.occupied === 'number' && typeof shelter.capacity === 'number'
-  const occupancy = known ? ` · ${shelter.occupied} of ${shelter.capacity}` : ' · occupancy —'
-  return `Shelter · ${shelter.name}${occupancy}`
 }
 
 function tooltipFor(d) {

@@ -1,5 +1,6 @@
 import { createSignal, onMount, onCleanup, Show, For } from 'solid-js'
 import { ZONE_COLORS, ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
+import { MIN_QUERY_LENGTH, parseCoordinates, searchPlaces } from '../lib/geocode'
 // Inlined (?raw) rather than loaded through <img>: the lockup is drawn in
 // currentColor with real knockouts, so it takes the header's ink — black on the
 // light bar, white on the graphite and #001DF3 dark bars — from one file.
@@ -31,6 +32,17 @@ import './TopBar.css'
 export default function TopBar(props) {
   const [menuOpen, setMenuOpen] = createSignal(false)
   const [searchFocused, setSearchFocused] = createSignal(false)
+
+  // Place search inside the location menu: "new y" → New York. Debounced,
+  // and a newer query aborts the one before it, so a slow answer for "new"
+  // can never replace the answer for "new york".
+  const [placeQuery, setPlaceQuery] = createSignal('')
+  const [places, setPlaces] = createSignal([])
+  const [placeState, setPlaceState] = createSignal('idle')   // idle | searching | done | error
+  const [placeError, setPlaceError] = createSignal(null)
+  let placeTimer = null
+  let placeAbort = null
+  let placeInput
 
   let locationRef
   let searchRef
@@ -82,7 +94,15 @@ export default function TopBar(props) {
   onCleanup(() => {
     document.removeEventListener('pointerdown', handlePointerDown, true)
     document.removeEventListener('keydown', handleKeyDown)
+    clearTimeout(placeTimer)
+    placeAbort?.abort()
   })
+
+  function toggleMenu() {
+    const open = !menuOpen()
+    setMenuOpen(open)
+    if (open) requestAnimationFrame(() => placeInput?.focus())
+  }
 
   function useMyLocation() {
     setMenuOpen(false)
@@ -92,6 +112,50 @@ export default function TopBar(props) {
   function selectRegion(name) {
     setMenuOpen(false)
     props.onSelectRegion?.(name)
+  }
+
+  function onPlaceInput(value) {
+    setPlaceQuery(value)
+    clearTimeout(placeTimer)
+    placeAbort?.abort()
+    const text = value.trim()
+    if (!text || (text.length < MIN_QUERY_LENGTH && !parseCoordinates(text))) {
+      setPlaces([])
+      setPlaceState('idle')
+      return
+    }
+    setPlaceState('searching')
+    // Coordinates answer at once; names wait for the operator to pause.
+    placeTimer = setTimeout(runPlaceSearch, parseCoordinates(text) ? 0 : 250)
+  }
+
+  async function runPlaceSearch() {
+    const ctrl = new AbortController()
+    placeAbort = ctrl
+    try {
+      const { places: found, error } = await searchPlaces(placeQuery(), { signal: ctrl.signal })
+      if (ctrl.signal.aborted) return
+      setPlaces(found)
+      setPlaceError(error)
+      setPlaceState(error ? 'error' : 'done')
+    } catch {
+      // Aborted by a newer query, which will answer instead.
+    }
+  }
+
+  function pickPlace(place) {
+    setMenuOpen(false)
+    setPlaceQuery('')
+    setPlaces([])
+    setPlaceState('idle')
+    props.onSelectPlace?.(place)
+  }
+
+  function onPlaceKey(event) {
+    if (event.key === 'Enter' && places().length) {
+      event.preventDefault()
+      pickPlace(places()[0])
+    }
   }
 
   function pickResult(phone) {
@@ -117,9 +181,9 @@ export default function TopBar(props) {
             type="button"
             class="gd-location__trigger"
             classList={{ 'is-open': menuOpen(), 'is-busy': !!props.locationBusy }}
-            aria-haspopup="menu"
+            aria-haspopup="dialog"
             aria-expanded={menuOpen()}
-            onClick={() => setMenuOpen(!menuOpen())}
+            onClick={toggleMenu}
           >
             <span class="gd-location__pin" aria-hidden="true" innerHTML={pinIcon} />
             {/* The pill is a fixed 240px, so the longer region names ellipsise —
@@ -133,11 +197,56 @@ export default function TopBar(props) {
           </button>
 
           <Show when={menuOpen()}>
-            <div class="gd-menu" role="menu" aria-label="Set location">
+            <div class="gd-menu" role="dialog" aria-label="Set location">
+              <div class="gd-menu__search">
+                <span class="gd-menu__search-icon" aria-hidden="true" innerHTML={searchIcon} />
+                <input
+                  ref={placeInput}
+                  type="search"
+                  class="gd-menu__input"
+                  placeholder="Search a city, or 31.06, -8.38"
+                  autocomplete="off"
+                  spellcheck={false}
+                  aria-label="Search a place or coordinates"
+                  value={placeQuery()}
+                  onInput={(e) => onPlaceInput(e.currentTarget.value)}
+                  onKeyDown={onPlaceKey}
+                />
+              </div>
+
+              <Show when={placeQuery().trim()}>
+                <div class="gd-menu__places" role="listbox" aria-label="Places">
+                  <Show when={placeState() === 'searching' && !places().length}>
+                    <p class="gd-menu__hint">Searching…</p>
+                  </Show>
+                  <Show when={placeState() === 'error'}>
+                    <p class="gd-menu__hint">{placeError()}</p>
+                  </Show>
+                  <Show when={placeState() === 'done' && !places().length}>
+                    <p class="gd-menu__hint">No place by that name.</p>
+                  </Show>
+                  <For each={places()}>
+                    {(place) => (
+                      <button
+                        type="button"
+                        class="gd-menu__place"
+                        role="option"
+                        aria-selected="false"
+                        onClick={() => pickPlace(place)}
+                      >
+                        <span class="gd-menu__place-name">{place.name}</span>
+                        <span class="gd-menu__place-sub">{place.label}</span>
+                      </button>
+                    )}
+                  </For>
+                  <p class="gd-menu__credit">Places: Photon · © OpenStreetMap contributors</p>
+                </div>
+              </Show>
+
+              <div class="gd-menu__divider" role="separator" />
               <button
                 type="button"
                 class="gd-menu__item"
-                role="menuitem"
                 onClick={useMyLocation}
               >
                 Use my location
@@ -148,7 +257,6 @@ export default function TopBar(props) {
                   <button
                     type="button"
                     class="gd-menu__item"
-                    role="menuitem"
                     aria-current={region.name === props.locationLabel ? 'true' : undefined}
                     onClick={() => selectRegion(region.name)}
                   >
@@ -239,6 +347,36 @@ export default function TopBar(props) {
           <span class="gd-launch__plus" aria-hidden="true">+</span>
           <span class="gd-launch__label">Launch incident</span>
         </button>
+
+        {/* Stop ⇄ Run. While a browser simulation is on the board this stops
+            it; afterwards it plays the last one again, with no launcher to
+            open. Beside Launch, and on the bar so it is there in every view. */}
+        <Show
+          when={props.simulating}
+          fallback={
+            <Show when={props.canRunSimulation}>
+              <button
+                type="button"
+                class="gd-stop-sim gd-stop-sim--run"
+                title={props.runSimulationTitle || 'Run the last simulation again'}
+                onClick={() => props.onRunSimulation?.()}
+              >
+                <span class="gd-run-sim__icon" aria-hidden="true" />
+                <span class="gd-stop-sim__label">Run simulation</span>
+              </button>
+            </Show>
+          }
+        >
+          <button
+            type="button"
+            class="gd-stop-sim"
+            title="Stop the simulation and return to the supervisor"
+            onClick={() => props.onStopSimulation?.()}
+          >
+            <span class="gd-stop-sim__icon" aria-hidden="true" />
+            <span class="gd-stop-sim__label">Stop simulation</span>
+          </button>
+        </Show>
 
         {/* The bell used to open a popover that listed error codes. It now
             opens the telemetry drawer, which lists the same codes plus the

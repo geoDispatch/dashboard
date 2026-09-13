@@ -521,17 +521,29 @@
 }
 
 /* ── Shelter marker ──────────────────────────────────────────────────────
-   divIcon html: <div class="shelter-pin"></div>. A shelter is not a casualty
-   and must not read as a zone: it is a square, in ink, so it is separable
-   from every round device dot at a glance and without colour. */
+   divIcon html: <div class="shelter-pin"><svg …house…/></div>. A shelter is
+   not a casualty and must not read as a zone: a square ink tile with a house,
+   separable from every round device dot at a glance and without colour. */
 
 .shelter-pin {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  background: var(--gd-surface);
-  border: 3px solid var(--gd-ink-2);
-  box-shadow: 0 1px 4px rgba(23, 33, 43, 0.35);
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  background: var(--gd-ink);
+  color: var(--gd-surface);
+  box-shadow:
+    0 0 0 2px var(--gd-marker-halo),
+    0 2px 6px rgba(23, 33, 43, 0.35);
+  cursor: pointer;
+}
+
+.shelter-pin svg {
+  display: block;
+  width: 16px;
+  height: 16px;
 }
 
 /* ── Stream state strip ──────────────────────────────────────────────────
@@ -706,94 +718,211 @@
   box-shadow: var(--gd-shadow-pop);
 }
 
-/* ── Simulation control ─────────────────────────────────────────────────────
-   The demo used to announce itself in a paragraph in the bottom-left corner,
-   beside the details column. It now sits with the other stream controls at the
-   top right, because that is where the operator already looks to read stream
-   state, and one click starts or stops it. */
-
-.map-overlay--tr.app-tr {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
-  row-gap: 12px;
-
-  /* Keep clear of the details column and its Hide button. Without this the
-     cluster kept its full width and ran straight into the Hide button on a
-     1280-wide window, printing the simulation label on top of it. Below that
-     width it wraps onto a second row instead of colliding.
-     400 panel + 84 Hide + three 24px gaps = 556. */
-  flex-wrap: wrap;
-  max-width: calc(100% - 556px);
-}
+/* ── Simulation ────────────────────────────────────────────────────────────
+   Present for as long as a browser simulation is on the board. The demo amber
+   the toolbar chip also wears, never a live colour, and a way back. */
 
 .app-sim {
-  display: inline-flex;
+  position: fixed;
+  left: 50%;
+  top: calc(var(--gd-map-inset) + 96px);
+  transform: translateX(-50%);
+  z-index: var(--gd-z-toast);
+  display: flex;
   align-items: center;
-  gap: 8px;
-  height: var(--gd-control-h);
-  padding: 0 16px;
-  border: 1px solid transparent;
+  gap: 14px;
+  max-width: min(680px, calc(100vw - 48px));
+  padding: 10px 12px 10px 16px;
   border-radius: var(--gd-radius-control);
-  background: var(--gd-surface);
-  box-shadow: var(--gd-shadow-card);
-  font-family: var(--gd-font);
-  font-size: var(--gd-fs-sm, 16px);
-  font-weight: 500;
-  line-height: 24px;
+  background: var(--gd-demo-fill);
+  box-shadow: inset 0 0 0 1px rgba(255, 165, 31, 0.55), var(--gd-shadow-pop);
+  color: var(--gd-ink-2);
+}
+
+.app-sim__text {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+}
+
+.app-sim__text strong {
   color: var(--gd-ink);
-  cursor: pointer;
+  font-weight: var(--gd-fw-bold);
+}
+
+.app-sim__btn {
+  flex: 0 0 auto;
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--gd-ink);
+  color: var(--gd-surface);
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-medium);
   white-space: nowrap;
-  transition: background 120ms ease, border-color 120ms ease, color 120ms ease;
 }
 
-.app-sim:hover {
-  background: var(--gd-field);
+.app-sim__btn:hover {
+  opacity: 0.88;
 }
 
-.app-sim:focus-visible {
+.app-sim__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 8px;
+}
+
+/* Replay sits beside Stop, a step quieter: it keeps the simulation going. */
+.app-sim__btn--quiet {
+  background: var(--gd-surface);
+  color: var(--gd-ink);
+  box-shadow: inset 0 0 0 1px rgba(255, 165, 31, 0.55);
+}
+
+.app-sim__btn:focus-visible {
   outline: 2px solid var(--gd-ink);
   outline-offset: 2px;
 }
 
-/* Idle: a play triangle — the affordance for "start this". */
-.app-sim__glyph {
-  width: 0;
-  height: 0;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
-  border-left: 8px solid currentColor;
-}
+/* ── Map popups: a clicked point, a shelter ──────────────────────────────
+   Leaflet's popup chrome, restyled to the console's cards. Coordinates are
+   tabular so they read and copy as one block. */
 
-/* Running: the triangle becomes a pulsing dot, matching the Stream live pill
-   beside it so the two read as one status, not two competing ones. */
-.app-sim.is-running {
-  border-color: rgba(255, 165, 31, 0.32);
-  background: rgba(255, 165, 31, 0.10);
+.gd-popup .leaflet-popup-content-wrapper {
+  border-radius: 12px;
+  background: var(--gd-surface);
   color: var(--gd-ink);
+  box-shadow: var(--gd-shadow-pop);
 }
 
-.app-sim.is-running:hover {
-  background: rgba(255, 165, 31, 0.16);
+.gd-popup .leaflet-popup-tip {
+  background: var(--gd-surface);
 }
 
-.app-sim.is-running .app-sim__glyph {
-  width: 8px;
-  height: 8px;
+.gd-popup .leaflet-popup-content {
+  margin: 14px 16px;
+  font-family: var(--gd-font);
+}
+
+.gd-popup a.leaflet-popup-close-button {
+  top: 6px;
+  right: 6px;
+  color: var(--gd-ink-4);
+}
+
+.pt-pop {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+}
+
+.pt-pop__title {
+  margin: 0 18px 2px 0;
+  font-size: var(--gd-fs-sm);
+  font-weight: var(--gd-fw-bold);
+  line-height: 20px;
+}
+
+.pt-pop__line {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  line-height: 16px;
+  color: var(--gd-ink-3);
+}
+
+.pt-pop__coords {
+  margin: 4px 0 0;
+  user-select: all;
+  font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+}
+
+.pt-pop__dms {
+  margin: 0;
+  font-size: var(--gd-fs-xs);
+  font-variant-numeric: tabular-nums;
+  line-height: 16px;
+  color: var(--gd-ink-4);
+}
+
+.pt-pop__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.pt-pop__btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: var(--gd-field);
+  color: var(--gd-ink-2);
+  font-size: var(--gd-fs-xs);
+  font-weight: var(--gd-fw-medium);
+  white-space: nowrap;
+  transition: background var(--gd-dur-fast) var(--gd-ease);
+}
+
+.pt-pop__btn:hover {
+  background: var(--gd-field-hover);
+}
+
+.pt-pop__btn--primary {
+  background: var(--gd-ink);
+  color: var(--gd-surface);
+}
+
+.pt-pop__btn--primary:hover {
+  background: var(--gd-ink);
+  opacity: 0.88;
+}
+
+.pt-pop__btn:disabled {
+  opacity: 0.7;
+}
+
+/* A shelter's name rides beside its marker, not behind a hover: there are at
+   most three, and where they are is the point of the layer. */
+.leaflet-tooltip.shelter-label {
+  padding: 3px 8px;
   border: 0;
-  border-radius: 50%;
-  background: var(--gd-orange);
-  animation: app-sim-pulse 1.8s ease-in-out infinite;
+  border-radius: 6px;
+  background: var(--gd-surface);
+  color: var(--gd-ink);
+  font-family: var(--gd-font);
+  font-size: 12px;
+  font-weight: var(--gd-fw-medium);
+  line-height: 16px;
+  box-shadow: 0 1px 4px rgba(23, 33, 43, 0.25);
 }
 
-@keyframes app-sim-pulse {
-  0%, 100% { opacity: 1; }
-  50%      { opacity: 0.35; }
+.leaflet-tooltip.shelter-label::before {
+  display: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .app-sim.is-running .app-sim__glyph { animation: none; }
+/* ── Completed incident ────────────────────────────────────────────────────
+   A lifecycle result from event_complete. This never describes the socket or
+   claims that an upstream provider is live. */
+
+.app-complete {
+  position: fixed;
+  right: var(--gd-map-inset);
+  bottom: var(--gd-map-inset);
+  z-index: var(--gd-z-toast);
+  margin: 0;
+  max-width: min(560px, calc(100vw - 48px));
+  padding: 10px 16px;
+  border: 1px solid var(--gd-line);
+  border-radius: var(--gd-radius-control);
+  background: var(--gd-surface);
+  color: var(--gd-ink-2);
+  font-size: var(--gd-fs-xs);
+  line-height: 17px;
+  box-shadow: var(--gd-shadow-pop);
 }
 
 /* ── Overlay hit-testing ────────────────────────────────────────────────────
@@ -818,7 +947,6 @@
 .map-overlay .dd__stack,
 .map-overlay .ops__stack,
 .map-overlay .dd-hide,
-.map-overlay .app-sim,
 .map-overlay .map-toolbar,
 .map-overlay.gd-map-location,
 .app-note {

@@ -60,8 +60,9 @@
   --mt-label: var(--mt-red-ink);
 }
 
-/* A demo stream must never wear the live colours, whatever the socket says.
-   Declared last so it overrides every status rule above. */
+/* A demo stream — today a browser simulation — must never wear the live
+   colours, whatever the socket says. Declared last so it overrides every
+   status rule above. */
 .mt-stream[data-source='demo'] {
   --mt-dot: var(--gd-orange, #ffa51f);
   --mt-label: var(--mt-amber-ink);

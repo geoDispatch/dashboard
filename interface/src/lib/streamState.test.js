@@ -3,9 +3,20 @@
 import { describe, expect, it } from 'vitest'
 import { createRoot } from 'solid-js'
 
-import { STALE_MS, streamChip, streamPhase, streamSentence } from './streamState'
+import {
+  PHASES,
+  SIMULATION_PHASE,
+  SOURCE_DETAIL,
+  SOURCE_LABEL,
+  STALE_MS,
+  streamChip,
+  streamPhase,
+  streamSentence,
+} from './streamState'
 import { createConsoleStore } from './store'
 import { createSelectors } from './selectors'
+import { routeMessage } from './router'
+import { EVENT_A, errorPayload, eventStream, heartbeat, snapshotBegin, snapshotEnd } from './v2frames.fixture'
 
 const at = (over = {}) => ({
   status: 'open', framesSinceOpen: 1, lastFrameAt: 1_000, now: 1_000, ...over,
@@ -36,6 +47,10 @@ describe('streamPhase', () => {
     expect(streamPhase({ ...base, now: t0 + STALE_MS * 4 })).toBe('stalled')
   })
 
+  it('allows three missed 15 s heartbeats before calling the stream stalled', () => {
+    expect(STALE_MS).toBe(45_000)
+  })
+
   it('treats lastFrameAt 0 as "never", not as the epoch', () => {
     expect(streamPhase({ status: 'open', framesSinceOpen: 3, lastFrameAt: 0, now: 5_000 }))
       .toBe('waiting')
@@ -48,27 +63,39 @@ describe('streamPhase', () => {
 })
 
 describe('wording', () => {
-  it('never says the stream is live', () => {
-    for (const phase of ['connecting', 'waiting', 'receiving', 'stalled', 'reconnecting', 'lost']) {
-      for (const source of ['supervisor', 'demo']) {
-        const { text } = streamChip(phase, source)
-        expect(text.toLowerCase()).not.toContain('live')
-        expect(streamSentence(phase, source).toLowerCase()).not.toContain('live supervisor')
-      }
+  it('has exactly the six transport phases', () => {
+    expect(PHASES).toEqual(['connecting', 'waiting', 'receiving', 'stalled', 'reconnecting', 'lost'])
+  })
+
+  it('never says live, and never mentions a demo', () => {
+    for (const phase of PHASES) {
+      const { text } = streamChip(phase)
+      const sentence = streamSentence(phase)
+      expect(text.toLowerCase()).not.toContain('live')
+      expect(sentence.toLowerCase()).not.toContain('live')
+      expect(`${text} ${sentence}`.toLowerCase()).not.toMatch(/demo|simulat/)
     }
   })
 
-  it('distinguishes the bundled demo from a connected supervisor', () => {
-    expect(streamChip('receiving', 'demo').text).toBe('Demo running')
-    expect(streamChip('receiving', 'supervisor').text).toBe('Receiving')
-    // A finished demo is not a fault; a stalled supervisor is.
-    expect(streamChip('stalled', 'demo').tone).toBe('idle')
-    expect(streamChip('stalled', 'supervisor').tone).toBe('warn')
+  it('names a simulation as a simulation, and never as the supervisor or live', () => {
+    expect(streamPhase({ status: 'simulation', framesSinceOpen: 0, lastFrameAt: 0, now: 1 })).toBe(SIMULATION_PHASE)
+    expect(PHASES).not.toContain(SIMULATION_PHASE)
+    const { text, tone } = streamChip(SIMULATION_PHASE)
+    const sentence = streamSentence(SIMULATION_PHASE)
+    expect(text).toBe('Simulation')
+    expect(tone).toBe('sim')
+    expect(sentence).toContain('Synthetic data, not from the supervisor')
+    expect(`${text} ${sentence}`.toLowerCase()).not.toContain('live')
+    expect(sentence).not.toContain(SOURCE_DETAIL)
   })
 
-  it('says the upstream source is unverified for a connected supervisor', () => {
-    expect(streamSentence('receiving', 'supervisor')).toMatch(/unverified/)
-    expect(streamSentence('receiving', 'demo')).toMatch(/No supervisor is involved/)
+  it('says a connected supervisor is connected, and that its upstream source is unverified', () => {
+    expect(SOURCE_LABEL).toBe('Supervisor connected')
+    expect(SOURCE_DETAIL).toBe('Frames come from the configured supervisor. Its upstream source is unverified.')
+    expect(streamSentence('receiving')).toContain(SOURCE_DETAIL)
+    expect(streamChip('stalled').tone).toBe('warn')
+    expect(streamChip('lost').tone).toBe('bad')
+    expect(streamChip('receiving').tone).toBe('ok')
   })
 })
 
@@ -80,7 +107,7 @@ describe('the phase the UI actually reads', () => {
 
       expect(selectors.phase()).toBe('connecting')
 
-      actions.setStatus('open', 'supervisor')
+      actions.setStatus('open')
       expect(selectors.phase()).toBe('waiting')
 
       actions.countFrame()
@@ -98,18 +125,49 @@ describe('the phase the UI actually reads', () => {
     })
   })
 
+  it('heartbeats keep a quiet supervisor fresh; invalid frames do not', () => {
+    createRoot((dispose) => {
+      let clock = 1_000
+      const { state, actions } = createConsoleStore({ now: () => clock })
+      const selectors = createSelectors(state)
+      actions.setStatus('open')
+      routeMessage(actions, snapshotBegin('', 0, 'idle'))
+      routeMessage(actions, snapshotEnd('', 0))
+
+      clock += 40_000
+      routeMessage(actions, heartbeat('', 0, 'idle', false))
+      clock += 40_000
+      actions.tick(clock)
+      expect(selectors.phase()).toBe('receiving')
+
+      // Garbage arriving is not proof of life.
+      routeMessage(actions, '{not json')
+      routeMessage(actions, { ...heartbeat('', 0, 'idle', false), v: 1 })
+      clock += 10_000
+      actions.tick(clock)
+      expect(selectors.phase()).toBe('stalled')
+
+      dispose()
+    })
+  })
+
   it('keeps pipeline health out of the transport phase', () => {
     createRoot((dispose) => {
       const { state, actions } = createConsoleStore()
       const selectors = createSelectors(state)
 
-      actions.setStatus('open', 'supervisor')
-      actions.countFrame()
-      actions.error({ code: 'DB_ERROR', message: 'dead', fatal: true }, null)
+      actions.setStatus('open')
+      routeMessage(actions, snapshotBegin('', 0, 'idle'))
+      routeMessage(actions, snapshotEnd('', 0))
+      const a = eventStream(EVENT_A)
+      routeMessage(actions, a.start())
+      routeMessage(actions, a.next('error', errorPayload({ code: 'DB_ERROR', stage: 'lookup', fatal: true, message: 'lookup failed' })))
 
       // The pipeline is halted; the socket is fine, and says so.
-      expect(selectors.incidentState()).toBe('halted')
+      expect(state.pipeline.fatal.code).toBe('DB_ERROR')
       expect(selectors.phase()).toBe('receiving')
+      // Halted is not terminal until event_complete says so.
+      expect(selectors.incidentState()).toBe('opening')
 
       dispose()
     })

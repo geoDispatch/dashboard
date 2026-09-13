@@ -1,6 +1,6 @@
 import { For, Show } from 'solid-js'
 import { DASH } from '../lib/format'
-import { PHASES, SOURCE_LABEL, streamChip, streamSentence } from '../lib/streamState'
+import { PHASES, SIMULATION_LABEL, SIMULATION_PHASE, SOURCE_LABEL, streamChip, streamSentence } from '../lib/streamState'
 // Inlined with Vite's ?raw suffix, not <img src>. An SVG behind <img> is an
 // isolated document, so stroke="currentColor" would resolve to that document's
 // own black; inlining lets the button's `color` reach the glyph, which is what
@@ -24,14 +24,12 @@ const LAYERS = [
 // bundled mocks, which is not something this console can see.
 
 export default function MapToolbar(props) {
-  const isDemo = () => props.source === 'demo'
-  const source = () => (isDemo() ? 'demo' : 'supervisor')
-
   // Anything unrecognised is treated as "connecting" rather than as healthy:
   // an unknown state must never read as a good one.
-  const phase = () => (PHASES.includes(props.phase) ? props.phase : 'connecting')
+  const simulating = () => props.phase === SIMULATION_PHASE
+  const phase = () => (PHASES.includes(props.phase) || simulating() ? props.phase : 'connecting')
 
-  const chip = () => streamChip(phase(), source())
+  const chip = () => streamChip(phase())
   const labelText = () => chip().text
 
   const fpsNumber = () => (Number.isFinite(props.fps) ? Math.round(props.fps) : null)
@@ -52,7 +50,8 @@ export default function MapToolbar(props) {
     const rate = fpsNumber() === null
       ? 'Frame rate unknown.'
       : `${fpsNumber()} frames per second.`
-    return `${SOURCE_LABEL[source()]}. ${labelText()}. ${rate} ${streamSentence(phase(), source())}`
+    if (simulating()) return `${SIMULATION_LABEL}. ${rate} ${streamSentence(phase())}`
+    return `${SOURCE_LABEL}. ${labelText()}. ${rate} ${streamSentence(phase())}`
   }
 
   const pillTitle = () => {
@@ -66,7 +65,7 @@ export default function MapToolbar(props) {
         class="mt-stream"
         data-status={phase()}
         data-tone={chip().tone}
-        data-source={source()}
+        data-source={simulating() ? 'demo' : 'supervisor'}
         title={pillTitle()}
       >
         <span class="mt-dot" aria-hidden="true" />

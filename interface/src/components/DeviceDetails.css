@@ -189,6 +189,13 @@
   word-break: break-word;
 }
 
+/* The AI-escalation note under the zone word, aligned with the text rather
+   than the icon (20px icon + 12px gap). Type and colour come from
+   .dd-row__note. */
+.dd-identity__note {
+  margin: -4px 0 0 32px;
+}
+
 /* --- detail rows --------------------------------------------------------- */
 
 .dd-details {

@@ -1,34 +1,33 @@
 // Turning the configured WebSocket endpoint into the HTTP routes beside it.
 //
-// The supervisor serves /ws, /sensor and /health on one host, so the operator
-// configures one address and these are derived from it. Configuring three
-// would be three chances to point the console at two different supervisors.
+// The supervisor serves /ws, /sensor, /health and /capabilities on one host,
+// so the operator configures one address and these are derived from it.
+// Configuring four would be four chances to point the console at two
+// different supervisors.
 //
 // ── The dev proxy, and what it does not solve ────────────────────────────
 //
 // POSTing to http://localhost:8080/sensor from a page served on :5173 is a
-// cross-origin request with a JSON content type, so the browser sends a
-// preflight OPTIONS first. The Go supervisor has no CORS handling at all — no
-// Access-Control-Allow-Origin, no OPTIONS route — so the preflight is refused
-// and fetch throws before the POST is ever attempted.
+// cross-origin request with a JSON content type, so the browser preflights it.
+// The supervisor answers CORS only for origins on its ALLOWED_ORIGINS list
+// (the development defaults include :5173); anything else is refused with 403
+// and fetch throws before the POST is attempted.
 //
-// In development Vite can forward a same-origin /sensor to the supervisor
-// server-side, where CORS does not apply. That is what `viaProxy` selects.
+// In development Vite can forward a same-origin request to the supervisor
+// server-side, where CORS does not apply, so the console works whatever the
+// allowlist says. That is what `viaProxy` selects.
 //
-// IT IS A DEVELOPMENT CRUTCH ONLY. `server.proxy` exists in `vite dev` and
-// nowhere else: a `vite build` has no proxy, so a deployed dashboard talking
-// to a supervisor on another origin will fail exactly as it does today. That
-// needs one of two things, neither of which is a frontend change:
-//
-//   1. CORS support on the supervisor, or
-//   2. a same-origin reverse proxy in front of both.
+// IT IS A DEVELOPMENT CONVENIENCE ONLY. `server.proxy` exists in `vite dev`
+// and nowhere else: a deployed dashboard on another origin needs its origin on
+// the supervisor's ALLOWED_ORIGINS, or a same-origin reverse proxy in front of
+// both.
 //
 // The proxy is also used ONLY when the configured endpoint is the same host
 // the proxy forwards to. Point the console at a staging supervisor and it
 // goes back to the absolute URL, because a relative path would have quietly
 // sent the incident to whichever host the proxy was built against.
 
-/** Where `vite.config.js` forwards /sensor and /health in development. */
+/** Where `vite.config.js` forwards /sensor, /health and /capabilities in development. */
 export const DEV_PROXY_TARGET =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PROXY_TARGET) ||
   'http://localhost:8080'
@@ -81,4 +80,11 @@ export function healthTarget(wsUrl, { fallback, dev = isDev(), target = DEV_PROX
   const absolute = httpUrlFor(wsUrl, '/health') || fallback || `${target}/health`
   const viaProxy = dev && matchesProxyTarget(wsUrl, target)
   return { url: viaProxy ? '/health' : absolute, absolute, viaProxy }
+}
+
+/** Same rule for GET /capabilities, which the launcher reads its disaster types from. */
+export function capabilitiesTarget(wsUrl, { fallback, dev = isDev(), target = DEV_PROXY_TARGET } = {}) {
+  const absolute = httpUrlFor(wsUrl, '/capabilities') || fallback || `${target}/capabilities`
+  const viaProxy = dev && matchesProxyTarget(wsUrl, target)
+  return { url: viaProxy ? '/capabilities' : absolute, absolute, viaProxy }
 }

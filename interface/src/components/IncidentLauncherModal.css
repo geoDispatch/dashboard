@@ -7,7 +7,7 @@
        +--------------------------------------------+
        | .ilm-head      title + close                |
        +--------------------------------------------+
-       | .ilm-body      scenario / form / summary    |
+       | .ilm-body      SensorInput form / summary   |
        +--------------------------------------------+
        | .ilm-foot      endpoint + Cancel / Launch   |
        +--------------------------------------------+
@@ -130,74 +130,7 @@
   overscroll-behavior: contain;
 }
 
-/* ── Scenario picker ──────────────────────────────────────────────────── */
-
-.ilm-presets {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ilm-preset {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 12px 14px;
-  border-radius: var(--gd-radius-control);
-  box-shadow: inset 0 0 0 1px var(--gd-hairline);
-  text-align: left;
-  transition: background-color var(--gd-dur-fast) var(--gd-ease),
-              box-shadow var(--gd-dur-fast) var(--gd-ease);
-}
-
-.ilm-preset:hover {
-  background: var(--gd-field);
-}
-
-.ilm-preset.is-active {
-  background: var(--gd-field);
-  box-shadow: inset 0 0 0 2px var(--gd-ink);
-}
-
-.ilm-preset__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.ilm-preset__name {
-  font-size: var(--gd-fs-sm);
-  font-weight: var(--gd-fw-bold);
-  line-height: var(--gd-lh-sm);
-  color: var(--gd-ink);
-}
-
-.ilm-preset__tick {
-  display: grid;
-  place-items: center;
-  flex: 0 0 20px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--gd-ink);
-  color: var(--gd-surface);
-}
-
-.ilm-preset__tick .ilm-icon,
-.ilm-preset__tick .ilm-icon svg {
-  width: 13px;
-  height: 13px;
-  flex-basis: 13px;
-}
-
-.ilm-preset__where {
-  font-size: var(--gd-fs-xs);
-  line-height: var(--gd-lh-xs);
-  color: var(--gd-ink-4);
-}
-
-/* ── Custom form ──────────────────────────────────────────────────────── */
+/* ── Form ─────────────────────────────────────────────────────────────── */
 
 .ilm-form {
   display: flex;
@@ -308,36 +241,50 @@
   color: var(--gd-surface);
 }
 
-.ilm-toggle {
-  position: relative;
-  flex: 0 0 auto;
-  width: 44px;
-  height: 26px;
+/* A disaster type this supervisor does not run: shown, so the operator knows
+   it exists, but not choosable. The title attribute says why. */
+.ilm-segment__btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.ilm-segment__btn:disabled:hover {
+  color: var(--gd-ink-3);
+}
+
+/* Coming soon: not choosable either, but planned — the word stays readable
+   rather than fading with the button, in the demo amber the simulation wears. */
+.ilm-segment__btn.is-soon:disabled {
+  opacity: 1;
+  color: var(--gd-ink-4);
+}
+
+.ilm-segment__badge {
+  margin-left: 6px;
+  padding: 1px 6px;
   border-radius: var(--gd-radius-pill);
-  background: var(--gd-hairline-strong);
-  transition: background-color var(--gd-dur) var(--gd-ease);
+  background: var(--gd-demo-fill);
+  box-shadow: inset 0 0 0 1px rgba(255, 165, 31, 0.55);
+  color: var(--gd-ink-2);
+  font-size: 10px;
+  font-weight: var(--gd-fw-bold);
+  letter-spacing: 0.04em;
+  line-height: 14px;
+  text-transform: uppercase;
+  vertical-align: 1px;
 }
 
-/* A tsunami warning is not a neutral setting, so the "on" state is the hazard
-   colour rather than the confirmation green every other switch uses. */
-.ilm-toggle.is-on {
-  background: var(--gd-red);
+/* An input with its helper button (New ID, Now) on the same line. */
+.ilm-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
-.ilm-toggle__knob {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--gd-surface);
-  box-shadow: 0 1px 2px rgba(23, 33, 43, 0.28);
-  transition: transform var(--gd-dur) var(--gd-ease);
-}
-
-.ilm-toggle.is-on .ilm-toggle__knob {
-  transform: translateX(18px);
+.ilm-inline .ilm-input {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 /* ── Summary ──────────────────────────────────────────────────────────── */
@@ -384,6 +331,24 @@
   color: var(--gd-ink-4);
 }
 
+/* Where the launch runs. A simulation wears the demo amber the toolbar uses
+   for it; a supervisor launch where it can find nobody is a warning. */
+.ilm-note--sim,
+.ilm-note--warn {
+  padding: 8px 10px;
+  border-radius: var(--gd-radius-control);
+  color: var(--gd-ink-2);
+}
+
+.ilm-note--sim {
+  background: var(--gd-demo-fill);
+  box-shadow: inset 0 0 0 1px rgba(255, 165, 31, 0.55);
+}
+
+.ilm-note--warn {
+  background: var(--gd-orange-soft);
+}
+
 .ilm-warn {
   margin: 0;
   padding: 10px 12px;
@@ -397,6 +362,10 @@
 .ilm-warn.is-error {
   background: var(--gd-red-soft);
   color: var(--gd-red-text);
+}
+
+.ilm-warn--list {
+  padding-left: 28px;
 }
 
 /* ── Foot ─────────────────────────────────────────────────────────────── */
@@ -463,6 +432,17 @@
 
 .ilm-btn:disabled {
   opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Helper buttons inside the form, which already sits on --gd-field: a field
+   coloured button would vanish into it, so these sit on the surface like the
+   inputs beside them. */
+.ilm-btn--quiet {
+  height: 40px;
+  padding: 0 12px;
+  background: var(--gd-surface);
+  box-shadow: inset 0 0 0 1px var(--gd-hairline);
 }
 
 .ilm-btn--primary {

@@ -1,6 +1,7 @@
 // Display formatters. Every one of these is safe to call with null/undefined —
-// the stream drops frames and a device can arrive before its dispatch update,
-// so no formatter may ever put "undefined" on screen.
+// a device is on screen at stage `triaged` before any decision exists, and
+// several v2 fields are null until then, so no formatter may ever put
+// "undefined" on screen.
 
 const DASH = '—'
 
@@ -8,7 +9,8 @@ const DASH = '—'
 // this is a government screen showing the live location of named citizens.
 export function maskPhone(phone) {
   if (!phone || typeof phone !== 'string') return DASH
-  if (phone.length < 9) return phone
+  // Too short to mask meaningfully — show nothing of it, as Go's MaskPhone does.
+  if (phone.length < 9) return '***'
   const cc = phone.slice(0, 4)          // +212
   const first = phone.slice(4, 5)       // 6
   const last = phone.slice(-3)          // 678
@@ -21,7 +23,7 @@ export function coords(lat, lng, decimals = 4) {
 }
 
 // The same point written the way a rescue team's handheld reads it.
-// 31.0625, -8.4144  ->  31°03'45" N, 8°24'52" W
+// 34.0209, -6.8416  ->  34°01'15" N, 6°50'30" W
 export function dms(lat, lng) {
   if (!isNum(lat) || !isNum(lng)) return DASH
   return `${dmsPart(lat, 'N', 'S')}, ${dmsPart(lng, 'E', 'W')}`
@@ -81,9 +83,10 @@ export function metres(n) {
   return `±${Math.round(n)} m`
 }
 
-// Relative time from a millisecond timestamp. Because the supervisor stamps
-// most frames with 0 (agent.md §6.3), callers pass client arrival time and
-// the UI must say "received", never "occurred".
+// Relative time from a millisecond timestamp. v2 frames carry the supervisor's
+// emit time (`emittedAt` in the store) and the store adds the client's arrival
+// time (`receivedAt`); callers say which one they are showing. Neither is when
+// the disaster itself occurred.
 export function ago(ms, now = Date.now()) {
   if (!isNum(ms) || ms <= 0) return DASH
   const s = Math.max(0, Math.round((now - ms) / 1000))
@@ -107,29 +110,73 @@ export function clock(ms) {
   return new Date(ms).toLocaleTimeString('en-GB', { hour12: false })
 }
 
-// The AI's action is not on the wire — it is derived from the two booleans
-// that are (agent.md §"AI decision").
-export function deriveAction(device) {
-  if (!device) return 'none'
-  const sms = !!device.sms_sent
-  const rescue = !!device.rescue_flag
-  if (sms && rescue) return 'both'
-  if (sms) return 'sms'
-  if (rescue) return 'rescue_flag'
-  return 'none'
-}
-
+// The AI's decision, as sent in device_update.action. It is what the AI ASKED
+// for, not what happened: whether an SMS actually went out is sms_status.
 export const ACTION_LABELS = {
-  sms:         'SMS sent',
-  rescue_flag: 'Rescue flagged',
-  both:        'SMS + rescue',
+  sms:         'Send SMS',
+  rescue_flag: 'Flag for rescue',
+  both:        'SMS + rescue flag',
   none:        'No action',
 }
 
+export const STAGE_LABELS = {
+  triaged:         'Located — awaiting AI decision',
+  decided:         'Decided',
+  decision_failed: 'AI decision failed',
+}
+
+export const SMS_STATUS_LABELS = {
+  not_requested:  'Not requested',
+  sent:           'Accepted by the SMS gateway',
+  failed:         'Failed — the SMS gateway rejected it',
+  not_configured: 'Not sent — no SMS gateway configured',
+}
+
+export const RESCUE_STATUS_LABELS = {
+  not_requested: 'Not requested',
+  recorded:      'Recorded',
+  failed:        'Recording failed',
+}
+
+export const LIFECYCLE_LABELS = {
+  idle:                    'No incident',
+  running:                 'Running',
+  completed:               'Completed',
+  completed_with_failures: 'Completed with failures',
+  no_devices:              'No registered devices within radius',
+  failed:                  'Failed',
+}
+
+const lookup = (table) => (key) => (key != null && table[key]) || DASH
+
+/** `null` (no decision yet) and unknown values render as a dash. */
+export const actionLabel       = lookup(ACTION_LABELS)
+export const stageLabel        = lookup(STAGE_LABELS)
+export const smsStatusLabel    = lookup(SMS_STATUS_LABELS)
+export const rescueStatusLabel = lookup(RESCUE_STATUS_LABELS)
+export const lifecycleLabel    = lookup(LIFECYCLE_LABELS)
+
+// Reachability comes from CAMARA, not the AI. When the lookup itself failed the
+// supervisor assumes NOT_CONNECTED and says so; so does this label.
 export function reachabilityLabel(device) {
-  if (!device) return DASH
-  if (device.reachability_status) return device.reachability_status.replace(/_/g, ' ')
-  return device.reachable ? 'Reachable' : 'Unreachable'
+  if (!device || !device.reachability_status) return DASH
+  const words = device.reachability_status.replace(/_/g, ' ')
+  return device.reachability_assumed ? `${words} (assumed — lookup failed)` : words
+}
+
+/**
+ * Severity worded for its disaster type. Only an earthquake has a magnitude;
+ * an "M" in front of a flood's number would claim a scale it is not on.
+ */
+export function severityLabel(type, value) {
+  if (!isNum(value)) return DASH
+  const v = value.toFixed(1)
+  switch (type) {
+    case 'earthquake': return `M ${v}`
+    case 'flood':      return `Flood severity ${v}`
+    case 'heatwave':   return `Heat severity ${v}`
+    default:           return `Severity ${v}`
+  }
 }
 
 export function titleCase(s) {

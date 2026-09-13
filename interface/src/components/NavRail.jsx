@@ -32,12 +32,16 @@ import './NavRail.css'
 
 // Every glyph is drawn on the same 24px grid at the same weight, so there is
 // no per-item size correction any more — the wrapper is a flat 24x24 slot.
+//
+// Third is Devices (the ring-and-spokes locator glyph) and fifth is Rescue
+// (the phone). They were the other way round; the glyphs kept their places
+// and the sections traded, so each file is named for what it opens.
 const PRIMARY_NAV = [
   { key: 'map',      label: 'Map',      hint: 'Live map',        icon: mapIcon },
   { key: 'details',  label: 'Details',  hint: 'Incident details', icon: detailsIcon },
-  { key: 'rescue',   label: 'Rescue',   hint: 'Rescue queue',    icon: rescueIcon },
-  { key: 'shelters', label: 'Shelters', hint: 'Shelters',        icon: sheltersIcon },
   { key: 'devices',  label: 'Devices',  hint: 'Devices by area', icon: devicesIcon },
+  { key: 'shelters', label: 'Shelters', hint: 'Shelters',        icon: sheltersIcon },
+  { key: 'rescue',   label: 'Rescue',   hint: 'Rescue queue',    icon: rescueIcon },
 ]
 
 // All three open the same dialog, on the tab that answers what the word

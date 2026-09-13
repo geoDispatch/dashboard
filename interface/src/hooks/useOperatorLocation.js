@@ -77,6 +77,25 @@ export function useOperatorLocation({ onLocated } = {}) {
     return apply({ ...region, source: 'manual' })
   }
 
+  /**
+   * A place from the location search (lib/geocode.js), anywhere in the world.
+   * Where the operator is LOOKING, not where they are — `source: 'search'`
+   * keeps the map from calling it "you are here".
+   */
+  function selectPlace(place) {
+    if (!place || !Number.isFinite(place.latitude) || !Number.isFinite(place.longitude)) return null
+    setStatus('ok')
+    return apply({
+      name:      place.name,
+      label:     place.label,
+      latitude:  place.latitude,
+      longitude: place.longitude,
+      zoom:      place.zoom,
+      bounds:    place.bounds,
+      source:    'search',
+    })
+  }
+
   function clear() {
     setStatus('idle')
     apply(null)
@@ -84,7 +103,7 @@ export function useOperatorLocation({ onLocated } = {}) {
 
   return {
     location, status, error,
-    locate, selectRegion, clear,
+    locate, selectRegion, selectPlace, clear,
     regions: MOROCCO_REGIONS,
     browserLocation,
   }

@@ -18,12 +18,19 @@
 import { createContext, useContext } from 'solid-js'
 import { createStore, produce } from 'solid-js/store'
 
-import { WS_URL } from '../constants/zones'
+import { WS_URL, zoneBandRange } from '../constants/zones'
 import { BASEMAP_KEYS, DEFAULT_BASEMAP } from '../constants/basemaps'
 import { coords, distance, dms, maskPhone } from './format'
 import { NIGHT_THEMES, THEME_PREFS } from './theme'
 
 const STORAGE_KEY = 'geodispatch.settings.v1'
+
+// Bumped when a stored value must be migrated. Version 2: the operator's
+// sector no longer has a scenario default. Browsers that stored the old
+// default would keep showing it as if the operator had typed it, and there is
+// no way to tell that apart from a sector they really did type — so a blob
+// without this version loses its sector (and only its sector) once.
+const SETTINGS_VERSION = 2
 
 export const LANGUAGES = [
   { key: 'en', label: 'English',  native: 'English',  locale: 'en-GB', rtl: false },
@@ -61,7 +68,7 @@ export const DEFAULT_SETTINGS = {
     name:   'Command Officer Ayoub',
     agency: 'Direction Générale de la Protection Civile (DGPC)',
     role:   'Lead Crisis Dispatcher & Triage Supervisor',
-    sector: 'Casablanca-Settat / Al Haouz Region',
+    sector: '',
     badge:  '#MA-DISPATCH-04',
   },
 }
@@ -117,6 +124,7 @@ function sanitise(saved) {
     for (const field of Object.keys(DEFAULT_SETTINGS.operator)) {
       next.operator[field] = text(saved.operator[field], DEFAULT_SETTINGS.operator[field])
     }
+    if (saved.version !== SETTINGS_VERSION) next.operator.sector = DEFAULT_SETTINGS.operator.sector
   }
 
   // Not read from storage. Masking is not a preference this console can be
@@ -138,7 +146,7 @@ function readStored() {
 
 function writeStored(settings) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings))
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...settings, version: SETTINGS_VERSION }))
     return true
   } catch {
     return false
@@ -233,14 +241,17 @@ export function makeDisplay(store) {
     distance: (valueKm, places = 1) =>
       distance(valueKm, { units: current().units, places }),
 
-    /** "0–17 km" / "0–11 mi" — a zone's distance band from the epicentre. */
-    band: (zone, radiusKm) => {
-      if (!radiusKm) return ''
-      const lo = zone === 'red' ? 0 : zone === 'orange' ? radiusKm * 0.33 : radiusKm * 0.66
-      const hi = zone === 'red' ? radiusKm * 0.33 : zone === 'orange' ? radiusKm * 0.66 : radiusKm
+    /**
+     * "0–5 km" / "0–3 mi" — a zone's distance band from the epicentre.
+     * @param bands  the event's zone_bands (selectors.zoneBands()); the
+     *               contract fallback when omitted
+     */
+    band: (zone, radiusKm, bands) => {
+      const r = zoneBandRange(zone, radiusKm, bands)
+      if (!r) return ''
       const unit = current().units === 'mi' ? 'mi' : 'km'
       const scale = current().units === 'mi' ? 0.621371 : 1
-      return `${Math.round(lo * scale)}–${Math.round(hi * scale)} ${unit}`
+      return `${Math.round(r.innerKm * scale)}–${Math.round(r.outerKm * scale)} ${unit}`
     },
 
     units: () => current().units,

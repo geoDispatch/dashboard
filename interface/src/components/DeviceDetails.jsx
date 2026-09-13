@@ -5,26 +5,28 @@
 // headings and icons and show a calm empty state in place of their rows — no
 // zeros, no placeholders, no invented values.
 //
-// Contract rules enforced here (agent.md / BUILD_SPEC):
+// Contract rules enforced here (contract v2, device_update):
 //   - phone numbers are always masked, never rendered raw;
 //   - a zone is never encoded by colour alone — the zone WORD is always drawn;
-//   - `shelter_name`, `confidence` and `rescue_priority` never arrive from the
-//     live Go supervisor (only from the bundled demo stream). Missing means
-//     DASH plus a muted "not sent by supervisor" note — never a guessed number;
-//   - the AI's `reasoning` field is audit-only and is NEVER read or rendered
-//     anywhere in this file.
+//   - the zone is Go's haversine band. An AI escalation is shown as a note
+//     beside it, never in its place;
+//   - `action`, `confidence` are null until the AI has decided; null renders as
+//     DASH with a note saying why, never a guessed number;
+//   - "SMS" is what the gateway did (sms_status), not what the AI asked for;
+//   - the AI's `reasoning` field never reaches the browser and is NEVER read or
+//     rendered anywhere in this file.
 
 import { createSignal, Show } from 'solid-js'
 
 import {
-  ACTION_LABELS,
   DASH,
-  coords,
-  deriveAction,
-  km,
+  actionLabel,
   maskPhone,
   percent,
   reachabilityLabel,
+  rescueStatusLabel,
+  smsStatusLabel,
+  stageLabel,
 } from '../lib/format'
 import { ZONE_LABELS, ZONE_TEXT } from '../constants/zones'
 import { useDisplay } from '../lib/settings'
@@ -54,10 +56,14 @@ const EMPTY_TEXT = {
 
 // Height of each card's filled row block, so the empty state holds the same
 // space and the stack does not jump when a device is selected.
-//   overview 2x24 + 8    status 3x24 + 2x12    location 2x24 + 12    ai 4x24 + 3x12
-const EMPTY_HEIGHT = { overview: 56, status: 96, location: 60, ai: 132 }
+//   overview 2x24 + 8    status 4x24 + 3x12    location 3x24 + 2x12    ai 3x24 + 2x12
+const EMPTY_HEIGHT = { overview: 56, status: 132, location: 96, ai: 96 }
 
-const GAP_NOTE = 'not sent by supervisor'
+// Why a decision field is empty, by stage. Only `decided` carries one.
+const UNDECIDED_NOTE = {
+  triaged:         'awaiting AI decision',
+  decision_failed: 'AI decision failed',
+}
 
 function isNumber(n) {
   return typeof n === 'number' && Number.isFinite(n)
@@ -105,8 +111,9 @@ export function EmptyState(props) {
   )
 }
 
-// A label column fixed at 124px, then the value. `missing` marks one of the
-// three backend gap fields, which renders DASH plus the muted note.
+// A label column fixed at 124px, then the value. `missing` mutes a value that
+// is not there (DASH); `note` is a muted line under the value saying why, or
+// qualifying it.
 export function DetailRow(props) {
   return (
     <div class="dd-row">
@@ -115,8 +122,8 @@ export function DetailRow(props) {
         <p class="dd-row__value" classList={{ 'is-missing': !!props.missing }}>
           {props.value}
         </p>
-        <Show when={props.missing}>
-          <p class="dd-row__note">{GAP_NOTE}</p>
+        <Show when={props.note}>
+          <p class="dd-row__note">{props.note}</p>
         </Show>
       </div>
     </div>
@@ -203,29 +210,39 @@ export default function DeviceDetails(props) {
     return ZONE_TEXT[z]
   }
 
+  // "AI escalation to Red zone" — a display annotation from the AI. The zone
+  // above it stays the one Go computed.
+  const escalationNote = () => {
+    const d = device()
+    if (!d || !d.zone_escalated || !ZONE_LABELS[d.escalated_zone]) return null
+    return `AI escalation to ${ZONE_LABELS[d.escalated_zone]}`
+  }
+
+  // CAMARA's answer, with "(assumed — lookup failed)" when there was none.
   const reachability = () => reachabilityLabel(device())
 
-  const smsValue = () => {
-    const d = device()
-    if (!d) return DASH
-    if (d.sms_sent) return 'Sent'
-    return 'Not sent'
-  }
+  const stageValue = () => stageLabel(device()?.stage)
+
+  // What the gateway did, in words: "Not sent — no SMS gateway configured" is
+  // a different fact from "Failed", and neither is "Sent".
+  const smsValue = () => smsStatusLabel(device()?.sms_status)
 
   const rescueValue = () => {
     const d = device()
     if (!d) return DASH
-    if (d.rescue_flag) return 'Flagged'
-    return 'Not flagged'
+    if (!d.rescue_flag) return 'Not flagged'
+    return `Flagged · ${rescueStatusLabel(d.rescue_status)}`
   }
 
-  // distance_km is derived by selectors.selectedDevice() from the epicenter;
-  // before an event_start there is no epicenter, so it stays a dash.
+  // The supervisor's own haversine distance; selectors only compute one as a
+  // fallback when it is missing, and the note says so.
   const distanceValue = () => {
     const d = device()
     if (!d || !isNumber(d.distance_km)) return DASH
     return `${fmt.distance(d.distance_km)} from epicenter`
   }
+  const distanceNote = () =>
+    device()?.distanceSource === 'computed' ? 'computed here — not sent by supervisor' : null
 
   const coordsValue = () => {
     const d = device()
@@ -233,22 +250,23 @@ export default function DeviceDetails(props) {
     return fmt.coords(d.latitude, d.longitude)
   }
 
-  const actionValue = () => {
+  // CAMARA reports an area, not a point: the coordinates are its centre and
+  // this is its radius.
+  const accuracyValue = () => {
     const d = device()
-    if (!d) return DASH
-    return ACTION_LABELS[d.action] || ACTION_LABELS[deriveAction(d)] || DASH
+    if (!d || !isNumber(d.location_accuracy_m)) return DASH
+    return `± ${fmt.distance(d.location_accuracy_m / 1000, 2)}`
   }
 
-  // --- the three backend gap fields -----------------------------------------
+  // --- decision fields: null until stage == decided ------------------------
 
-  const shelterMissing = () => {
+  const undecided = () => {
     const d = device()
-    return !d || !d.shelter_name
+    return !d || d.stage !== 'decided'
   }
-  const shelterValue = () => {
-    if (shelterMissing()) return DASH
-    return device().shelter_name
-  }
+  const undecidedNote = () => UNDECIDED_NOTE[device()?.stage] || null
+
+  const actionValue = () => actionLabel(device()?.action)
 
   const confidenceMissing = () => {
     const d = device()
@@ -259,15 +277,12 @@ export default function DeviceDetails(props) {
     return percent(device().confidence, 0)
   }
 
-  const priorityMissing = () => {
-    const d = device()
-    return !d || !isNumber(d.rescue_priority)
-  }
+  // 0 means "no rescue priority"; 1 is the most urgent.
   const priorityValue = () => {
-    if (priorityMissing()) return DASH
-    const p = device().rescue_priority
-    if (p <= 0) return 'None'
-    return String(p)
+    const d = device()
+    if (!d || !isNumber(d.rescue_priority)) return DASH
+    if (d.rescue_priority <= 0) return 'None'
+    return String(d.rescue_priority)
   }
 
   return (
@@ -301,6 +316,9 @@ export default function DeviceDetails(props) {
                     {zoneLabel()}
                   </p>
                 </div>
+                <Show when={escalationNote()}>
+                  <p class="dd-row__note dd-identity__note">{escalationNote()}</p>
+                </Show>
               </div>
             </Show>
           </DetailCard>
@@ -318,6 +336,7 @@ export default function DeviceDetails(props) {
             >
               <div class="dd-details">
                 <DetailRow label="Reachability" value={reachability()} />
+                <DetailRow label="Stage" value={stageValue()} />
                 <DetailRow label="SMS" value={smsValue()} />
                 <DetailRow label="Rescue" value={rescueValue()} />
               </div>
@@ -336,8 +355,9 @@ export default function DeviceDetails(props) {
               fallback={<EmptyState height={EMPTY_HEIGHT.location} text={EMPTY_TEXT.location} />}
             >
               <div class="dd-details">
-                <DetailRow label="Distance" value={distanceValue()} />
+                <DetailRow label="Distance" value={distanceValue()} note={distanceNote()} />
                 <DetailRow label="Coordinates" value={coordsValue()} />
+                <DetailRow label="Accuracy" value={accuracyValue()} />
               </div>
             </Show>
           </DetailCard>
@@ -354,14 +374,19 @@ export default function DeviceDetails(props) {
               fallback={<EmptyState height={EMPTY_HEIGHT.ai} text={EMPTY_TEXT.ai} />}
             >
               <div class="dd-details">
-                <DetailRow label="Action" value={actionValue()} />
-                <DetailRow label="Shelter" value={shelterValue()} missing={shelterMissing()} />
+                <DetailRow
+                  label="Action"
+                  value={actionValue()}
+                  missing={undecided()}
+                  note={undecidedNote()}
+                />
+                <DetailRow label="Priority" value={priorityValue()} />
                 <DetailRow
                   label="Confidence"
                   value={confidenceValue()}
                   missing={confidenceMissing()}
+                  note={undecided() ? undecidedNote() : null}
                 />
-                <DetailRow label="Priority" value={priorityValue()} missing={priorityMissing()} />
               </div>
             </Show>
           </DetailCard>

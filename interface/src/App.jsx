@@ -6,8 +6,9 @@
 // imports its own CSS; the only markup here is the shell and the overlays.
 //
 // Honesty rules that this file, and only this file, can enforce:
-//   - the toolbar is told where the frames really come from (stream.source()),
-//     so a demo can never be presented as the live supervisor;
+//   - every operational frame comes from the configured supervisor — except
+//     while the operator runs a browser simulation, which replaces the socket
+//     for its duration and is labelled as synthetic everywhere it shows;
 //   - the incident launcher is the ONE thing here that sends: it POSTs a sensor
 //     reading, the same way the seismic sensor does, and nothing else in this
 //     console ever talks back to the pipeline;
@@ -38,39 +39,19 @@ import { DevicesPanel, PanelShell, RescuePanel, SheltersPanel } from './componen
 import { createConsoleStore } from './lib/store'
 import { createSelectors } from './lib/selectors'
 import { checkHealth, createStream } from './lib/socket'
+import { buildSimulation } from './lib/simulation'
+import { readLastSimulation, writeLastSimulation } from './lib/lastSimulation'
 import { LANGUAGES, SettingsContext, createSettingsStore, makeDisplay } from './lib/settings'
 import { applyTheme, basemapForTheme, isDarkTheme, resolveTheme, systemDarkQuery } from './lib/theme'
 import { playAlert } from './lib/audio'
-import { SHELTERS } from './lib/mockStream'
-import { AL_HAOUZ_LOCALITIES, nearestLocality } from './lib/geo'
-import { maskPhone, num } from './lib/format'
-import { ZONE_LABELS } from './constants/zones'
-
-import { HEALTH_URL, SENSOR_URL } from './constants/zones'
-import { healthTarget, sensorTarget } from './lib/endpoints'
+import { lifecycleLabel, maskPhone, num, severityLabel } from './lib/format'
+import { CAPABILITIES_URL, HEALTH_URL, SENSOR_URL, ZONE_LABELS } from './constants/zones'
+import { capabilitiesTarget, healthTarget, sensorTarget } from './lib/endpoints'
 
 import { useNetworkStats } from './hooks/useNetworkStats'
 import { useOperatorLocation } from './hooks/useOperatorLocation'
 
 import './App.css'
-
-// ── Shelters ────────────────────────────────────────────────────────────────
-// The supervisor does not publish shelters; the bundled Al Haouz scenario does,
-// but only as a name and an occupancy. A shelter is placed on the map only when
-// its name resolves to a locality we hold a centroid for — the rest are listed
-// with no coordinates rather than dropped at a made-up point.
-const SHELTER_SITES = SHELTERS.map((shelter) => {
-  const anchor = AL_HAOUZ_LOCALITIES.find((locality) => shelter.name.includes(locality.name))
-  if (!anchor) {
-    return { ...shelter, latitude: null, longitude: null, anchor: null }
-  }
-  return {
-    ...shelter,
-    latitude: anchor.latitude,
-    longitude: anchor.longitude,
-    anchor: anchor.name,
-  }
-})
 
 const SEARCH_LIMIT = 8
 const NOTE_MS = 6000
@@ -101,7 +82,8 @@ export default function App(props) {
   const selectors = createSelectors(state)
 
   // The stream registers its own onCleanup, so it must be created inside the
-  // component body. `source()` is the only truthful answer to "is this live?".
+  // component body. The UI reports transport state separately from incident
+  // lifecycle; neither is presented as proof of a live upstream source.
   const stream = createStream(actions, { url: settings.wsUrl })
 
   // No pingUrl: a background probe every ten seconds against a supervisor that
@@ -115,6 +97,8 @@ export default function App(props) {
   // proxy forwards to. See lib/endpoints.js for why the proxy is dev-only.
   const sensor = () => sensorTarget(settings.wsUrl, { fallback: SENSOR_URL })
   const health = () => healthTarget(settings.wsUrl, { fallback: HEALTH_URL })
+  const capabilities = () =>
+    capabilitiesTarget(settings.wsUrl, { fallback: CAPABILITIES_URL })
 
   // The shell reads coordinates for the search list, so it needs the operator's
   // format too. It binds the store directly rather than through the context it
@@ -124,13 +108,22 @@ export default function App(props) {
   // ── ui signals ───────────────────────────────────────────────────────────
   const [handle, setHandle] = createSignal(null)   // DisasterMap's imperative handle
   const [activeView, setActiveView] = createSignal('map')
-  const [panelHidden, setPanelHidden] = createSignal(false)
+  // The console opens on the map alone: the details column waits behind its
+  // Show button until the operator asks for it — Show, a device or zone
+  // picked, or a rail panel opened.
+  const [panelHidden, setPanelHidden] = createSignal(true)
   const [query, setQuery] = createSignal('')
   const [note, setNote] = createSignal(null)
-  const [layers, setLayers] = createSignal({ zones: true, devices: true, shelters: false })
+  // Shelters are on from the start: at most three, each labelled, and where
+  // they are is half of what an operator needs from the map.
+  const [layers, setLayers] = createSignal({ zones: true, devices: true, shelters: true })
   const [settingsTab, setSettingsTab] = createSignal(null)   // null = dialog closed
   const [launcherOpen, setLauncherOpen] = createSignal(false)
+  // A point the launcher opens on, from the map's "Launch incident here".
+  const [launchPoint, setLaunchPoint] = createSignal(null)
   const [telemetryOpen, setTelemetryOpen] = createSignal(false)
+
+  const simulating = () => stream.source() === 'simulation'
 
   let mapEl                 // the element that goes fullscreen
   let noteTimer = null
@@ -156,7 +149,9 @@ export default function App(props) {
       if (!loc) return
       actions.setRegion(loc)
       const map = handle()
-      if (map) map.flyTo(loc.latitude, loc.longitude, loc.source === 'manual' ? 8 : 11)
+      if (!map) return
+      if (loc.source === 'search') map.flyToPlace(loc)
+      else map.flyTo(loc.latitude, loc.longitude, loc.source === 'manual' ? 8 : 11)
     },
   })
 
@@ -185,6 +180,13 @@ export default function App(props) {
     if (!region) showNote(`No region named ${name} is on the list.`)
   }
 
+  // A place from the location search: the map goes there and the pill names
+  // it. The details panel may be over the map, so the map view comes first.
+  function selectPlace(place) {
+    setActiveView('map')
+    operator.selectPlace(place)
+  }
+
   const locationLabel = () => {
     const region = state.region
     if (region && region.name) return region.name
@@ -194,7 +196,8 @@ export default function App(props) {
   const locationBusy = () => operator.status() === 'locating'
 
   // ── search ───────────────────────────────────────────────────────────────
-  // Masked phone, zone word, nearest locality and coordinates. The query is
+  // Masked phone, zone word and coordinates. The supervisor does not publish
+  // a locality, so the console never guesses one from a fixed place list. The query is
   // read first so an empty field never subscribes to the device map — with
   // thousands of dots streaming, that would recompute on every frame.
   const results = createMemo(() => {
@@ -205,18 +208,16 @@ export default function App(props) {
     for (const device of Object.values(state.devices)) {
       const masked = maskPhone(device.phone)
       const zoneWord = ZONE_LABELS[device.zone] || ''
-      const locality = nearestLocality(device.latitude, device.longitude)
-      const place = locality ? locality.name : ''
       const point = fmt.coords(device.latitude, device.longitude)
       const raw = `${device.latitude} ${device.longitude}`
 
-      const haystack = `${masked} ${device.zone || ''} ${zoneWord} ${place} ${point} ${raw}`
+      const haystack = `${masked} ${device.zone || ''} ${zoneWord} ${point} ${raw}`
       if (!haystack.toLowerCase().includes(q)) continue
 
       out.push({
         phone: device.phone,
         label: masked,
-        sub: place ? `${place} · ${point}` : point,
+        sub: point,
         zone: device.zone,
       })
       if (out.length >= SEARCH_LIMIT) break
@@ -259,9 +260,10 @@ export default function App(props) {
   }
 
   function focusShelter(shelter) {
-    if (typeof shelter.latitude !== 'number') return
+    const point = shelter?.location
+    if (typeof point?.latitude !== 'number' || typeof point?.longitude !== 'number') return
     const map = handle()
-    if (map) map.flyTo(shelter.latitude, shelter.longitude, 12)
+    if (map) map.flyTo(point.latitude, point.longitude, 12)
   }
 
   function focusIncidentArea() {
@@ -293,6 +295,19 @@ export default function App(props) {
       request.catch(() => showNote('The browser refused fullscreen for this page.'))
     }
   }
+
+  // Escape lets go of the selected device or zone (a click on the map no longer
+  // does — it shows the point's coordinates instead), and closes that popup.
+  // Dialogs handle their own Escape first.
+  onMount(() => {
+    const onKey = (e) => {
+      if (e.key !== 'Escape' || launcherOpen() || settingsOpen() || telemetryOpen()) return
+      handle()?.closePopup?.()
+      if (state.selectedPhone || state.selectedZone) actions.clearSelection()
+    }
+    document.addEventListener('keydown', onKey)
+    onCleanup(() => document.removeEventListener('keydown', onKey))
+  })
 
   // Leaflet has to be told the container changed size.
   onMount(() => {
@@ -426,12 +441,76 @@ export default function App(props) {
   // ── incident launcher ────────────────────────────────────────────────────
   // The dialog does the POST itself and hands back exactly what it sent, so the
   // note names the real event rather than what was asked for.
-  function onLaunched(sent) {
+  function openLauncher(point = null) {
+    setLaunchPoint(point)
+    setLauncherOpen(true)
+  }
+
+  function onLaunched(result, sent) {
     setLauncherOpen(false)
-    const magnitude = typeof sent.severity === 'number' ? ` M ${sent.severity}` : ''
-    showNote(
-      `${sent.event_id} sent to the supervisor: ${magnitude.trim()} ${sent.disaster_type}.`,
-    )
+    const outcome = result?.outcome === 'duplicate' ? 'already accepted' : 'accepted'
+    showNote(`${sent.event_id} ${outcome}: ${severityLabel(sent.disaster_type, sent.severity)} ${sent.disaster_type}.`)
+  }
+
+  // ── browser simulation ───────────────────────────────────────────────────
+  // The map frames the area first and waits for its ground to draw, so the
+  // simulation can ask where the water is before it places anyone. A second
+  // launch while one is being prepared wins.
+  let simToken = 0
+
+  // The last simulation run, kept in this browser, so Run simulation and
+  // Replay can play it again without the launcher — as often as a demo needs.
+  const [lastSimulation, setLastSimulation] = createSignal(readLastSimulation())
+
+  function replaySimulation() {
+    const sensor = lastSimulation()
+    if (sensor) runSimulation(sensor)
+  }
+
+  const replayTitle = () => {
+    const s = lastSimulation()
+    if (!s) return ''
+    return `Run ${s.event_id} again: ${severityLabel(s.disaster_type, s.severity)} ${s.disaster_type}, ` +
+      `${fmt.coords(s.epicenter.latitude, s.epicenter.longitude)}, ${fmt.distance(s.radius_km)} radius`
+  }
+
+  async function runSimulation(sensor) {
+    setLauncherOpen(false)
+    setActiveView('map')
+    const token = ++simToken
+    showNote(`Preparing simulation ${sensor.event_id}…`)
+
+    await Promise.resolve()   // the map view mounts and hands over its handle
+    const map = handle()
+    if (map) {
+      map.closePopup()
+      map.fitArea(sensor.epicenter.latitude, sensor.epicenter.longitude, sensor.radius_km)
+      await map.whenIdle(2500)
+    }
+    if (token !== simToken) return
+
+    // The launcher already refuses what the simulation cannot model (flood,
+    // heatwave: coming soon); a refusal here still ends as a note, never a
+    // half-started board.
+    let built
+    try {
+      built = buildSimulation(sensor, { isLand: map ? map.isLand : undefined })
+    } catch (err) {
+      showNote(String(err?.message || err))
+      return
+    }
+    const { frames, devices } = built
+    setLastSimulation(sensor)
+    writeLastSimulation(sensor)
+    stream.startSimulation(frames)
+    showNote(devices.length
+      ? `Simulation ${sensor.event_id}: ${num(devices.length)} synthetic devices. Not real data.`
+      : `Simulation ${sensor.event_id}: no land inside the radius, so nobody to place.`)
+  }
+
+  function exitSimulation() {
+    simToken += 1
+    if (stream.stopSimulation()) showNote('Simulation stopped. Back on the supervisor.')
   }
 
   function endShift() {
@@ -444,9 +523,8 @@ export default function App(props) {
   }
 
   // ── export ───────────────────────────────────────────────────────────────
-  // A real Blob download of what this console is actually holding, stamped with
-  // where the frames came from so an exported demo is never mistaken for a
-  // record of a live event.
+  // A real Blob download of exactly what this console received from the
+  // configured supervisor, including sync and lifecycle diagnostics.
   function exportJson() {
     const payload = {
       exported_at: new Date().toISOString(),
@@ -454,22 +532,23 @@ export default function App(props) {
       connection: {
         status: state.connection.status,
         phase: phase(),
-        source: state.connection.source,
-        manual_demo: state.connection.manualDemo,
         fps: state.connection.fps,
-        frames: state.connection.frames,
+        last_frame_at: state.connection.lastFrameAt,
       },
+      counters: state.counters,
+      sync: state.sync,
+      lifecycle: state.lifecycle,
       pipeline: {
         fatal: state.pipeline.fatal,
         frames_after_fatal: state.pipeline.framesAfterFatal,
       },
       active_event_id: state.activeEventId,
-      joined_late: state.joinedLate,
-      dropped_foreign_frames: state.dropped.foreign,
       event: state.event,
+      context: state.context,
       devices: Object.values(state.devices),
       summary: state.summary,
       narratives: state.narratives,
+      errors: state.errors,
     }
 
     let url = null
@@ -498,33 +577,31 @@ export default function App(props) {
   // wording on a pipeline problem and left the operator with no way to tell
   // which had actually happened. The halted pipeline has its own banner.
   //
-  // It also used to report 'live' for any open socket, and for the demo it
-  // read frames-per-second as a stand-in for health. Both are now one pure
+  // It also used to report 'live' for any open socket. It is now one pure
   // derivation over lastFrameAt — see lib/streamState.js.
   const phase = () => selectors.phase()
-  const isDemo = () => stream.source() === 'demo'
 
-  function useDemoStream() {
-    stream.useDemo()
-    showNote('Bundled demo selected.')
-  }
-
-  function useSupervisorStream() {
-    stream.useSupervisor()
-    showNote(`Connecting to ${stream.endpoint()}. Waiting for the next frame.`)
+  const completionMessage = () => {
+    const complete = state.lifecycle.complete
+    if (!complete || state.lifecycle.status === 'failed') return null
+    const pieces = [
+      `${lifecycleLabel(state.lifecycle.status)}.`,
+      `${num(complete.devices_decided)} of ${num(complete.devices_triaged)} triaged devices decided.`,
+    ]
+    if (complete.sms_not_sent_no_gateway > 0) {
+      pieces.push(
+        `${num(complete.sms_not_sent_no_gateway)} SMS not sent — no SMS gateway configured.`,
+      )
+    }
+    return pieces.join(' ')
   }
 
   // ── halted pipeline ──────────────────────────────────────────────────────
-  // Two separate recoveries, because they are two separate decisions: ask for
-  // a new socket, or stop showing an incident nobody is updating. There is no
-  // third option — the supervisor sends no snapshot on connect and supports no
-  // replay, so nothing here can offer to "resume".
+  // Two separate recoveries: ask for a fresh supervisor snapshot, or clear the
+  // local board. A reconnect preserves the last state until replay completes.
   function reconnectNow() {
-    if (stream.reconnect()) {
-      showNote('Reconnecting to the supervisor.')
-    } else {
-      showNote('The console is on the bundled demo. Choose the supervisor first.')
-    }
+    stream.reconnect()
+    showNote('Reconnecting to the supervisor and requesting a fresh snapshot.')
   }
 
   function clearIncident() {
@@ -536,12 +613,15 @@ export default function App(props) {
   const badges = () => ({
     rescue: selectors.rescueQueue().length,
     devices: selectors.counts().total,
-    shelters: SHELTER_SITES.length,
+    shelters: selectors.shelters().length,
   })
 
+  // A rail panel (Rescue, Devices, Shelters) is what the operator clicked for,
+  // so it opens. The Map tile only goes back to the map; its details column
+  // stays however the operator left it, behind Show.
   function navigate(key) {
     setActiveView(key)
-    setPanelHidden(false)
+    if (key !== 'map') setPanelHidden(false)
   }
 
   const panelLabel = () => PANEL_LABELS[activeView()] || 'Panel'
@@ -556,6 +636,7 @@ export default function App(props) {
         regions={operator.regions}
         onUseMyLocation={useMyLocation}
         onSelectRegion={selectRegion}
+        onSelectPlace={selectPlace}
         query={query()}
         results={results()}
         onQueryInput={(value) => setQuery(value)}
@@ -563,7 +644,12 @@ export default function App(props) {
         errorCount={state.errors.length}
         telemetryOpen={telemetryOpen()}
         onOpenTelemetry={() => setTelemetryOpen(!telemetryOpen())}
-        onLaunchIncident={() => setLauncherOpen(true)}
+        onLaunchIncident={() => openLauncher(null)}
+        simulating={simulating()}
+        onStopSimulation={exitSimulation}
+        canRunSimulation={!!lastSimulation()}
+        runSimulationTitle={replayTitle()}
+        onRunSimulation={replaySimulation}
         operator={settings.operator}
         onOpenAccount={() => openSettings('station')}
       />
@@ -586,7 +672,10 @@ export default function App(props) {
           devices={state.devices}
           narratives={state.narratives}
           counts={selectors.counts()}
-          shelters={SHELTER_SITES}
+          context={state.context}
+          shelters={selectors.shelters()}
+          sheltersStatus={state.context?.shelters_status}
+          zoneBands={selectors.zoneBands()}
           connection={state.connection}
           phase={phase()}
           source={stream.source()}
@@ -604,7 +693,7 @@ export default function App(props) {
             selectedZone={state.selectedZone}
             operator={state.region}
             layers={layers()}
-            shelters={SHELTER_SITES}
+            shelters={selectors.shelters()}
             basemap={settings.basemap}
             units={settings.units}
             theme={theme()}
@@ -612,6 +701,7 @@ export default function App(props) {
               phone ? pickDevice(phone, { focus: false }) : actions.clearSelection()
             }
             onSelectZone={pickZone}
+            onLaunchAt={(point) => openLauncher(point)}
             onReady={(api) => setHandle(() => api)}
           />
 
@@ -639,7 +729,8 @@ export default function App(props) {
                   zone={state.selectedZone}
                   event={state.event}
                   counts={selectors.counts()}
-                  narrative={state.narratives[state.selectedZone]?.text}
+                  narrative={state.narratives[state.selectedZone]?.narrative}
+                  bands={selectors.zoneBands()}
                   hidden={panelHidden()}
                   onToggleHidden={toggleHidden}
                 />
@@ -658,40 +749,28 @@ export default function App(props) {
 
             <Show when={activeView() === 'devices'}>
               <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
-                <DevicesPanel counts={selectors.counts()} areas={selectors.byLocality()} />
+                <DevicesPanel counts={selectors.counts()} groups={selectors.zoneGroups()} />
               </PanelShell>
             </Show>
 
             <Show when={activeView() === 'shelters'}>
               <PanelShell label={panelLabel()} hidden={panelHidden()} onToggleHidden={toggleHidden}>
-                <SheltersPanel shelters={SHELTER_SITES} onFocus={focusShelter} />
+                <SheltersPanel
+                  shelters={selectors.shelters()}
+                  status={state.context?.shelters_status}
+                  simulated={simulating()}
+                  hasEvent={!!state.event}
+                  onFocus={focusShelter}
+                />
               </PanelShell>
             </Show>
 
           </div>
 
-          {/* Right overlay — simulation control, then the map toolbar. */}
+          {/* Right overlay — stream and map controls. */}
           <div class="map-overlay map-overlay--tr app-tr">
-            <button
-              type="button"
-              class="app-sim"
-              classList={{ 'is-running': isDemo() }}
-              onClick={isDemo() ? useSupervisorStream : useDemoStream}
-              title={
-                isDemo()
-                  ? 'Leave the bundled demo and connect to the supervisor'
-                  : 'Run the bundled Al Haouz demo in this browser'
-              }
-            >
-              <span class="app-sim__glyph" aria-hidden="true" />
-              <span class="app-sim__label">
-                {isDemo() ? 'Bundled demo' : 'Run bundled demo'}
-              </span>
-            </button>
-
             <MapToolbar
               phase={phase()}
-              source={stream.source()}
               fps={state.connection.fps}
               layers={layers()}
               netLabel={net.label()}
@@ -742,13 +821,20 @@ export default function App(props) {
         )}
       </Show>
 
-      {/* Frames from a DIFFERENT incident were dropped rather than merged.
-          The supervisor gives no snapshot and no replay, so there is nothing to
-          request; what the console can do is say that it happened. */}
-      <Show when={state.dropped.foreign > 0}>
+      {/* Completion belongs to the incident lifecycle, not the transport.
+          Keep it visible until the supervisor starts the next event. */}
+      <Show when={completionMessage()}>
+        <p class="app-complete" role="status" aria-live="polite">
+          {completionMessage()}
+        </p>
+      </Show>
+
+      {/* Frames from a different incident are dropped rather than merged. The
+          store requests a supervisor snapshot to recover the authoritative state. */}
+      <Show when={state.counters.foreign > 0}>
         <p class="app-foreign" role="status">
-          Ignored {num(state.dropped.foreign)} frame{state.dropped.foreign === 1 ? '' : 's'} from
-          incident {state.dropped.lastId}. Showing {state.activeEventId || 'the current incident'}.
+          Ignored {num(state.counters.foreign)} frame{state.counters.foreign === 1 ? '' : 's'} from
+          incident {state.counters.lastForeignId}. Resynchronizing {state.activeEventId || 'the board'}.
         </p>
       </Show>
 
@@ -759,11 +845,40 @@ export default function App(props) {
         <IncidentLauncherModal
           sensorUrl={sensor().url}
           sensorTarget={sensor().absolute}
+          capabilitiesUrl={capabilities().url}
           viaDevProxy={sensor().viaProxy}
-          source={stream.source()}
+          mapCenter={() => handle()?.getCenter?.() ?? null}
+          initialPoint={launchPoint()}
+          simulating={simulating()}
+          onSimulate={runSimulation}
+          onExitSimulation={exitSimulation}
           onLaunched={onLaunched}
           onClose={() => setLauncherOpen(false)}
         />
+      </Show>
+
+      {/* A simulation says so for as long as it is on screen, whichever view
+          is open, and offers the way back. */}
+      <Show when={simulating()}>
+        <div class="app-sim" role="status">
+          <p class="app-sim__text">
+            <strong>Simulation.</strong> Synthetic devices, zones and shelters generated in this
+            browser. Not real data, and nothing was sent to the supervisor.
+          </p>
+          <span class="app-sim__actions">
+            <button
+              type="button"
+              class="app-sim__btn app-sim__btn--quiet"
+              title={replayTitle()}
+              onClick={replaySimulation}
+            >
+              Replay
+            </button>
+            <button type="button" class="app-sim__btn" onClick={exitSimulation}>
+              Stop simulation
+            </button>
+          </span>
+        </div>
       </Show>
 
       {/* Telemetry is a drawer rather than a modal for the opposite reason:
@@ -785,6 +900,7 @@ export default function App(props) {
           tab={settingsTab()}
           event={state.event}
           connection={state.connection}
+          counters={state.counters}
           phase={phase()}
           source={stream.source()}
           netLabel={net.label()}
@@ -795,8 +911,6 @@ export default function App(props) {
           onSetTheme={setTheme}
           onSetNightTheme={setNightTheme}
           onApplyWsUrl={applyWsUrl}
-          onUseDemo={useDemoStream}
-          onUseSupervisor={useSupervisorStream}
           onPing={() => checkHealth({ url: health().url, timeout: 3000 })}
           onEndShift={endShift}
         />

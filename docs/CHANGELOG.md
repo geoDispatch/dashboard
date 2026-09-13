@@ -5,6 +5,52 @@ untouched by everything below.
 
 ---
 
+## Unreleased — launch anywhere: presets, simulation, place search
+
+- **Launcher presets** for the three places the development supervisor holds
+  subscribers for: Al Haouz, Agadir, Casablanca. A preset fills every field in
+  view; nothing is sent until Launch.
+- **Runs on: Supervisor | Simulation.** Chosen from the epicentre (inside a
+  supervisor area → supervisor, elsewhere → simulation), overridable. A
+  simulation (`lib/simulation.js`) generates contract v2 frames in the browser
+  and feeds them through the same validate → store path; `lib/socket.js` gains
+  an explicit `startSimulation` / `stopSimulation` source that closes the
+  socket for its duration. Labelled everywhere: amber chip, banner,
+  narratives, "Simulated shelter" names, `+999` phones. Devices are kept off
+  water using the vector basemap's water layers.
+- **Earthquakes only in the simulation.** Flood and heatwave are disabled
+  with a "Soon" badge and a "coming soon" note: rings around an epicentre are
+  not how water or heat spreads, and a flood in the middle of a desert would
+  be a lie on the map. `SIMULATION_CAPABILITIES` marks them `coming_soon`;
+  validation says so, and `buildSimulation` refuses them outright.
+- **Stop ⇄ Run in the top bar.** While a simulation runs: **Stop
+  simulation**. Afterwards: **Run simulation**, which plays the last one again
+  (same place, same settings, same incident) with no launcher to open; its
+  tooltip names what it will run. The banner adds **Replay**, which restarts
+  the running simulation from the beginning. The last simulation is kept in
+  this browser (`lib/lastSimulation.js`, validated before use, so a stored
+  flood or a broken value is dropped rather than run).
+- **Rail: Devices and Rescue traded places' content.** The ring glyph (third)
+  now opens Devices and the phone (fifth) opens the Rescue queue; the glyphs
+  stayed put and the two icon files were renamed to match what they open.
+- Place labels read city, region, country (no county: in Morocco that is the
+  pachalik, which pushed the country out of the label).
+- **The console opens on the map alone.** The details column starts behind
+  its Show button and opens when the operator asks: Show, a device or zone
+  picked, or a rail panel (Rescue, Devices, Shelters). The Map rail tile no
+  longer forces it open.
+- **Place search** in Set location: Photon (OpenStreetMap), keyless, sends
+  only the typed text; coordinates in decimal or DMS work offline.
+- **Map click** no longer clears the selection. It opens the point's
+  coordinates (decimal + DMS) with Copy coordinates, Copy map link and Launch
+  incident here; a refused clipboard is said out loud and the text selected.
+  **Escape** clears the selection.
+- **Shelters on the map by default**: a house tile with its name beside it;
+  click for capacity, distance, address and copyable coordinates.
+- Tests: `simulation.test.js`, `geocode.test.js`, simulation lifecycle in
+  `socket.test.js`, the simulation phase in `streamState.test.js`, presets in
+  `launch.test.js` — 227 tests.
+
 ## Unreleased — the map ground is vector (Leaflet + MapLibre)
 
 - **Leaflet stays; the ground under it is now MapLibre GL.** The dark, light

@@ -1,55 +1,33 @@
-// Pure ingestion: (actions, message) => result.
+// Pure ingestion: (actions, raw frame) → status.
 // No Solid, no DOM, no socket — so fixtures replay through the exact same path
 // the real stream uses, and the whole ingestion layer is testable in node.
 //
-// The envelope's `event_id` is handed to every action. The store decides
-// whether a frame belongs to the incident on screen; this file's job is only
-// to make sure the id is never dropped on the way there, which is what let
-// two incidents merge before.
+// Order matters and is the whole point of this file:
+//
+//   1. validate   a frame that breaks contract v2 is counted `invalid` and
+//                 never reaches the store — and never refreshes lastFrameAt,
+//                 so garbage cannot make a dead stream look alive
+//   2. apply      the store gates by event and seq and returns what it did
+//   3. freshness  only accepted and control frames count as proof of life
+//
+// Counting `received` is the socket's job (it sees every raw message,
+// including ones that are not even JSON), so it is not repeated here.
 
-const HANDLED = new Set([
-  'event_start',
-  'device_update',
-  'zone_summary',
-  'narrative_update',
-  'error',
-])
+import { validateFrame } from './validate'
 
-export function routeMessage(actions, msg) {
-  if (!msg || typeof msg !== 'object' || typeof msg.type !== 'string') {
-    return { ok: false, reason: 'malformed frame' }
+/**
+ * @param actions  the console store's actions
+ * @param raw      a parsed frame, or its JSON text
+ * @returns { status: 'accepted'|'control'|'invalid'|'foreign'|'duplicate', reason? }
+ */
+export function routeMessage(actions, raw) {
+  const checked = validateFrame(raw)
+  if (!checked.ok) {
+    actions.noteInvalid(checked.reason)
+    return { status: 'invalid', reason: checked.reason }
   }
 
-  const p = msg.payload
-
-  switch (msg.type) {
-    case 'event_start':
-      if (!p?.epicenter) return { ok: false, reason: 'event_start without epicenter' }
-      actions.eventStart(p, msg.event_id, msg.timestamp)
-      return { ok: true }
-
-    case 'device_update':
-      if (!p?.phone) return { ok: false, reason: 'device_update without phone' }
-      actions.deviceUpdate(p, msg.event_id)
-      return { ok: true }
-
-    case 'zone_summary':
-      actions.zoneSummary(p ?? {}, msg.event_id)
-      return { ok: true }
-
-    case 'narrative_update':
-      actions.narrative(p ?? {}, msg.event_id)
-      return { ok: true }
-
-    case 'error':
-      actions.error(p ?? {}, msg.event_id)
-      return { ok: true }
-
-    default:
-      return { ok: false, reason: `unknown message type: ${msg.type}` }
-  }
-}
-
-export function isHandled(type) {
-  return HANDLED.has(type)
+  const status = actions.apply(checked.frame)
+  if (status === 'accepted' || status === 'control') actions.countFrame()
+  return { status }
 }

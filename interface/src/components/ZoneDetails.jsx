@@ -11,7 +11,7 @@ import { createSignal, Show } from 'solid-js'
 import { DetailCard, DetailRow, EmptyState, HideButton } from './DeviceDetails'
 import { ZONE_LABELS, ZONE_MEANING, ZONE_TEXT } from '../constants/zones'
 import { useDisplay } from '../lib/settings'
-import { decimal, num, titleCase, DASH } from '../lib/format'
+import { num, severityLabel as severityWords, titleCase, DASH } from '../lib/format'
 
 // `?raw` + innerHTML, the same technique DeviceDetails uses: an <img> cannot
 // inherit `color`, so the icons are inlined and stroke="currentColor" resolves
@@ -62,15 +62,9 @@ export default function ZoneDetails(props) {
     return DISASTER_LABELS[e.disaster_type] || titleCase(e.disaster_type)
   }
 
-  // Magnitude is the Richter value for a quake; for the other two disaster
-  // types the same field is a severity index, so it must not say "M".
-  const severityLabel = () => {
-    const e = event()
-    if (typeof e?.severity !== 'number') return DASH
-    return e.disaster_type === 'earthquake'
-      ? `M ${decimal(e.severity, 1)}`
-      : `Severity ${decimal(e.severity, 1)}`
-  }
+  // Only an earthquake has a magnitude; the other types' severity is an index
+  // on no named scale, so it must not say "M". See severityLabel in lib/format.
+  const severityLabel = () => severityWords(event()?.disaster_type, event()?.severity)
 
   // ── status ───────────────────────────────────────────────────────────────
   const inZone = () => counts()?.byZone?.[zone()] || null
@@ -81,12 +75,11 @@ export default function ZoneDetails(props) {
     return `${num(c.reachable)} of ${num(c.total)}`
   }
 
-  // Only the red band ever carries rescue flags — that asymmetry is by design,
-  // so the other two say so rather than showing a zero that looks like data.
+  // Rescue flags are the AI's call per device and are independent of the band:
+  // an orange or green device can be flagged too, so every band counts its own.
   const rescueText = () => {
     const c = inZone()
     if (!c) return DASH
-    if (zone() !== 'red') return 'None in this band'
     return `${num(c.rescue)} flagged`
   }
 
@@ -100,7 +93,9 @@ export default function ZoneDetails(props) {
   const bandText = () => {
     const e = event()
     if (!e?.radius_km || !zone()) return DASH
-    return `${fmt.band(zone(), e.radius_km)} from epicenter`
+    // The band edges the supervisor sent with event_start (props.bands), so the
+    // words match the rings on the map and the zones Go assigned.
+    return `${fmt.band(zone(), e.radius_km, props.bands)} from epicenter`
   }
 
   const epicentreText = () => {

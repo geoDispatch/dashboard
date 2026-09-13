@@ -19,15 +19,17 @@
 import { For, Show, createMemo, createSignal } from 'solid-js'
 
 import {
-  ACTION_LABELS,
   DASH,
+  actionLabel,
   ago,
   decimal,
-  deriveAction,
   maskPhone,
   num,
   percent,
   reachabilityLabel,
+  severityLabel,
+  smsStatusLabel,
+  stageLabel,
 } from '../lib/format'
 import {
   ZONE_COLORS,
@@ -80,14 +82,15 @@ export default function IncidentDetailsPage(props) {
   const [page, setPage] = createSignal(0)
 
   // ── distance ──────────────────────────────────────────────────────────
-  // distance_km is not on the wire; this is the same haversine Go runs. Sorting
-  // needs it for every row, on every batch, so the answer is cached per phone —
-  // and invalidated if that phone is relocated or a new epicentre arrives,
-  // because CAMARA can move a device between its triage and dispatch frames.
+  // distance_km is on the wire: Go's own haversine, the one the zone was
+  // assigned from. Recomputing is only a fallback for a value that is somehow
+  // missing, cached per phone and invalidated if that phone is relocated or a
+  // new epicentre arrives.
   let distCache = new Map()
   let distEpicentre = null
 
   function distanceOf(device) {
+    if (device && isNumber(device.distance_km)) return device.distance_km
     const epi = props.event && props.event.epicenter
     if (!epi || !device) return null
     if (distEpicentre !== epi) {
@@ -123,7 +126,7 @@ export default function IncidentDetailsPage(props) {
 
       const haystack = `${maskPhone(device.phone)} ${device.zone || ''} ${
         ZONE_LABELS[device.zone] || ''
-      } ${device.shelter_name || ''}`
+      } ${stageLabel(device.stage)}`
       return haystack.toLowerCase().includes(q)
     })
   })
@@ -201,34 +204,20 @@ export default function IncidentDetailsPage(props) {
   }
 
   // ── shelters ──────────────────────────────────────────────────────────
-  // Two different numbers, kept apart on purpose. `occupied` is the scenario's
-  // own standing figure; `routed` is how many devices the AI has pointed at
-  // this shelter in the stream. Adding them together would invent a third.
-  const routed = createMemo(() => {
-    const tally = {}
-    for (const device of allDevices()) {
-      if (device.shelter_name) {
-        tally[device.shelter_name] = (tally[device.shelter_name] || 0) + 1
-      }
-    }
-    return tally
-  })
+  // The nearest shelter records the supervisor looked up (event_context).
+  // The database holds a capacity and nothing about occupancy, and the AI
+  // routes nobody to a named shelter, so neither is shown.
+  const shelters = () => props.shelters || []
 
-  const shelters = createMemo(() =>
-    (props.shelters || []).map((shelter) => {
-      const rate =
-        isNumber(shelter.occupied) && isNumber(shelter.capacity) && shelter.capacity > 0
-          ? shelter.occupied / shelter.capacity
-          : null
-      return {
-        ...shelter,
-        rate,
-        routed: routed()[shelter.name] || 0,
-        word: rate === null ? DASH : rate >= 1 ? 'At capacity' : rate >= 0.9 ? 'Nearly full' : 'Space free',
-        full: rate !== null && rate >= 1,
-      }
-    }),
-  )
+  const sheltersEmpty = () => {
+    if (!props.event) return 'No incident yet.'
+    if (props.sheltersStatus === 'unavailable') return 'Shelter records unavailable (database query failed).'
+    if (!props.sheltersStatus) return "Waiting for the supervisor's shelter lookup."
+    return 'No shelter records near this incident.'
+  }
+
+  // ── network context ───────────────────────────────────────────────────
+  const network = () => (props.context && props.context.network) || null
 
   // ── header facts ──────────────────────────────────────────────────────
   const riskTone = (risk) =>
@@ -249,7 +238,7 @@ export default function IncidentDetailsPage(props) {
                 <span class="idp-chip">{id()}</span>
                 <span class="idp-head__meta">
                   <span class="is-capital">{props.event.disaster_type || DASH}</span>
-                  {isNumber(props.event.severity) ? ` · M ${decimal(props.event.severity, 1)}` : ''}
+                  {isNumber(props.event.severity) ? ` · ${severityLabel(props.event.disaster_type, props.event.severity)}` : ''}
                   {isNumber(props.event.radius_km) ? ` · ${fmt.distance(props.event.radius_km, 0)} radius` : ''}
                 </span>
               </span>
@@ -278,7 +267,7 @@ export default function IncidentDetailsPage(props) {
                 { label: 'Hazard', value: props.event.disaster_type || DASH, cap: true },
                 {
                   label: 'Severity',
-                  value: isNumber(props.event.severity) ? `M ${decimal(props.event.severity, 1)}` : DASH,
+                  value: severityLabel(props.event.disaster_type, props.event.severity),
                   strong: true,
                 },
                 {
@@ -293,7 +282,12 @@ export default function IncidentDetailsPage(props) {
                   value: isNumber(props.event.radius_km) ? fmt.distance(props.event.radius_km, 0) : DASH,
                   tabular: true,
                 },
-                { label: 'Depth', value: DASH, missing: true },
+                {
+                  label: 'Depth',
+                  value: isNumber(props.event.depth_km) ? fmt.distance(props.event.depth_km, 1) : DASH,
+                  tabular: true,
+                  missing: !isNumber(props.event.depth_km),
+                },
                 { label: 'Aftershock risk', tone: riskTone(props.event.aftershock_risk),
                   value: props.event.aftershock_risk || DASH },
                 { label: 'Tsunami risk', tone: props.event.tsunami_risk ? 'red' : null,
@@ -326,7 +320,6 @@ export default function IncidentDetailsPage(props) {
                 </div>
               )}
             </For>
-            <p class="idp-facts__note">Depth is not provided by the supervisor.</p>
           </Show>
         </section>
 
@@ -376,7 +369,7 @@ export default function IncidentDetailsPage(props) {
           </article>
 
           <article class="idp-card idp-metric">
-            <span class="idp-label">Evacuation SMS sent</span>
+            <span class="idp-label">SMS accepted by gateway</span>
             <span class="idp-metric__value">{num(counts() ? counts().sms : 0, '0')}</span>
             <span class="idp-bar" aria-hidden="true">
               <span
@@ -387,7 +380,14 @@ export default function IncidentDetailsPage(props) {
                 }}
               />
             </span>
-            <span class="idp-metric__sub">Dispatched after the AI decision</span>
+            <span class="idp-metric__sub">
+              <Show
+                when={counts() && counts().smsNotConfigured > 0}
+                fallback="Accepted by the SMS gateway after the AI decision"
+              >
+                {num(counts().smsNotConfigured)} not sent — no SMS gateway configured
+              </Show>
+            </span>
           </article>
 
           <article class="idp-card idp-metric">
@@ -428,7 +428,7 @@ export default function IncidentDetailsPage(props) {
                       {ZONE_LABELS[zone]}
                     </span>
                     <Show when={props.event && isNumber(props.event.radius_km)}>
-                      <span class="idp-zone__band">{fmt.band(zone, props.event.radius_km)}</span>
+                      <span class="idp-zone__band">{fmt.band(zone, props.event.radius_km, props.zoneBands)}</span>
                     </Show>
                   </div>
                   <p class="idp-zone__meaning">{ZONE_MEANING[zone]}</p>
@@ -442,22 +442,18 @@ export default function IncidentDetailsPage(props) {
                       <dt class="idp-label">Reachable</dt>
                       <dd class="idp-stat__value">{num(zoneCount(zone)?.reachable, '0')}</dd>
                     </div>
-                    {/* Shown wherever the supervisor actually flagged one.
-                        The AI can escalate a zone and can flag an orange-zone
-                        device, so gating this on `zone === 'red'` silently hid
-                        real flags. A zone with none simply has one fewer
-                        number rather than a placeholder. */}
-                    <Show when={zone === 'red' || (zoneCount(zone)?.rescue || 0) > 0}>
-                      <div class="idp-stat">
-                        <dt class="idp-label">Rescue</dt>
-                        <dd
-                          class="idp-stat__value"
-                          classList={{ 'is-red': (zoneCount(zone)?.rescue || 0) > 0 }}
-                        >
-                          {num(zoneCount(zone)?.rescue, '0')}
-                        </dd>
-                      </div>
-                    </Show>
+                    {/* Every zone counts its own rescue flags: the AI flags
+                        devices, not bands, and an orange or green device can
+                        be flagged as well as a red one. */}
+                    <div class="idp-stat">
+                      <dt class="idp-label">Rescue</dt>
+                      <dd
+                        class="idp-stat__value"
+                        classList={{ 'is-red': (zoneCount(zone)?.rescue || 0) > 0 }}
+                      >
+                        {num(zoneCount(zone)?.rescue, '0')}
+                      </dd>
+                    </div>
                   </dl>
 
                   <Show
@@ -468,7 +464,7 @@ export default function IncidentDetailsPage(props) {
                   >
                     {(report) => (
                       <>
-                        <p class="idp-zone__report">{report().text}</p>
+                        <p class="idp-zone__report">{report().narrative}</p>
                         <p class="idp-zone__stamp">Received {ago(report().receivedAt)}</p>
                       </>
                     )}
@@ -495,7 +491,7 @@ export default function IncidentDetailsPage(props) {
                 <input
                   type="search"
                   class="idp-search__input"
-                  placeholder="Search a masked number, zone or shelter"
+                  placeholder="Search a masked number, zone or stage"
                   value={search()}
                   onInput={(e) => applySearch(e.currentTarget.value)}
                 />
@@ -539,8 +535,8 @@ export default function IncidentDetailsPage(props) {
                     <SortHeader label="Zone" col="zone" sortKey={sortKey()} dir={sortDir()} onSort={sortBy} />
                     <SortHeader label="Distance" col="distance" align="right" sortKey={sortKey()} dir={sortDir()} onSort={sortBy} />
                     <SortHeader label="Reachability" col="reach" sortKey={sortKey()} dir={sortDir()} onSort={sortBy} />
+                    <th class="idp-th">Stage</th>
                     <th class="idp-th">AI action</th>
-                    <th class="idp-th">Shelter</th>
                     <SortHeader label="Priority" col="priority" align="right" sortKey={sortKey()} dir={sortDir()} onSort={sortBy} />
                     <SortHeader label="Confidence" col="confidence" align="right" sortKey={sortKey()} dir={sortDir()} onSort={sortBy} />
                     <th class="idp-th">SMS</th>
@@ -593,18 +589,24 @@ export default function IncidentDetailsPage(props) {
                             </span>
                           </td>
                           <td class="idp-td">
+                            <span class="idp-state" classList={{ 'is-down': device.stage === 'decision_failed' }}>
+                              {stageLabel(device.stage)}
+                            </span>
+                          </td>
+                          <td class="idp-td">
+                            {/* What the AI ASKED for. Whether an SMS went out is
+                                the SMS column, from the gateway. */}
                             <span
                               class="idp-action"
                               classList={{
-                                'is-rescue': device.rescue_flag,
-                                'is-sms': device.sms_sent && !device.rescue_flag,
-                                'is-none': !device.sms_sent && !device.rescue_flag,
+                                'is-rescue': !!device.rescue_flag,
+                                'is-sms': (device.action === 'sms') && !device.rescue_flag,
+                                'is-none': !device.action || device.action === 'none',
                               }}
                             >
-                              {ACTION_LABELS[deriveAction(device)]}
+                              {actionLabel(device.action)}
                             </span>
                           </td>
-                          <td class="idp-td idp-td--shelter">{device.shelter_name || DASH}</td>
                           <td class="idp-td idp-td--num">
                             <Show when={priorityOf(device)} fallback={<span class="is-missing">{DASH}</span>}>
                               {(priority) => <span class="idp-priority">P{priority()}</span>}
@@ -627,12 +629,15 @@ export default function IncidentDetailsPage(props) {
                             </Show>
                           </td>
                           <td class="idp-td">
-                            <Show
-                              when={device.sms_sent}
-                              fallback={<span class="is-missing">Not sent</span>}
+                            <span
+                              class="idp-state"
+                              classList={{
+                                'is-missing': !device.sms_sent,
+                                'is-down': device.sms_status === 'failed',
+                              }}
                             >
-                              <span class="idp-state">Sent</span>
-                            </Show>
+                              {smsStatusLabel(device.sms_status)}
+                            </span>
                           </td>
                         </tr>
                       )}
@@ -672,7 +677,10 @@ export default function IncidentDetailsPage(props) {
               </div>
             </div>
 
-            <p class="idp-note">Priority, confidence and shelter are demo-only.</p>
+            <p class="idp-note">
+              Action, priority and confidence come from the AI decision and stay empty until a
+              device is decided. Zone and distance are the supervisor's.
+            </p>
           </div>
         </section>
 
@@ -687,44 +695,30 @@ export default function IncidentDetailsPage(props) {
             <div class="idp-shelters">
               <For
                 each={shelters()}
-                fallback={<p class="idp-card idp-empty">No shelters are listed for this scenario.</p>}
+                fallback={<p class="idp-card idp-empty">{sheltersEmpty()}</p>}
               >
                 {(shelter) => (
-                  <article class="idp-card idp-shelter" classList={{ 'is-full': shelter.full }}>
+                  <article class="idp-card idp-shelter">
                     <div class="idp-shelter__head">
                       <h3 class="idp-shelter__name">{shelter.name}</h3>
-                      <span class="idp-shelter__word" classList={{ 'is-full': shelter.full }}>
-                        {shelter.word}
-                      </span>
                     </div>
-
-                    <span class="idp-bar" aria-hidden="true">
-                      <span
-                        class="idp-bar__fill"
-                        style={{
-                          width: `${Math.min(100, (shelter.rate || 0) * 100)}%`,
-                          background: shelter.full ? 'var(--gd-red)' : 'var(--gd-zone-green)',
-                        }}
-                      />
-                    </span>
 
                     <dl class="idp-shelter__stats">
                       <div class="idp-stat">
-                        <dt class="idp-label">Occupied</dt>
+                        <dt class="idp-label">Capacity</dt>
+                        <dd class="idp-stat__value">{num(shelter.capacity, DASH)}</dd>
+                      </div>
+                      <div class="idp-stat">
+                        <dt class="idp-label">Distance</dt>
                         <dd class="idp-stat__value">
-                          {num(shelter.occupied, DASH)} of {num(shelter.capacity, DASH)}
-                          <small>{shelter.rate === null ? '' : ` · ${percent(shelter.rate, 0)}`}</small>
+                          {isNumber(shelter.distance_km) ? fmt.distance(shelter.distance_km) : DASH}
                         </dd>
                       </div>
                       <div class="idp-stat">
-                        <dt class="idp-label">Routed by the AI</dt>
-                        <dd class="idp-stat__value">{num(shelter.routed, '0')}</dd>
-                      </div>
-                      <div class="idp-stat">
-                        <dt class="idp-label">Location</dt>
+                        <dt class="idp-label">Address</dt>
                         <dd class="idp-stat__value">
-                          <Show when={shelter.anchor} fallback={<span class="is-missing">No coordinates</span>}>
-                            {(anchor) => <>Near {anchor()}</>}
+                          <Show when={shelter.address} fallback={<span class="is-missing">{DASH}</span>}>
+                            {shelter.address}
                           </Show>
                         </dd>
                       </div>
@@ -735,14 +729,21 @@ export default function IncidentDetailsPage(props) {
             </div>
 
             <p class="idp-note">
-              Demo data only. Shelter occupancy and routing are not provided by the supervisor.
+              {props.source === 'simulation'
+                ? 'Simulated shelters, generated in this browser. Not real places.'
+                : "Nearest shelter records to the epicentre, from the supervisor's database."}{' '}
+              Occupancy is not recorded.
             </p>
           </section>
 
           <section class="idp-section" aria-label="Network">
             <div class="idp-section__head">
               <h2 class="idp-section__title">Network</h2>
-              <span class="idp-section__meta">Nokia CAMARA</span>
+              <span class="idp-section__meta">
+                <Show when={props.context && props.context.network_source} fallback="Source not declared yet">
+                  {(source) => <>Source {source()}: declared by supervisor configuration (unverified)</>}
+                </Show>
+              </span>
             </div>
 
             <div class="idp-card idp-network">
@@ -756,8 +757,12 @@ export default function IncidentDetailsPage(props) {
                   <dd class="idp-stat__value">{num(counts() ? counts().unreachable : 0, '0')}</dd>
                 </div>
                 <div class="idp-stat idp-stat--row">
-                  <dt class="idp-label">SMS dispatched</dt>
+                  <dt class="idp-label">SMS accepted by gateway</dt>
                   <dd class="idp-stat__value">{num(counts() ? counts().sms : 0, '0')}</dd>
+                </div>
+                <div class="idp-stat idp-stat--row">
+                  <dt class="idp-label">SMS failed</dt>
+                  <dd class="idp-stat__value">{num(counts() ? counts().smsFailed : 0, '0')}</dd>
                 </div>
               </dl>
 
@@ -765,16 +770,26 @@ export default function IncidentDetailsPage(props) {
 
               <dl class="idp-rows">
                 <div class="idp-stat idp-stat--row">
-                  <dt class="idp-label">Congestion insight</dt>
-                  <dd class="idp-stat__value is-missing">{DASH}</dd>
+                  <dt class="idp-label">Congestion</dt>
+                  <dd class="idp-stat__value" classList={{ 'is-missing': !network() }}>
+                    {network() ? network().congestion_level : DASH}
+                  </dd>
                 </div>
                 <div class="idp-stat idp-stat--row">
                   <dt class="idp-label">QoS on demand</dt>
-                  <dd class="idp-stat__value is-missing">{DASH}</dd>
+                  <dd class="idp-stat__value" classList={{ 'is-missing': !network() }}>
+                    {network() ? network().qos_status : DASH}
+                  </dd>
                 </div>
                 <div class="idp-stat idp-stat--row">
-                  <dt class="idp-label">SMS delivery rate</dt>
-                  <dd class="idp-stat__value is-missing">{DASH}</dd>
+                  <dt class="idp-label">SMS gateway</dt>
+                  <dd class="idp-stat__value" classList={{ 'is-missing': !props.context }}>
+                    {!props.context
+                      ? DASH
+                      : props.context.sms_gateway === 'configured'
+                        ? 'Configured'
+                        : 'Not configured — no SMS is sent'}
+                  </dd>
                 </div>
               </dl>
 
@@ -784,13 +799,17 @@ export default function IncidentDetailsPage(props) {
                 <div class="idp-stat idp-stat--row">
                   <dt class="idp-label">Frame source</dt>
                   <dd class="idp-stat__value">
-                    {SOURCE_LABEL[props.source === 'demo' ? 'demo' : 'supervisor']}
+                    {props.source === 'simulation'
+                      ? 'Simulation in this browser; synthetic data'
+                      : props.connection && props.connection.status === 'open'
+                        ? `${SOURCE_LABEL}; upstream source unverified`
+                        : 'Supervisor not connected'}
                   </dd>
                 </div>
                 <div class="idp-stat idp-stat--row">
                   <dt class="idp-label">Transport</dt>
                   <dd class="idp-stat__value">
-                    {streamChip(props.phase, props.source === 'demo' ? 'demo' : 'supervisor').text}
+                    {streamChip(props.phase).text}
                     <small>
                       {props.connection && props.connection.fps
                         ? ` · ${num(props.connection.fps)} frames/s`
@@ -801,7 +820,8 @@ export default function IncidentDetailsPage(props) {
               </dl>
 
               <p class="idp-note">
-                Congestion, QoS and delivery rate are not forwarded by the supervisor.
+                Congestion and QoS are the supervisor's latest event context. SMS delivery to the
+                handset is not reported, only whether the gateway accepted the message.
               </p>
             </div>
           </section>

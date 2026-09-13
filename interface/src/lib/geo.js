@@ -1,6 +1,6 @@
-// Geography helpers: haversine (mirrors the Go supervisor's zone maths),
-// locality lookup for the Al Haouz demo scenario, and "where am I" resolution
-// for the region selector.
+// Geography helpers: haversine (mirrors the Go supervisor's zone maths — only a
+// display fallback now that device_update carries Go's own distance_km), and
+// "where am I" resolution for the operator's region selector.
 
 const R_EARTH_KM = 6371
 
@@ -17,8 +17,9 @@ export function haversine(a, b) {
   return 2 * R_EARTH_KM * Math.asin(Math.sqrt(h))
 }
 
-// Morocco's twelve regions — the selector has no backend query yet (agent.md §6),
-// so the list is local. Centres are approximate administrative centroids.
+// Morocco's twelve regions — the operator's own "Set location" list and nothing
+// else. The selector has no backend query, so the list is local. Centres are
+// approximate administrative centroids.
 export const MOROCCO_REGIONS = [
   { name: 'Tanger-Tétouan-Al Hoceïma',  latitude: 35.2517, longitude: -5.3720 },
   { name: 'Oriental',                   latitude: 34.2610, longitude: -2.4000 },
@@ -34,36 +35,22 @@ export const MOROCCO_REGIONS = [
   { name: 'Dakhla-Oued Ed-Dahab',       latitude: 23.6850, longitude: -15.9300 },
 ]
 
-// Al Haouz demo localities. Counts match the scenario table in agent.md §11
-// so the demo never contradicts itself (total 4,812).
-export const AL_HAOUZ_LOCALITIES = [
-  { name: 'Amizmiz',         zone: 'orange', people: 1129, latitude: 31.2167, longitude: -8.2333 },
-  { name: 'Asni',            zone: 'orange', people:  842, latitude: 31.2544, longitude: -7.9819 },
-  { name: 'Tahannaout',      zone: 'green',  people:  721, latitude: 31.3572, longitude: -7.9500 },
-  { name: "Talat N'Yaaqoub", zone: 'red',    people:  634, latitude: 30.9833, longitude: -8.3833 },
-  { name: 'Marrakech Sud',   zone: 'green',  people:  622, latitude: 31.5500, longitude: -8.0500 },
-  { name: 'Ouirgane',        zone: 'red',    people:  495, latitude: 31.1667, longitude: -8.0833 },
-  { name: 'Moulay Brahim',   zone: 'orange', people:  369, latitude: 31.2833, longitude: -8.0333 },
-]
-
-// device_update carries lat/lng but no place name — reverse geocoding is a
-// backend gap. Nearest-centroid over the demo localities stands in for it.
-export function nearestLocality(lat, lng, localities = AL_HAOUZ_LOCALITIES) {
+// Nearest region centroid to a point: names where the OPERATOR is for the
+// "Set location" control. Never used to label devices — device_update carries
+// no place name, and a centroid lookup would put a region's name on a person
+// who may not be in it.
+export function nearestRegion(lat, lng) {
   if (typeof lat !== 'number' || typeof lng !== 'number') return null
   let best = null
   let bestKm = Infinity
-  for (const loc of localities) {
-    const d = haversine({ latitude: lat, longitude: lng }, loc)
+  for (const region of MOROCCO_REGIONS) {
+    const d = haversine({ latitude: lat, longitude: lng }, region)
     if (d !== null && d < bestKm) {
       bestKm = d
-      best = loc
+      best = region
     }
   }
   return best ? { ...best, distanceKm: bestKm } : null
-}
-
-export function nearestRegion(lat, lng) {
-  return nearestLocality(lat, lng, MOROCCO_REGIONS)
 }
 
 // ── "Set location" ────────────────────────────────────────────

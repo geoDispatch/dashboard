@@ -12,7 +12,7 @@
 
 import { For, Show, createEffect, createSignal, onCleanup, onMount } from 'solid-js'
 
-import { BASEMAPS, basemapPreview, maxZoomFor, profileFor } from '../constants/basemaps'
+import { BASEMAPS, PREVIEW_VIEW, basemapPreview, maxZoomFor, profileFor } from '../constants/basemaps'
 import { prepareStyle } from '../lib/mapStyle'
 import { fetchStyle, loadVectorEngine, snapshotStyle } from '../lib/vectorBasemap'
 import { INTERFACE_SCALES, LANGUAGES, isWsUrl, useSettings } from '../lib/settings'
@@ -62,8 +62,9 @@ const SCALE_CHOICES = INTERFACE_SCALES.map((scale) => ({
   label: `${Math.round(scale * 100)}%`,
 }))
 
-// A sample point for the coordinate-format preview when no event has arrived.
-const SAMPLE_POINT = { latitude: 31.0625, longitude: -8.4144 }
+// A neutral map-preview point when no event has arrived. It is display-only,
+// never incident data.
+const SAMPLE_POINT = { latitude: PREVIEW_VIEW.center[1], longitude: PREVIEW_VIEW.center[0] }
 
 function Icon(props) {
   return <span class="set-icon" innerHTML={props.markup} aria-hidden="true" />
@@ -184,7 +185,7 @@ function ThemeCard(props) {
   )
 }
 
-// A basemap as it really is, over the Al Haouz epicentre. Vector basemaps are
+// A basemap as it really is, over the neutral preview point. Vector basemaps are
 // rendered — in the current theme, so the dark canvas shows graphite or navy
 // exactly as the live map will — and read back as an image; satellite is one
 // real imagery tile. If the vector engine cannot run in this browser, the
@@ -351,7 +352,6 @@ export default function SettingsModal(props) {
   }
 
   const connection = () => props.connection || {}
-  const isDemo = () => props.source === 'demo'
 
   // ── localisation preview ──────────────────────────────────────────────
   const samplePoint = () => (props.event && props.event.epicenter) || SAMPLE_POINT
@@ -746,25 +746,14 @@ export default function SettingsModal(props) {
 
               <Card
                 title="Frame source"
-                note="Changing the frame source clears the board."
+                note="Operational data is accepted only from the configured supervisor."
               >
                 <Row
                   label="Where frames come from"
-                  hint={SOURCE_DETAIL[isDemo() ? 'demo' : 'supervisor']}
+                  hint={SOURCE_DETAIL}
                   stacked
                 >
-                  <Segmented
-                    label="Frame source"
-                    value={isDemo() ? 'demo' : 'supervisor'}
-                    options={[
-                      { key: 'supervisor', label: 'Connected supervisor' },
-                      { key: 'demo', label: 'Bundled demo' },
-                    ]}
-                    onChange={(key) => {
-                      if (key === 'demo') props.onUseDemo && props.onUseDemo()
-                      else props.onUseSupervisor && props.onUseSupervisor()
-                    }}
-                  />
+                  <span class="set-inline__value">Configured supervisor only</span>
                 </Row>
               </Card>
 
@@ -772,16 +761,16 @@ export default function SettingsModal(props) {
                 <dl class="set-readout">
                   <div class="set-readout__row">
                     <dt>Source</dt>
-                    <dd>{SOURCE_LABEL[isDemo() ? 'demo' : 'supervisor']}</dd>
+                    <dd>{props.source === 'simulation' ? 'Simulation in this browser (synthetic data)' : SOURCE_LABEL}</dd>
                   </div>
                   <div class="set-readout__row">
                     <dt>Transport</dt>
-                    <dd>{streamChip(props.phase, isDemo() ? 'demo' : 'supervisor').text}</dd>
+                    <dd>{streamChip(props.phase).text}</dd>
                   </div>
                   <div class="set-readout__row">
                     <dt>Frames</dt>
                     <dd>
-                      {num(connection().frames, '0')}
+                      {num(props.counters?.received, '0')}
                       <small> received · {num(connection().fps, '0')}/s now</small>
                     </dd>
                   </div>

@@ -128,7 +128,7 @@ export function firstRender(glMap, timeout = 6000) {
 
 // ── previews ──────────────────────────────────────────────────────────────────
 //
-// The Settings picker shows each basemap as it really is, over the Al Haouz
+// The Settings picker shows each basemap as it really is, over a neutral
 // epicentre. For a vector basemap that is a real render: an off-screen GL map,
 // drawn once, read back as an image, and destroyed — one at a time, so the
 // picker never holds more than one extra WebGL context.
